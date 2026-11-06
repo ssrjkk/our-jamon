@@ -354,3 +354,15 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .scenario-list { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 0.9375rem; color: var(--graphite-muted); flex: 1; }
 .scenario-total-row { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px dashed var(--bone-line); padding-top: 12px; }
 .scenario-total { font-family: var(--font-serif); font-weight: 700; font-size: 1.4rem; }
+
+/* ВКЛАДКИ (панели главной и табы отделов) */
+.site-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 14px 0 0; scrollbar-width: none; position: sticky; top: var(--header-h); z-index: 26; background-color: var(--paper-salt); border-bottom: 2px solid var(--hoof-graphite); }
+.site-tabs::-webkit-scrollbar { display: none; }
+.site-tabs button { min-height: 48px; padding: 10px 18px; font-size: 0.9375rem; font-weight: 600; color: var(--graphite-muted); border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: color 0.15s ease, border-color 0.15s ease; }
+.site-tabs button:hover { color: var(--hoof-graphite); }
+.site-tabs button[aria-selected="true"] { color: var(--cured-ruby); border-bottom-color: var(--cured-ruby); }
+.dept-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 12px 0 14px; scrollbar-width: none; border-bottom: 1px solid var(--bone-line); margin-bottom: 20px; }
+.dept-tabs::-webkit-scrollbar { display: none; }
+.dept-tabs button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.875rem; font-weight: 500; color: var(--hoof-graphite); border-radius: 999px; white-space: nowrap; transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
+.dept-tabs button:hover { border-color: var(--graphite-muted); }
+.dept-tabs button[aria-pressed="true"] { background-color: var(--hoof-graphite); color: var(--fat-white); border-color: var(--hoof-graphite); }
