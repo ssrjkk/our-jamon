@@ -377,6 +377,19 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .scenario-total-row { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px dashed var(--bone-line); padding-top: 12px; }
 .scenario-total { font-family: var(--font-serif); font-weight: 700; font-size: 1.4rem; }
 
+
+/* ВКЛАДКИ */
+.site-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 14px 0 0; scrollbar-width: none; position: sticky; top: var(--header-h); z-index: 26; background-color: var(--paper-salt); border-bottom: 2px solid var(--hoof-graphite); }
+.site-tabs::-webkit-scrollbar { display: none; }
+.site-tabs button { min-height: 48px; padding: 10px 18px; font-size: 0.9375rem; font-weight: 600; color: var(--graphite-muted); border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: color 0.15s ease, border-color 0.15s ease; }
+.site-tabs button:hover { color: var(--hoof-graphite); }
+.site-tabs button[aria-selected="true"] { color: var(--cured-ruby); border-bottom-color: var(--cured-ruby); }
+.dept-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 12px 0 14px; scrollbar-width: none; border-bottom: 1px solid var(--bone-line); margin-bottom: 20px; }
+.dept-tabs::-webkit-scrollbar { display: none; }
+.dept-tabs button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.875rem; font-weight: 500; color: var(--hoof-graphite); border-radius: 999px; white-space: nowrap; transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
+.dept-tabs button:hover { border-color: var(--graphite-muted); }
+.dept-tabs button[aria-pressed="true"] { background-color: var(--hoof-graphite); color: var(--fat-white); border-color: var(--hoof-graphite); }
+
 </style>
 </head>
 <body>
@@ -393,7 +406,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
     </div>
     <nav class="main-nav" aria-label="Основная навигация">
       <a href="#catalog">Каталог</a>
-      <a href="#sets">Наборы</a>
+      <a href="#scenarios">Сценарии</a>
       <a href="#weight-system">Как считаем вес</a>
       <a href="#aging">Выдержка</a>
       <a href="#delivery">Доставка и оплата</a>
@@ -413,7 +426,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
     <button type="button" id="menu-close-btn" class="cart-close" aria-label="Закрыть меню">Закрыть</button>
   </div>
   <a class="menu-link" href="#catalog">Каталог и куски</a>
-  <a class="menu-link" href="#sets">Готовые наборы</a>
+  <a class="menu-link" href="#scenarios">Сценарии и наборы</a>
   <a class="menu-link" href="#weight-system">Как считаем вес</a>
   <a class="menu-link" href="#aging">Гид по выдержке</a>
   <a class="menu-link" href="#delivery">Доставка и оплата</a>
@@ -459,15 +472,19 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
             <text x="40" y="530" fill="#9B8B76" font-size="15" font-family="Golos Text, sans-serif">Фото клиента: веер нарезки хамона (макро)</text>
           </svg></div></div></section>
 
-    <section id="scenarios" class="section" style="border-top:none;"><div class="container"><div class="section-head"><h2 class="section-title">Три сценария — выберите свой</h2><p class="section-subtitle">Хамон — главный герой. Вкусы собираем вокруг него: для себя, к столу и на подарок.</p></div><div class="scenarios-grid"><article class="scenario-card"><div class="scenario-label">Для себя</div><div class="scenario-name">Познакомиться с хамоном</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Три выдержки в одной коробке - найдёте свою.</p><ul class="scenario-list"><li>Дегустационный сет нарезок 3 × 100 г</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">1 150 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addProductToCart('hamon-tasting-sliced', this)">Собрать сценарий</button></article><article class="scenario-card"><div class="scenario-label">К столу</div><div class="scenario-name">Вкусный вечер</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Нарезка «22», крупные оливки и гриссини к бокалу.</p><ul class="scenario-list"><li>Нарезка хамона «22»</li><li>Оливки Gordal крупные</li><li>Гриссини хлебные палочки</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">1 430 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addSetToCart('evening', this)">Собрать сценарий</button></article><article class="scenario-card"><div class="scenario-label">На подарок</div><div class="scenario-name">Бокс «В подарок»</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Соберём и упакуем - останется подписать открытку.</p><ul class="scenario-list"><li>Нарезка хамона «22»</li><li>Оливки Manzanilla</li><li>Сыр овечий Манчего</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">2 300 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addSetToCart('gift', this)">Собрать сценарий</button></article></div></div></section>
-
-    <!-- ИСТОРИИ ЛАВКИ -->
-  <section class="stories-section container" aria-label="Истории лавки">
+    <section class="stories-section container" aria-label="Истории лавки">
     <div class="stories-strip" id="stories-strip"></div>
   </section>
 
-  <!-- КАТАЛОГ -->
-  <section id="catalog" class="section" style="border-top:none;">
+      <!-- ВКЛАДКИ -->
+      <div class="site-tabs" role="tablist" aria-label="Разделы сайта">
+        <button type="button" role="tab" data-tab="catalog" aria-selected="true">Витрина</button>
+        <button type="button" role="tab" data-tab="scenarios" aria-selected="false">Сценарии</button>
+        <button type="button" role="tab" data-tab="aging" aria-selected="false">Про выдержку</button>
+        <button type="button" role="tab" data-tab="weight-system" aria-selected="false">Как считаем вес</button>
+        <button type="button" role="tab" data-tab="delivery" aria-selected="false">Доставка</button>
+      </div>
+      <section id="catalog" class="site-panel" class="section" style="border-top:none;">
     <div class="container">
       <div class="section-head">
         <h2 class="section-title">Витрина и выбор кусков по весу</h2>
@@ -509,81 +526,17 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
         </div>
       </div>
 
-      <p class="catalog-hint">Витрина разделена по отделам. Панель отделов прилипает под шапкой и остаётся на виду при прокрутке - жмите нужный блок, длинный скролл не нужен. Внутри карточки выбирается конкретный кусок по весу, оливки - на развес.</p>
+      <p class="catalog-hint">Сайт работает вкладками: сверху разделы, внутри витрины - отделы. Никакой длинной ленты: выбираете вкладку - видите только её содержимое. В карточке - средний вес куска, точный подтверждаем при связи.</p>
 
-      <nav class="dept-nav" id="dept-nav" aria-label="Отделы витрины">
-        <button type="button" class="filter-btn" data-dept-link="dept-piece" aria-pressed="true">Хамон куском</button>
-        <button type="button" class="filter-btn" data-dept-link="dept-sliced" aria-pressed="false">Хамон в нарезке</button>
-        <button type="button" class="filter-btn" data-dept-link="dept-leg" aria-pressed="false">Целые ноги</button>
-        <button type="button" class="filter-btn" data-dept-link="dept-olives" aria-pressed="false">Оливки и антипасти</button>
-        <button type="button" class="filter-btn" data-dept-link="dept-cheese" aria-pressed="false">Сыры и колбасы</button>
-        <button type="button" class="filter-btn" data-dept-link="sets">Наборы</button>
-      </nav>
+      <div class="dept-tabs" id="dept-tabs" role="tablist" aria-label="Отделы витрины"></div>
 
       <div id="catalog-grid" class="catalog-grid" aria-live="polite"></div>
     </div>
   </section>
 
-  <!-- НАБОРЫ -->
-  <section id="sets" class="section" style="border-top:none;">
-    <div class="container">
-      <div class="section-head">
-        <h2 class="section-title">Соберём вкусный вечер, подарок или набор к столу</h2>
-        <p class="section-subtitle">Готовые сочетания из витрины лавки: собираем в вакуумной упаковке и отправляем в день заказа. Один клик — и весь набор в корзине.</p>
-      </div>
-      <div id="sets-grid" class="sets-grid"></div>
-    </div>
-  </section>
+    <section id="scenarios" class="site-panel" hidden class="section" style="border-top:none;"><div class="container"><div class="section-head"><h2 class="section-title">Три сценария — выберите свой</h2><p class="section-subtitle">Хамон — главный герой. Вкусы собираем вокруг него: для себя, к столу и на подарок.</p></div><div class="scenarios-grid"><article class="scenario-card"><div class="scenario-label">Для себя</div><div class="scenario-name">Познакомиться с хамоном</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Три выдержки в одной коробке - найдёте свою.</p><ul class="scenario-list"><li>Дегустационный сет нарезок 3 × 100 г</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">1 150 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addProductToCart('hamon-tasting-sliced', this)">Собрать сценарий</button></article><article class="scenario-card"><div class="scenario-label">К столу</div><div class="scenario-name">Вкусный вечер</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Нарезка «22», крупные оливки и гриссини к бокалу.</p><ul class="scenario-list"><li>Нарезка хамона «22»</li><li>Оливки Gordal крупные</li><li>Гриссини хлебные палочки</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">1 430 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addSetToCart('evening', this)">Собрать сценарий</button></article><article class="scenario-card"><div class="scenario-label">На подарок</div><div class="scenario-name">Бокс «В подарок»</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Соберём и упакуем - останется подписать открытку.</p><ul class="scenario-list"><li>Нарезка хамона «22»</li><li>Оливки Manzanilla</li><li>Сыр овечий Манчего</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">2 300 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addSetToCart('gift', this)">Собрать сценарий</button></article></div></div></section>
 
-  <!-- КАК СЧИТАЕМ ВЕС -->
-  <section id="weight-system" class="section-dark">
-    <div class="container">
-      <div class="section-head">
-        <h2 class="section-title">Как считаем вес куска</h2>
-        <p class="section-subtitle">Все куски хамона приходят разного веса. Мы взвешиваем каждый кусок при приёмке и заносим в учётную систему, поэтому цена считается по фактическому весу до рубля.</p>
-      </div>
-      <div class="scale-bento">
-        <div class="scale-panel">
-          <div>
-            <div class="scale-switch" role="group" aria-label="Выбор продукта для расчёта">
-              <button type="button" class="scale-switch-btn" data-scale-product="hamon" aria-pressed="true">Хамон «16», 16 мес</button>
-              <button type="button" class="scale-switch-btn" data-scale-product="olives" aria-pressed="false">Оливки Gordal на развес</button>
-            </div>
-          </div>
-          <div class="scale-readout tabular" aria-live="polite">
-            <div class="readout-cell">
-              <span class="readout-label">Вес</span>
-              <span id="demo-scale-weight" class="readout-digits">215&nbsp;г</span>
-            </div>
-            <div class="readout-cell">
-              <span class="readout-label">Цена за 1 кг</span>
-              <span id="demo-scale-rate" class="readout-digits">3&nbsp;000&nbsp;₽</span>
-            </div>
-            <div class="readout-cell">
-              <span class="readout-label">Итого</span>
-              <span id="demo-scale-price" class="readout-digits highlight">690&nbsp;₽</span>
-            </div>
-          </div>
-          <div class="scale-range-wrap">
-            <label class="scale-range-label" for="demo-scale-range" id="demo-scale-hint">Ползунок притягивается к реальным весам кусков на складе: 215&nbsp;г, 260&nbsp;г, 340&nbsp;г</label>
-            <input id="demo-scale-range" type="range" min="180" max="420" step="1" value="215">
-          </div>
-          <div class="magnet-chips" role="group" aria-label="Быстрый выбор веса" id="demo-scale-chips"></div>
-          <button type="button" id="scale-add-btn" class="scale-add-btn">Добавить порцию в корзину</button>
-        </div>
-        <div class="scale-panel scale-info-panel">
-          <h3>Почему оплата куска проходит в два шага</h3>
-          <p>1. Вы выбираете конкретный кусок по весу и отправляете заказ без регистрации.</p>
-          <p>2. Мы находим именно этот кусок на Сытном рынке, проверяем вакуумную упаковку и подтверждаем вес.</p>
-          <p>3. Приходит ссылка на оплату точной суммы в Telegram, WhatsApp или SMS — как удобнее.</p>
-          <div class="scale-info-foot">Для фиксированной нарезки, банок оливок и сыров оплата открывается сразу при оформлении.</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ВЫДЕРЖКА -->
-  <section id="aging" class="section">
+    <section id="aging" class="site-panel" hidden class="section">
     <div class="container">
       <div class="section-head">
         <h2 class="section-title">Выдержка от 8 до 28+ месяцев</h2>
@@ -634,8 +587,53 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
     </div>
   </section>
 
-  <!-- ДОСТАВКА И ОПЛАТА -->
-  <section id="delivery" class="section" style="border-top:none;">
+    <section id="weight-system" class="site-panel" hidden class="section-dark">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Как считаем вес куска</h2>
+        <p class="section-subtitle">Все куски хамона приходят разного веса. Мы взвешиваем каждый кусок при приёмке и заносим в учётную систему, поэтому цена считается по фактическому весу до рубля.</p>
+      </div>
+      <div class="scale-bento">
+        <div class="scale-panel">
+          <div>
+            <div class="scale-switch" role="group" aria-label="Выбор продукта для расчёта">
+              <button type="button" class="scale-switch-btn" data-scale-product="hamon" aria-pressed="true">Хамон «16», 16 мес</button>
+              <button type="button" class="scale-switch-btn" data-scale-product="olives" aria-pressed="false">Оливки Gordal на развес</button>
+            </div>
+          </div>
+          <div class="scale-readout tabular" aria-live="polite">
+            <div class="readout-cell">
+              <span class="readout-label">Вес</span>
+              <span id="demo-scale-weight" class="readout-digits">215&nbsp;г</span>
+            </div>
+            <div class="readout-cell">
+              <span class="readout-label">Цена за 1 кг</span>
+              <span id="demo-scale-rate" class="readout-digits">3&nbsp;000&nbsp;₽</span>
+            </div>
+            <div class="readout-cell">
+              <span class="readout-label">Итого</span>
+              <span id="demo-scale-price" class="readout-digits highlight">690&nbsp;₽</span>
+            </div>
+          </div>
+          <div class="scale-range-wrap">
+            <label class="scale-range-label" for="demo-scale-range" id="demo-scale-hint">Ползунок притягивается к реальным весам кусков на складе: 215&nbsp;г, 260&nbsp;г, 340&nbsp;г</label>
+            <input id="demo-scale-range" type="range" min="180" max="420" step="1" value="215">
+          </div>
+          <div class="magnet-chips" role="group" aria-label="Быстрый выбор веса" id="demo-scale-chips"></div>
+          <button type="button" id="scale-add-btn" class="scale-add-btn">Добавить порцию в корзину</button>
+        </div>
+        <div class="scale-panel scale-info-panel">
+          <h3>Почему оплата куска проходит в два шага</h3>
+          <p>1. Вы выбираете конкретный кусок по весу и отправляете заказ без регистрации.</p>
+          <p>2. Мы находим именно этот кусок на Сытном рынке, проверяем вакуумную упаковку и подтверждаем вес.</p>
+          <p>3. Приходит ссылка на оплату точной суммы в Telegram, WhatsApp или SMS — как удобнее.</p>
+          <div class="scale-info-foot">Для фиксированной нарезки, банок оливок и сыров оплата открывается сразу при оформлении.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+    <section id="delivery" class="site-panel" hidden class="section" style="border-top:none;">
     <div class="container">
       <div class="section-head">
         <h2 class="section-title">Доставка из Санкт-Петербурга и оплата</h2>
@@ -663,6 +661,34 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
       <p class="delivery-note">Маршрут до лавки и отзывы — в Яндекс&nbsp;Картах, ссылка в подвале сайта.</p>
     </div>
   </section>
+
+    
+
+    <!-- ИСТОРИИ ЛАВКИ -->
+  
+
+  <!-- КАТАЛОГ -->
+  
+
+  <!-- НАБОРЫ -->
+  <section id="sets" class="section" style="border-top:none;">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Соберём вкусный вечер, подарок или набор к столу</h2>
+        <p class="section-subtitle">Готовые сочетания из витрины лавки: собираем в вакуумной упаковке и отправляем в день заказа. Один клик — и весь набор в корзине.</p>
+      </div>
+      <div id="sets-grid" class="sets-grid"></div>
+    </div>
+  </section>
+
+  <!-- КАК СЧИТАЕМ ВЕС -->
+  
+
+  <!-- ВЫДЕРЖКА -->
+  
+
+  <!-- ДОСТАВКА И ОПЛАТА -->
+  
 
 </main>
 
@@ -986,7 +1012,28 @@ var SETS = [
     desc: 'Собрали то, что чаще всего берут одним махом к бокалу.',
     components: [
       { productId: 'hamon-sliced-22', optionIdx: 0 },
-      { productId: 'olives-gordal', optionIdx: 0 },
+
+
+  { id: 'hamonera-pine', country: 'ru', category: 'extras', title: 'Хамонера из сосны', agingMonths: null,
+    description: 'Подставка для целой ноги. Продаётся отдельно от окорока. [заглушка цены]',
+    kind: 'pack', pricePerKg: 0,
+    pieces: [], packs: [{ label: 'Хамонера', weightG: 0, price: 3500 }], bulk: null },
+  { id: 'hamonera-oak', country: 'ru', category: 'extras', title: 'Хамонера из дуба', agingMonths: null,
+    description: 'Массивная подставка из дуба - на годы. [заглушка цены]',
+    kind: 'pack', pricePerKg: 0,
+    pieces: [], packs: [{ label: 'Хамонера', weightG: 0, price: 5900 }], bulk: null },
+  { id: 'hamon-knife', country: 'ru', category: 'extras', title: 'Нож для хамона, 24 см', agingMonths: null,
+    description: 'Длинный гибкий нож для тонкой нарезки. [заглушка цены]',
+    kind: 'pack', pricePerKg: 0,
+    pieces: [], packs: [{ label: 'Нож 24 см', weightG: 0, price: 3900 }], bulk: null },
+  { id: 'gift-certificate', country: 'ru', category: 'extras', title: 'Подарочный сертификат', agingMonths: null,
+    description: 'Именной, с индивидуальным номером. Оплатит покупку целиком или частично.',
+    kind: 'pack', pricePerKg: 0,
+    pieces: [], packs: [
+      { label: 'Сертификат на 3 000 ₽', weightG: 0, price: 3000 },
+      { label: 'Сертификат на 5 000 ₽', weightG: 0, price: 5000 },
+      { label: 'Сертификат на 10 000 ₽', weightG: 0, price: 10000 }
+    ], bulk: null },      { productId: 'olives-gordal', optionIdx: 0 },
       { productId: 'grissini', optionIdx: 0 }
     ] },
   { id: 'gift', kicker: 'Подарочный набор', title: 'Бокс «В подарок»',
@@ -1036,6 +1083,7 @@ var COUNTRY_NAMES = { ru: 'Россия', es: 'Испания', it: 'Итали�
 // 3. СОСТОЯНИЕ МАГАЗИНА И LOCALSTORAGE
 // =========================================================================
 var state = {
+  activeDept: 'dept-piece',
   filterCountry: 'all',
   filterAging: 'all',
   selectedOptionByProduct: {},
@@ -1268,60 +1316,7 @@ function getActiveProductData(product) {
   };
 }
 
-function renderCatalog(withFlip) {
-  var grid = document.getElementById('catalog-grid');
-  var oldPositions = {};
-  if (withFlip && !prefersReducedMotion() && window.gsap) {
-    grid.querySelectorAll('.product-card').forEach(function (el) {
-      oldPositions[el.getAttribute('data-product-id')] = el.getBoundingClientRect();
-    });
-  }
-
-  var visible = PRODUCTS.filter(matchesFilters);
-  if (visible.length === 0) {
-    grid.innerHTML = '<div style="padding:40px 20px;background:var(--fat-white);border:1px solid var(--bone-line);">' +
-      '<p style="margin-bottom:12px;color:var(--graphite-muted);">По выбранному сочетанию страны и выдержки ничего не нашлось.</p>' +
-      '<button type="button" class="filter-btn" id="reset-filters-btn">Показать все товары</button></div>';
-    var resetBtn = document.getElementById('reset-filters-btn');
-    if (resetBtn) resetBtn.addEventListener('click', function () {
-      state.filterCountry = 'all'; state.filterAging = 'all';
-      syncFilterButtonsUI(); renderCatalog(true);
-    });
-    return;
-  }
-
-  grid.innerHTML = buildDepartmentsHtml(visible);
-  observeDeptSections();
-
-  // FLIP-перестроение при смене фильтров
-  if (withFlip && !prefersReducedMotion() && window.gsap) {
-    grid.querySelectorAll('.product-card').forEach(function (el) {
-      var prev = oldPositions[el.getAttribute('data-product-id')];
-      if (prev) {
-        var next = el.getBoundingClientRect();
-        var dx = prev.left - next.left;
-        var dy = prev.top - next.top;
-        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-          gsap.fromTo(el, { x: dx, y: dy }, { x: 0, y: 0, duration: 0.32, ease: 'power2.out' });
-        }
-      } else {
-        gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.25 });
-      }
-    });
-  }
-}
-
-function buildDepartmentsHtml(visible) {
-  var html = '';
-  DEPT_ORDER.forEach(function (dept) {
-    var items = visible.filter(function (p) { return p.category === dept.cat; });
-    if (!items.length) return;
-    html += '<div class="dept-section" id="' + dept.id + '">' +
-      '<div class="dept-head"><h3 class="dept-title">' + dept.title + '</h3>' +
-      '<span class="dept-count tabular">' + items.length + ' поз.</span></div>' +
-      '<p class="dept-note">' + dept.note + '</p>' +
-      '<div class="catalog-grid dept-grid">' +
-      items.map(function (product) {
+function cardHtml(product) {
     var active = getActiveProductData(product);
     var per100 = calcPricePer100g(product.pricePerKg);
     var sel = state.selectedOptionByProduct[product.id];
@@ -1409,31 +1404,54 @@ function buildDepartmentsHtml(visible) {
       '<span class="btn-text">' + (active.canAdd ? 'Добавить в корзину' : 'Кусок в корзине') + '</span>' +
       '</button></div></div>' +
       '</article>';
-      }).join('') + '</div></div>';
-  });
-  return html;
-}
+      }
 
-function observeDeptSections() {
-  if (!('IntersectionObserver' in window)) return;
-  if (!deptSpy) {
-    deptSpy = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        var id = entry.target.id;
-        document.querySelectorAll('[data-dept-link]').forEach(function (btn) {
-          btn.setAttribute('aria-pressed', String(btn.getAttribute('data-dept-link') === id));
-        });
-      });
-    }, { rootMargin: '-35% 0px -55% 0px' });
+function renderCatalog() {
+  var grid = document.getElementById('catalog-grid');
+  var visible = PRODUCTS.filter(matchesFilters);
+  var dept = DEPT_ORDER.filter(function (d) { return d.id === state.activeDept; })[0] || DEPT_ORDER[0];
+  var items = visible.filter(function (p) { return p.category === dept.cat; });
+
+  renderDeptTabs(visible);
+
+  if (items.length === 0) {
+    grid.innerHTML = '<div style="padding:40px 20px;background:var(--fat-white);border:1px solid var(--bone-line);">' +
+      '<p style="margin-bottom:12px;color:var(--graphite-muted);">В этом отделе пока пусто при текущих фильтрах.</p>' +
+      '<button type="button" class="filter-btn" id="reset-filters-btn">Показать все товары</button></div>';
+    var resetBtn = document.getElementById('reset-filters-btn');
+    if (resetBtn) resetBtn.addEventListener('click', function () {
+      state.filterCountry = 'all'; state.filterAging = 'all';
+      syncFilterButtonsUI(); renderCatalog();
+    });
+    return;
   }
-  deptSpy.disconnect();
-  document.querySelectorAll('.dept-section').forEach(function (el) { deptSpy.observe(el); });
+
+  grid.innerHTML =
+    '<div class="dept-head">' +
+    '<h2 class="dept-title">' + dept.title + '</h2>' +
+    '<span class="dept-count tabular">' + items.length + ' поз.</span>' +
+    '</div>' +
+    '<p class="dept-note">' + dept.note + '</p>' +
+    '<div class="catalog-grid">' +
+    items.map(function (product) { return cardHtml(product); }).join('') +
+    '</div>';
 }
 
-// =========================================================================
-// 6. АНИМАЦИИ (оливки, свинка, счётчик цены, полёт в корзину)
-// =========================================================================
+function renderDeptTabs(visible) {
+  var el = document.getElementById('dept-tabs');
+  el.innerHTML = DEPT_ORDER.map(function (d) {
+    var count = visible.filter(function (p) { return p.category === d.cat; }).length;
+    return '<button type="button" role="tab" aria-pressed="' + (state.activeDept === d.id) + '"' +
+      ' data-dept="' + d.id + '">' + d.title + (count ? ' · ' + count : '') + '</button>';
+  }).join('');
+  el.querySelectorAll('button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.activeDept = b.getAttribute('data-dept');
+      renderCatalog();
+    });
+  });
+}
+
 function animatePriceChange(el, fromVal, toVal) {
   if (!el) return;
   if (prefersReducedMotion() || !window.gsap || fromVal === toVal) {
@@ -1599,7 +1617,7 @@ function addProductToCart(productId, triggerBtn) {
   var active = getActiveProductData(product);
   if (!active.canAdd) {
     state.statusMessageByProduct[product.id] = 'Этот кусок уже лежит в вашей корзине — выберите другой вес.';
-    renderCatalog(false);
+    renderCatalog();
     return;
   }
   pushCartItem({
@@ -1620,9 +1638,9 @@ function addProductToCart(productId, triggerBtn) {
     if (svgPath && window.gsap && !prefersReducedMotion()) {
       gsap.to(svgPath, { strokeDashoffset: 0, duration: 0.25 });
     }
-    setTimeout(function () { renderCatalog(false); }, 420);
+    setTimeout(function () { renderCatalog(); }, 420);
   } else {
-    renderCatalog(false);
+    renderCatalog();
   }
   if (product.category === 'olives') {
     bounceOlivesInCard(product.id);
@@ -1683,7 +1701,7 @@ function removeCartItem(uid, rowEl) {
     state.cart = state.cart.filter(function (item) { return item.uid !== uid; });
     savePersistedState();
     updateCartUI();
-    renderCatalog(false);
+    renderCatalog();
   };
   if (rowEl && window.gsap && !prefersReducedMotion()) {
     gsap.to(rowEl, {
@@ -2042,7 +2060,7 @@ function renderStoryAction() {
           label: 'Кусок ~' + formatWeightLabel(avg) + ' (средний)',
           price: price, weightG: avg, requiresWeightCheck: true, pieceId1c: null
         });
-        renderCatalog(false);
+        renderCatalog();
         closeStory();
         openCart(document.getElementById('header-cart-btn'));
       });
@@ -2281,7 +2299,7 @@ function initCheckoutForm() {
       initProductSelections();
       savePersistedState();
       updateCartUI();
-      renderCatalog(false);
+      renderCatalog();
     }, 700);
   });
 }
@@ -2294,8 +2312,41 @@ document.addEventListener('DOMContentLoaded', function () {
   initProductSelections();
   renderStoriesStrip();
   renderSets();
-  renderCatalog(false);
+  renderCatalog();
   updateCartUI();
+  // ВКЛАДКИ: переключение панелей без ленты
+  function activateTab(name, scrollTo) {
+    document.querySelectorAll('.site-tabs button').forEach(function (b) {
+      b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === name));
+    });
+    ['catalog', 'scenarios', 'aging', 'weight-system', 'delivery'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.hidden = id !== name;
+    });
+    if (scrollTo) {
+      var tabs = document.querySelector('.site-tabs');
+      if (tabs) tabs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (history.replaceState) history.replaceState(null, '', '#' + name);
+  }
+  window.activateTab = activateTab;
+
+  document.querySelectorAll('.site-tabs button').forEach(function (b) {
+    b.addEventListener('click', function () { activateTab(b.getAttribute('data-tab'), false); });
+  });
+  document.querySelectorAll('a[href="#catalog"], a[href="#scenarios"], a[href="#aging"], a[href="#weight-system"], a[href="#delivery"]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      activateTab(a.getAttribute('href').slice(1), true);
+    });
+  });
+  var initialHash = location.hash.replace('#', '');
+  if (['catalog', 'scenarios', 'aging', 'weight-system', 'delivery'].indexOf(initialHash) !== -1) {
+    activateTab(initialHash, false);
+  } else {
+    activateTab('catalog', false);
+  }
+
   initDemoScale();
   initCheckoutForm();
 
@@ -2316,38 +2367,18 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.addEventListener('click', function () {
       state.filterCountry = btn.getAttribute('data-filter-country');
       syncFilterButtonsUI();
-      renderCatalog(true);
+      renderCatalog();
     });
   });
 
-  // Панель отделов: переход к блоку витрины (если отдел скрыт фильтрами - сбрасываем их)
-  document.querySelectorAll('[data-dept-link]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var targetId = btn.getAttribute('data-dept-link');
-      var target = document.getElementById(targetId);
-      if (!target) {
-        state.filterCountry = 'all';
-        state.filterAging = 'all';
-        syncFilterButtonsUI();
-        renderCatalog(true);
-        target = document.getElementById(targetId);
-      }
-      if (target) target.scrollIntoView({ behavior: 'smooth' });
-      if (targetId === 'dept-olives') {
-        setTimeout(function () {
-          var firstOlive = PRODUCTS.filter(function (p) { return p.category === 'olives'; })[0];
-          if (firstOlive) bounceOlivesInCard(firstOlive.id);
-        }, 500);
-      }
-    });
-  });
+  // Панель отделов переехала в табы витрины (renderDeptTabs)
 
   // Фильтры: выдержка
   document.querySelectorAll('[data-filter-aging]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       state.filterAging = btn.getAttribute('data-filter-aging');
       syncFilterButtonsUI();
-      renderCatalog(true);
+      renderCatalog();
     });
   });
 
@@ -2356,8 +2387,8 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.addEventListener('click', function () {
       state.filterAging = btn.getAttribute('data-aging-link');
       syncFilterButtonsUI();
-      renderCatalog(true);
-      document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
+      renderCatalog();
+      activateTab('catalog', true);
     });
   });
 
@@ -2370,7 +2401,7 @@ document.addEventListener('DOMContentLoaded', function () {
       state.statusMessageByProduct[prodId] = '';
       var prevEl = document.getElementById('price-val-' + prodId);
       var prevPrice = prevEl ? parseInt(prevEl.getAttribute('data-current-price') || '0', 10) : 0;
-      renderCatalog(false);
+      renderCatalog();
       var product = findProduct(prodId);
       if (product) {
         var nextEl = document.getElementById('price-val-' + prodId);
