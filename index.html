@@ -7,7 +7,7 @@
 <meta name="description" content="Испанский хамон выдержки от 8 до 28+ месяцев: нарезка, куски и целые ноги. Оливки, сыры, готовые наборы. Лавка на Сытном рынке в Санкт-Петербурге, доставка по СПб и России.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@600;700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <style>
 :root {
@@ -22,7 +22,7 @@
   --bone-line: #DDD8CE;
   --surface-tint: #EFECE4;
   --error-red: #9E2A2B;
-  --font-serif: 'Cormorant', Georgia, serif;
+  --font-serif: 'Literata', Georgia, serif;
   --font-sans: 'Golos Text', -apple-system, BlinkMacSystemFont, sans-serif;
   --container: 1280px;
 }
@@ -39,6 +39,7 @@ html {
 body {
   min-height: 100vh;
   overflow-x: hidden;
+  overflow-x: clip;
   padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
 }
 @media (min-width: 900px) { body { padding-bottom: 0; } }
@@ -69,7 +70,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 @media (min-width: 960px) { .hero-grid { grid-template-columns: 5fr 7fr; gap: 48px; } }
 .hero-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
 .hero-location { font-size: 0.875rem; color: var(--graphite-muted); border-left: 2px solid var(--cured-ruby); padding-left: 10px; }
-.hero-title { font-family: var(--font-serif); font-size: clamp(2.35rem, 4.6vw, 4.1rem); font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; max-width: 16ch; }
+.hero-title { font-family: var(--font-serif); font-size: clamp(2.35rem, 4.6vw, 4.1rem); font-weight: 700; line-height: 1.05; letter-spacing: -0.015em; max-width: 16ch; }
 .hero-line-mask { display: block; overflow: hidden; padding-bottom: 0.06em; }
 .hero-line-inner { display: block; will-change: transform; }
 .hero-lead { font-size: 1.0625rem; color: var(--graphite-muted); max-width: 52ch; line-height: 1.55; }
@@ -132,6 +133,22 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .filter-btn:active { transform: scale(0.97); }
 .filter-btn[aria-pressed="true"] { background-color: var(--hoof-graphite); color: var(--fat-white); border-color: var(--hoof-graphite); }
 .flag-svg { width: 20px; height: 20px; flex: 0 0 auto; }
+
+/* ПОДСКАЗКА И ЛИПКАЯ ПАНЕЛЬ ОТДЕЛОВ */
+.catalog-hint { font-size: 0.875rem; color: var(--graphite-muted); margin: -8px 0 18px; max-width: 72ch; }
+.dept-nav { position: sticky; top: 64px; z-index: 25; display: flex; gap: 8px; overflow-x: auto; background-color: var(--paper-salt); padding: 10px 0 12px; border-bottom: 1px solid var(--bone-line); margin-bottom: 18px; scrollbar-width: none; }
+.dept-nav::-webkit-scrollbar { display: none; }
+.dept-nav .filter-btn { flex: 0 0 auto; }
+.dept-nav .filter-btn[aria-pressed="true"] { background-color: var(--cured-ruby); border-color: var(--cured-ruby); }
+
+/* ОТДЕЛЫ КАТАЛОГА */
+#catalog-grid { display: block; border: none; }
+.dept-section { scroll-margin-top: 134px; }
+.dept-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; padding: 26px 0 0; border-bottom: 2px solid var(--hoof-graphite); }
+.dept-title { font-family: var(--font-serif); font-size: 1.7rem; font-weight: 700; line-height: 1.15; }
+.dept-count { font-size: 0.8125rem; color: var(--graphite-muted); }
+.dept-note { width: 100%; font-size: 0.875rem; color: var(--graphite-muted); padding: 6px 0 16px; }
+.dept-grid { border-top: none; }
 
 /* СЕТКА КАТАЛОГА */
 .catalog-grid { display: grid; grid-template-columns: 1fr; border-top: 1px solid var(--bone-line); border-left: 1px solid var(--bone-line); }
@@ -414,17 +431,6 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
           </button>
         </div>
 
-        <div class="filter-row" role="group" aria-label="Фильтр по отделу">
-          <span class="filter-label">Отдел:</span>
-          <button type="button" class="filter-btn" data-filter-cat="all" aria-pressed="true">Все отделы</button>
-          <button type="button" class="filter-btn" data-filter-cat="sliced" aria-pressed="false">Хамон в нарезке</button>
-          <button type="button" class="filter-btn" data-filter-cat="piece" aria-pressed="false">Хамон куском</button>
-          <button type="button" class="filter-btn" data-filter-cat="leg" aria-pressed="false">Целые ноги</button>
-          <button type="button" class="filter-btn" data-filter-cat="olives" aria-pressed="false">Оливки и антипасти</button>
-          <button type="button" class="filter-btn" data-filter-cat="cheese" aria-pressed="false">Сыры и колбасы</button>
-          <button type="button" class="filter-btn" data-filter-cat="sets" aria-pressed="false">Наборы</button>
-        </div>
-
         <div class="filter-row" role="group" aria-label="Фильтр по выдержке хамона">
           <span class="filter-label">Выдержка:</span>
           <button type="button" class="filter-btn" data-filter-aging="all" aria-pressed="true">Любая</button>
@@ -433,6 +439,17 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
           <button type="button" class="filter-btn" data-filter-aging="24" aria-pressed="false">24+ мес</button>
         </div>
       </div>
+
+      <p class="catalog-hint">Витрина разделена по отделам. Панель отделов прилипает под шапкой и остаётся на виду при прокрутке - жмите нужный блок, длинный скролл не нужен. Внутри карточки выбирается конкретный кусок по весу, оливки - на развес.</p>
+
+      <nav class="dept-nav" id="dept-nav" aria-label="Отделы витрины">
+        <button type="button" class="filter-btn" data-dept-link="dept-piece" aria-pressed="true">Хамон куском</button>
+        <button type="button" class="filter-btn" data-dept-link="dept-sliced" aria-pressed="false">Хамон в нарезке</button>
+        <button type="button" class="filter-btn" data-dept-link="dept-leg" aria-pressed="false">Целые ноги</button>
+        <button type="button" class="filter-btn" data-dept-link="dept-olives" aria-pressed="false">Оливки и антипасти</button>
+        <button type="button" class="filter-btn" data-dept-link="dept-cheese" aria-pressed="false">Сыры и колбасы</button>
+        <button type="button" class="filter-btn" data-dept-link="sets">Наборы</button>
+      </nav>
 
       <div id="catalog-grid" class="catalog-grid" aria-live="polite"></div>
     </div>
@@ -913,7 +930,6 @@ var COUNTRY_NAMES = { es: 'Испания', it: 'Италия', gr: 'Греци�
 // =========================================================================
 var state = {
   filterCountry: 'all',
-  filterCat: 'all',
   filterAging: 'all',
   selectedOptionByProduct: {},
   bulkWeightByProduct: {},
@@ -1020,8 +1036,17 @@ function placeholderArt(product) {
 }
 
 // =========================================================================
-// 5. РЕНДЕР КАТАЛОГА
+// 5. РЕНДЕР КАТАЛОГА (Витрина разделена по отделам)
 // =========================================================================
+var DEPT_ORDER = [
+  { cat: 'piece', id: 'dept-piece', title: 'Хамон куском', note: 'Каждый кусок взвешен при приёмке - внутри карточки выбирается конкретный кусок по весу, цена считается по факту до рубля.' },
+  { cat: 'sliced', id: 'dept-sliced', title: 'Хамон в нарезке', note: 'Вакуумные пачки 50-150 г - фиксированная цена, оплата сразу.' },
+  { cat: 'leg', id: 'dept-leg', title: 'Целые ноги на кости', note: 'Окорока длительной выдержки для дома, событий и подарков - вес ноги известен заранее.' },
+  { cat: 'olives', id: 'dept-olives', title: 'Оливки и антипасти', note: 'Банки фиксированной фасовки и оливки на развес с ползунком веса.' },
+  { cat: 'cheese', id: 'dept-cheese', title: 'Сыры и колбасы', note: 'Манчего, чоризо и выдержанные сыры Италии, Греции, Франции и Швейцарии.' }
+];
+var deptSpy = null;
+
 function matchesFilters(product) {
   if (state.filterCountry !== 'all') {
     if (state.filterCountry === 'frch') {
@@ -1030,7 +1055,6 @@ function matchesFilters(product) {
       return false;
     }
   }
-  if (state.filterCat !== 'all' && product.category !== state.filterCat) return false;
   if (state.filterAging !== 'all') {
     if (!product.agingMonths) return false;
     if (state.filterAging === '8-12' && (product.agingMonths < 8 || product.agingMonths > 12)) return false;
@@ -1104,18 +1128,49 @@ function renderCatalog(withFlip) {
 
   var visible = PRODUCTS.filter(matchesFilters);
   if (visible.length === 0) {
-    grid.innerHTML = '<div style="grid-column:1/-1;padding:40px 20px;background:var(--fat-white);border-right:1px solid var(--bone-line);border-bottom:1px solid var(--bone-line);">' +
-      '<p style="margin-bottom:12px;color:var(--graphite-muted);">По выбранному сочетанию страны, отдела и выдержки ничего не нашлось.</p>' +
+    grid.innerHTML = '<div style="padding:40px 20px;background:var(--fat-white);border:1px solid var(--bone-line);">' +
+      '<p style="margin-bottom:12px;color:var(--graphite-muted);">По выбранному сочетанию страны и выдержки ничего не нашлось.</p>' +
       '<button type="button" class="filter-btn" id="reset-filters-btn">Показать все товары</button></div>';
     var resetBtn = document.getElementById('reset-filters-btn');
     if (resetBtn) resetBtn.addEventListener('click', function () {
-      state.filterCountry = 'all'; state.filterCat = 'all'; state.filterAging = 'all';
+      state.filterCountry = 'all'; state.filterAging = 'all';
       syncFilterButtonsUI(); renderCatalog(true);
     });
     return;
   }
 
-  grid.innerHTML = visible.map(function (product) {
+  grid.innerHTML = buildDepartmentsHtml(visible);
+  observeDeptSections();
+
+  // FLIP-перестроение при смене фильтров
+  if (withFlip && !prefersReducedMotion() && window.gsap) {
+    grid.querySelectorAll('.product-card').forEach(function (el) {
+      var prev = oldPositions[el.getAttribute('data-product-id')];
+      if (prev) {
+        var next = el.getBoundingClientRect();
+        var dx = prev.left - next.left;
+        var dy = prev.top - next.top;
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+          gsap.fromTo(el, { x: dx, y: dy }, { x: 0, y: 0, duration: 0.32, ease: 'power2.out' });
+        }
+      } else {
+        gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.25 });
+      }
+    });
+  }
+}
+
+function buildDepartmentsHtml(visible) {
+  var html = '';
+  DEPT_ORDER.forEach(function (dept) {
+    var items = visible.filter(function (p) { return p.category === dept.cat; });
+    if (!items.length) return;
+    html += '<div class="dept-section" id="' + dept.id + '">' +
+      '<div class="dept-head"><h3 class="dept-title">' + dept.title + '</h3>' +
+      '<span class="dept-count tabular">' + items.length + ' поз.</span></div>' +
+      '<p class="dept-note">' + dept.note + '</p>' +
+      '<div class="catalog-grid dept-grid">' +
+      items.map(function (product) {
     var active = getActiveProductData(product);
     var per100 = calcPricePer100g(product.pricePerKg);
     var sel = state.selectedOptionByProduct[product.id];
@@ -1206,24 +1261,26 @@ function renderCatalog(withFlip) {
       '<span class="btn-text">' + (active.canAdd ? 'Добавить в корзину' : 'Кусок в корзине') + '</span>' +
       '</button></div></div>' +
       '</article>';
-  }).join('');
+      }).join('') + '</div></div>';
+  });
+  return html;
+}
 
-  // FLIP-перестроение при смене фильтров
-  if (withFlip && !prefersReducedMotion() && window.gsap) {
-    grid.querySelectorAll('.product-card').forEach(function (el) {
-      var prev = oldPositions[el.getAttribute('data-product-id')];
-      if (prev) {
-        var next = el.getBoundingClientRect();
-        var dx = prev.left - next.left;
-        var dy = prev.top - next.top;
-        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-          gsap.fromTo(el, { x: dx, y: dy }, { x: 0, y: 0, duration: 0.32, ease: 'power2.out' });
-        }
-      } else {
-        gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.25 });
-      }
-    });
+function observeDeptSections() {
+  if (!('IntersectionObserver' in window)) return;
+  if (!deptSpy) {
+    deptSpy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        var id = entry.target.id;
+        document.querySelectorAll('[data-dept-link]').forEach(function (btn) {
+          btn.setAttribute('aria-pressed', String(btn.getAttribute('data-dept-link') === id));
+        });
+      });
+    }, { rootMargin: '-35% 0px -55% 0px' });
   }
+  deptSpy.disconnect();
+  document.querySelectorAll('.dept-section').forEach(function (el) { deptSpy.observe(el); });
 }
 
 // =========================================================================
@@ -1908,9 +1965,6 @@ function syncFilterButtonsUI() {
   document.querySelectorAll('[data-filter-country]').forEach(function (btn) {
     btn.setAttribute('aria-pressed', String(btn.getAttribute('data-filter-country') === state.filterCountry));
   });
-  document.querySelectorAll('[data-filter-cat]').forEach(function (btn) {
-    btn.setAttribute('aria-pressed', String(btn.getAttribute('data-filter-cat') === state.filterCat));
-  });
   document.querySelectorAll('[data-filter-aging]').forEach(function (btn) {
     btn.setAttribute('aria-pressed', String(btn.getAttribute('data-filter-aging') === state.filterAging));
   });
@@ -2101,20 +2155,24 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // Фильтры: отделы (Наборы — переход к секции наборов)
-  document.querySelectorAll('[data-filter-cat]').forEach(function (btn) {
+  // Панель отделов: переход к блоку витрины (если отдел скрыт фильтрами - сбрасываем их)
+  document.querySelectorAll('[data-dept-link]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      var val = btn.getAttribute('data-filter-cat');
-      if (val === 'sets') {
-        document.getElementById('sets').scrollIntoView({ behavior: 'smooth' });
-        return;
+      var targetId = btn.getAttribute('data-dept-link');
+      var target = document.getElementById(targetId);
+      if (!target) {
+        state.filterCountry = 'all';
+        state.filterAging = 'all';
+        syncFilterButtonsUI();
+        renderCatalog(true);
+        target = document.getElementById(targetId);
       }
-      state.filterCat = val;
-      syncFilterButtonsUI();
-      renderCatalog(true);
-      if (val === 'olives') {
-        var firstOlive = PRODUCTS.filter(function (p) { return p.category === 'olives'; })[0];
-        if (firstOlive) setTimeout(function () { bounceOlivesInCard(firstOlive.id); }, 120);
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
+      if (targetId === 'dept-olives') {
+        setTimeout(function () {
+          var firstOlive = PRODUCTS.filter(function (p) { return p.category === 'olives'; })[0];
+          if (firstOlive) bounceOlivesInCard(firstOlive.id);
+        }, 500);
       }
     });
   });
