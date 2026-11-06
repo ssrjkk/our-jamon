@@ -420,7 +420,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 
 <!-- МЕНЮ (СЭНДВИЧ, МОБИЛЬНЫЕ) -->
 <div id="menu-backdrop" class="menu-backdrop" aria-hidden="true"></div>
-<nav id="menu-drawer" class="menu-drawer" role="dialog" aria-modal="true" aria-label="Меню сайта" aria-hidden="true">
+<nav id="menu-drawer" class="menu-drawer" role="dialog" aria-modal="true" aria-label="Меню сайта" aria-hidden="true" inert>
   <div class="menu-head">
     <span class="brand-title">Наш Хамон</span>
     <button type="button" id="menu-close-btn" class="cart-close" aria-label="Закрыть меню">Закрыть</button>
@@ -737,7 +737,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 
 <!-- ШТОРКА КОРЗИНЫ -->
 <div id="cart-backdrop" class="cart-backdrop" aria-hidden="true"></div>
-<aside id="cart-sheet" class="cart-sheet" role="dialog" aria-modal="true" aria-labelledby="cart-dialog-title" aria-hidden="true">
+<aside id="cart-sheet" class="cart-sheet" role="dialog" aria-modal="true" aria-labelledby="cart-dialog-title" aria-hidden="true" inert>
   <div class="cart-head">
     <div>
       <h2 id="cart-dialog-title" class="cart-head-title">Корзина</h2>
@@ -821,7 +821,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 </aside>
 
 <!-- ПЛЕЕР ИСТОРИЙ -->
-<div id="stories-player" class="stories-player" role="dialog" aria-modal="true" aria-label="Просмотр истории" aria-hidden="true">
+<div id="stories-player" class="stories-player" role="dialog" aria-modal="true" aria-label="Просмотр истории" aria-hidden="true" inert>
   <div class="stories-frame">
     <div class="story-bars" id="story-bars"></div>
     <div class="story-head">
@@ -1875,6 +1875,7 @@ function refreshDeliveryCostLabels() {
 
 function openCart(triggerEl) {
   state.lastFocusedTrigger = triggerEl || document.activeElement;
+  document.getElementById('cart-sheet').inert = false;
   document.getElementById('cart-backdrop').classList.add('is-open');
   document.getElementById('cart-sheet').classList.add('is-open');
   document.getElementById('cart-sheet').setAttribute('aria-hidden', 'false');
@@ -1882,6 +1883,7 @@ function openCart(triggerEl) {
   setTimeout(function () { document.getElementById('cart-close-btn').focus(); }, 60);
 }
 function closeCart() {
+  document.getElementById('cart-sheet').inert = true;
   document.getElementById('cart-backdrop').classList.remove('is-open');
   document.getElementById('cart-sheet').classList.remove('is-open');
   document.getElementById('cart-sheet').setAttribute('aria-hidden', 'true');
@@ -1895,6 +1897,7 @@ function closeCart() {
 var menuToggleEl = null;
 function openMenu(triggerEl) {
   menuToggleEl = triggerEl || document.getElementById('menu-toggle');
+  document.getElementById('menu-drawer').inert = false;
   document.getElementById('menu-backdrop').classList.add('is-open');
   document.getElementById('menu-drawer').classList.add('is-open');
   document.getElementById('menu-drawer').setAttribute('aria-hidden', 'false');
@@ -1902,6 +1905,7 @@ function openMenu(triggerEl) {
   setTimeout(function () { document.getElementById('menu-close-btn').focus(); }, 60);
 }
 function closeMenu() {
+  document.getElementById('menu-drawer').inert = true;
   document.getElementById('menu-backdrop').classList.remove('is-open');
   document.getElementById('menu-drawer').classList.remove('is-open');
   document.getElementById('menu-drawer').setAttribute('aria-hidden', 'true');
@@ -2043,7 +2047,7 @@ var STORY_ART = {
 
 var STORIES = [
   { id: 'cut', label: 'Свежий распил', title: 'Кусок только что взвесили',
-    text: 'Хамон Reserva 18 месяцев, взвешен при приёмке. Цена по фактическому весу — до рубля.',
+    text: 'Хамон «16», только что взвешен при приёмке. Цена по фактическому весу — до рубля.',
     action: 'piece' },
   { id: 'evening', label: 'Вкусный вечер', title: 'Набор к столу одним кликом',
     text: 'Нарезка Gran Reserva, крупные Gordal и гриссини. Добавим весь набор в корзину сразу.',
@@ -2172,6 +2176,7 @@ function prevStory() {
 }
 function openStory(idx) {
   currentStoryIndex = idx;
+  document.getElementById('stories-player').inert = false;
   renderStory();
   var player = document.getElementById('stories-player');
   player.classList.add('is-open');
@@ -2180,6 +2185,7 @@ function openStory(idx) {
 }
 function closeStory() {
   stopStoryTimer();
+  document.getElementById('stories-player').inert = true;
   var player = document.getElementById('stories-player');
   player.classList.remove('is-open');
   player.setAttribute('aria-hidden', 'true');
