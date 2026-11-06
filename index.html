@@ -1089,8 +1089,7 @@ function findProduct(id) {
 function initProductSelections() {
   PRODUCTS.forEach(function (p) {
     if (p.kind === 'piece') {
-      var available = p.pieces.filter(function (pc) { return !isPieceInCart(pc.id1c); })[0];
-      state.selectedOptionByProduct[p.id] = available ? available.id1c : 'custom-cut';
+      state.selectedOptionByProduct[p.id] = 'avg';
     } else {
       state.selectedOptionByProduct[p.id] = 'pack-0';
       if (p.bulk) state.bulkWeightByProduct[p.id] = 350;
@@ -1217,23 +1216,30 @@ function getActiveProductData(product) {
       return {
         mode: 'custom-cut',
         price: calcPiecePrice(avgW, product.pricePerKg),
-        priceCaption: 'Ориентир — точный вес согласуем',
+        priceCaption: 'Ориентир - точный вес согласуем',
         canAdd: true,
         label: 'Индивидуальный отрез под заказ',
         weightG: avgW,
         requiresWeightCheck: true
       };
     }
-    var pieceObj = product.pieces.filter(function (pc) { return pc.id1c === sel; })[0] || product.pieces[0];
-    var alreadyInCart = isPieceInCart(pieceObj.id1c);
+    var weights = product.pieces.map(function (pc) { return pc.weightG; });
+    var avg = weights.length
+      ? Math.round(weights.reduce(function (a, b) { return a + b; }, 0) / weights.length)
+      : 250;
+    var legFixed = product.pieces[0] && typeof product.pieces[0].price === 'number'
+      ? product.pieces[0].price
+      : null;
     return {
       mode: 'piece',
-      pieceId1c: pieceObj.id1c,
-      weightG: pieceObj.weightG,
-      price: piecePriceOf(product, pieceObj),
-      priceCaption: 'Точная цена за ' + formatWeightLabel(pieceObj.weightG),
-      canAdd: !alreadyInCart,
-      label: 'Кусок ' + formatWeightLabel(pieceObj.weightG),
+      pieceId1c: null,
+      weightG: avg,
+      price: legFixed !== null ? legFixed : calcPiecePrice(avg, product.pricePerKg),
+      priceCaption: legFixed !== null
+        ? 'Фиксированная цена за ногу'
+        : 'Средний вес ' + formatWeightLabel(avg) + ' - подтвердим при связи',
+      canAdd: true,
+      label: (product.category === 'leg' ? 'Нога ' : 'Кусок ') + formatWeightLabel(avg),
       requiresWeightCheck: true
     };
   }
@@ -1327,35 +1333,32 @@ function buildDepartmentsHtml(visible) {
 
     var optionsHtml;
     if (product.kind === 'piece') {
-      var pieceButtons = product.pieces.map(function (pc) {
-        var taken = isPieceInCart(pc.id1c);
-        var checked = sel === pc.id1c;
-        var piecePrice = piecePriceOf(product, pc);
-        return '<button type="button" class="option-chip tabular" role="radio" aria-checked="' + checked + '"' +
-          ' data-action="select-option" data-product-id="' + product.id + '" data-option-val="' + pc.id1c + '"' +
-          (taken ? ' disabled title="Этот кусок уже в вашей корзине"' : '') + '>' +
-          '<span>' + formatWeightLabel(pc.weightG) + '</span>' +
-          '<span class="chip-sub">' + (taken ? 'В корзине' : formatRub(piecePrice)) + '</span>' +
-          '</button>';
-      }).join('');
-      var customNote;
-      if (sel === 'custom-cut') {
-        customNote = 'Точный вес и сумму согласуем при сборке и пришлём ссылку на оплату.';
-      } else if (statusMsg) {
-        customNote = statusMsg;
-      } else {
-        customNote = 'Кусок взвешен при приёмке. Второй раз тот же кусок добавить нельзя.';
-      }
+      // Решение Виталия: куски не выкладываем поштучно - средний вес, подтверждение при связи
+      var weights = product.pieces.map(function (pc) { return pc.weightG; });
+      var avgW = weights.length
+        ? Math.round(weights.reduce(function (a, b) { return a + b; }, 0) / weights.length)
+        : 250;
+      var legFixed = product.pieces[0] && typeof product.pieces[0].price === 'number'
+        ? product.pieces[0].price
+        : null;
+      var isLeg = product.category === 'leg';
       optionsHtml =
-        '<div class="selector-caption"><span>Взвешенные куски в наличии:</span><span>1 кусок = 1 экземпляр</span></div>' +
-        '<div class="options-wrap" role="radiogroup" aria-label="Выбор куска по весу">' + pieceButtons +
-        (product.category === 'piece'
-          ? '<button type="button" class="option-chip" role="radio" aria-checked="' + (sel === 'custom-cut') + '"' +
-            ' data-action="select-option" data-product-id="' + product.id + '" data-option-val="custom-cut">' +
-            '<span>Под заказ</span><span class="chip-sub">Свой вес</span></button>'
-          : '') +
+        '<div class="selector-caption"><span>' + (isLeg ? 'Вес ноги (средний):' : 'Кусок (средний вес):') + '</span></div>' +
+        '<div class="options-wrap" role="radiogroup" aria-label="Вес">' +
+        '<button type="button" class="option-chip tabular" role="radio" aria-checked="true">' +
+        '<span>' + (isLeg ? 'Целая нога' : 'Кусок') + '</span>' +
+        '<span class="chip-sub">' + (legFixed !== null ? formatRub(legFixed) : '~' + avgW + '\u00A0г') + '</span>' +
+        '</button>' +
+        (isLeg ? '' :
+        '<button type="button" class="option-chip" role="radio" aria-checked="false"' +
+        ' data-action="select-option" data-product-id="' + product.id + '" data-option-val="custom-cut">' +
+        '<span>Отрез под заказ</span><span class="chip-sub">Свой вес</span></button>') +
         '</div>' +
-        '<div class="custom-cut-note">' + customNote + '</div>';
+        '<div class="custom-cut-note">' +
+        (sel === 'custom-cut'
+          ? 'Точный вес и сумму согласуем при сборке и пришлём ссылку на оплату.'
+          : 'Кусок взвешен при приёмке. Подтвердим вес и остатки, когда свяжемся с вами по заказу.') +
+        '</div>';
     } else {
       var packButtons = product.packs.map(function (pk, idx) {
         var val = 'pack-' + idx;
@@ -1609,9 +1612,7 @@ function addProductToCart(productId, triggerBtn) {
     pieceId1c: active.pieceId1c || null
   });
   if (active.mode === 'piece') {
-    var nextAvailable = product.pieces.filter(function (pc) { return !isPieceInCart(pc.id1c); })[0];
-    state.selectedOptionByProduct[product.id] = nextAvailable ? nextAvailable.id1c : 'custom-cut';
-    state.statusMessageByProduct[product.id] = 'Кусок ' + formatWeightLabel(active.weightG) + ' добавлен в корзину.';
+    state.statusMessageByProduct[product.id] = 'Добавили в заказ. Подтвердим вес и остатки, когда свяжемся с вами.';
   }
   if (triggerBtn) {
     triggerBtn.innerHTML = '<svg class="check-svg" viewBox="0 0 24 24" aria-hidden="true"><polyline points="4 12 10 18 20 6"/></svg><span>Добавлено</span>';
@@ -2029,19 +2030,18 @@ function renderStoryAction() {
   var slot = document.getElementById('story-action-slot');
   if (story.action === 'piece') {
     var product = findProduct('hamon-16-piece');
-    var piece = product && product.pieces.filter(function (pc) { return !isPieceInCart(pc.id1c); })[0];
-    if (piece) {
-      var price = calcPiecePrice(piece.weightG, product.pricePerKg);
-      slot.innerHTML = '<button type="button" id="story-action-btn" class="story-action-btn tabular">Забрать кусок ' +
-        piece.weightG + '\u00A0г за ' + formatRub(price) + '</button>';
+    if (product) {
+      var weights = product.pieces.map(function (pc) { return pc.weightG; });
+      var avg = weights.length ? Math.round(weights.reduce(function (a, b) { return a + b; }, 0) / weights.length) : 250;
+      var price = calcPiecePrice(avg, product.pricePerKg);
+      slot.innerHTML = '<button type="button" id="story-action-btn" class="story-action-btn tabular">Забрать кусок ~' +
+        avg + '\u00A0г за ' + formatRub(price) + '</button>';
       document.getElementById('story-action-btn').addEventListener('click', function () {
         pushCartItem({
           productId: product.id, title: product.title,
-          label: 'Кусок ' + formatWeightLabel(piece.weightG),
-          price: price, weightG: piece.weightG, requiresWeightCheck: true, pieceId1c: piece.id1c
+          label: 'Кусок ~' + formatWeightLabel(avg) + ' (средний)',
+          price: price, weightG: avg, requiresWeightCheck: true, pieceId1c: null
         });
-        var nextAvailable = product.pieces.filter(function (pc) { return !isPieceInCart(pc.id1c); })[0];
-        state.selectedOptionByProduct[product.id] = nextAvailable ? nextAvailable.id1c : 'custom-cut';
         renderCatalog(false);
         closeStory();
         openCart(document.getElementById('header-cart-btn'));
