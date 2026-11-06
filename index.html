@@ -7,22 +7,22 @@
 <meta name="description" content="Испанский хамон выдержки от 8 до 28+ месяцев: нарезка, куски и целые ноги. Оливки, сыры, готовые наборы. Лавка на Сытном рынке в Санкт-Петербурге, доставка по СПб и России.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <style>
 :root {
-  --paper-salt: #F6F5F0;
-  --fat-white: #FFFFFF;
-  --hoof-graphite: #181615;
-  --graphite-muted: #5C5752;
-  --cured-ruby: #7A1C1C;
-  --cured-ruby-hover: #5E1414;
-  --brine-olive: #4E5E32;
-  --brine-olive-soft: #E9EFE0;
-  --bone-line: #DDD8CE;
-  --surface-tint: #EFECE4;
+  --paper-salt: #FAF5EA;
+  --fat-white: #FFFDF8;
+  --hoof-graphite: #241B17;
+  --graphite-muted: #6E6155;
+  --cured-ruby: #5B2824;
+  --cured-ruby-hover: #431E1B;
+  --brine-olive: #5E6B33;
+  --brine-olive-soft: #EFF1E2;
+  --bone-line: #E7DEC9;
+  --surface-tint: #F4EDDE;
   --error-red: #9E2A2B;
-  --font-serif: 'Literata', Georgia, serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
   --font-sans: 'Golos Text', -apple-system, BlinkMacSystemFont, sans-serif;
   --container: 1280px;
 }
@@ -349,6 +349,34 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
     scroll-behavior: auto !important;
   }
 }
+
+/* ФИРМЕННЫЙ РЕДИЗАЙН: лёгкость, хамон - главный герой */
+.brand-logo { height: 40px; width: auto; display: block; }
+.brand-logo.stacked { height: 72px; }
+.brand-link { display: inline-flex; align-items: center; min-height: 44px; }
+.hero-light { padding: 40px 0 56px; border-bottom: 1px solid var(--bone-line); background-color: var(--paper-salt); }
+@media (min-width: 900px) { .hero-light { padding: 72px 0 88px; } }
+.hero-light-grid { display: grid; grid-template-columns: 1fr; gap: 36px; align-items: center; }
+@media (min-width: 960px) { .hero-light-grid { grid-template-columns: 6fr 5fr; gap: 56px; } }
+.hero-kicker { font-size: 0.8125rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--graphite-muted); font-weight: 600; }
+.hero-big { font-family: var(--font-serif); font-weight: 800; font-size: clamp(2.6rem, 5.4vw, 4.6rem); line-height: 1.02; letter-spacing: -0.01em; }
+.hero-big em { font-style: italic; font-weight: 700; color: var(--cured-ruby); }
+.hero-sub { font-size: 1.0625rem; color: var(--graphite-muted); max-width: 46ch; }
+.hero-cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.hero-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.hero-chip { font-size: 0.8125rem; color: var(--hoof-graphite); border: 1px solid var(--bone-line); background-color: var(--fat-white); padding: 7px 12px; border-radius: 999px; }
+.hero-art { width: 100%; }
+.hero-art svg { width: 100%; height: auto; display: block; }
+.scenarios-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 820px) { .scenarios-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.scenario-card { background-color: var(--fat-white); border: 1px solid var(--bone-line); border-radius: 6px; padding: 26px; display: flex; flex-direction: column; gap: 12px; transition: border-color 0.15s ease; }
+.scenario-card:hover { border-color: var(--cured-ruby); }
+.scenario-label { font-family: var(--font-serif); font-style: italic; font-weight: 700; font-size: 2rem; line-height: 1; color: var(--cured-ruby); }
+.scenario-name { font-family: var(--font-serif); font-weight: 700; font-size: 1.3rem; }
+.scenario-list { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 0.9375rem; color: var(--graphite-muted); flex: 1; }
+.scenario-total-row { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px dashed var(--bone-line); padding-top: 12px; }
+.scenario-total { font-family: var(--font-serif); font-weight: 700; font-size: 1.4rem; }
+
 </style>
 </head>
 <body>
@@ -361,7 +389,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <span class="menu-toggle-label">Меню</span>
       </button>
-      <a href="#top" class="brand-title">Наш Хамон</a>
+      <a href="#top" class="brand-link" aria-label="Наш Хамон - на главную"><img src="brand/logo-horizontal.svg" alt="Наш Хамон - лавка деликатесов" class="brand-logo"></a>
     </div>
     <nav class="main-nav" aria-label="Основная навигация">
       <a href="#catalog">Каталог</a>
@@ -399,102 +427,41 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 <main id="top">
 
   <!-- ПЕРВЫЙ ЭКРАН -->
-  <section class="hero" aria-labelledby="hero-heading">
-    <div class="container hero-grid">
-      <div class="hero-copy">
-        <p class="hero-location">Санкт-Петербург, Сытнинская&nbsp;ул., 4П — фуд-аллея рынка «Сытный»</p>
-        <h1 id="hero-heading" class="hero-title">
-          <span class="hero-line-mask"><span class="hero-line-inner">Настоящий хамон,</span></span>
-          <span class="hero-line-mask"><span class="hero-line-inner">оливки и сыры</span></span>
-          <span class="hero-line-mask"><span class="hero-line-inner">в Петербурге</span></span>
-        </h1>
-        <p class="hero-lead">Нарезка в вакууме, куски от 200&nbsp;г и целые ноги на кости. Каждый кусок взвешиваем при приёмке: вы выбираете конкретный кусок по весу, а точную сумму видите сразу.</p>
-        <a href="#catalog" class="btn-primary">Выбрать кусок</a>
-        <dl class="hero-facts">
-          <div>
-            <dt>Выдержка окороков</dt>
-            <dd class="tabular">от 8 до 28+ месяцев</dd>
-          </div>
-          <div>
-            <dt>Лавка открыта</dt>
-            <dd class="tabular">вт–вс, 10:30–20:30</dd>
-          </div>
-        </dl>
-        <div class="hero-tiles" aria-label="Быстрый переход по отделам">
-          <button type="button" class="hero-tile" data-dept-link="dept-piece">
-            <svg viewBox="0 0 34 26" aria-hidden="true"><path d="M4 18 C8 8, 22 4, 30 8 L28 16 C18 20, 10 20, 4 18 Z" fill="#7A1C1C"/><path d="M7 14 C12 9, 22 8, 28 11" stroke="#F6F5F0" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
-            <span>Хамон куском</span><small class="tabular">от 2 600 ₽/кг</small>
-          </button>
-          <button type="button" class="hero-tile" data-dept-link="dept-sliced">
-            <svg viewBox="0 0 34 26" aria-hidden="true"><rect x="4" y="6" width="26" height="14" rx="2" fill="none" stroke="#181615" stroke-width="1.4"/><path d="M7 10 L27 10 M7 14 L27 14 M7 18 L23 18" stroke="#7A1C1C" stroke-width="2.4"/></svg>
-            <span>Хамон в нарезке</span><small class="tabular">от 390 ₽</small>
-          </button>
-          <button type="button" class="hero-tile" data-dept-link="dept-olives">
-            <svg viewBox="0 0 34 26" aria-hidden="true"><circle cx="13" cy="15" r="7" fill="#4E5E32"/><ellipse cx="15.4" cy="13.4" rx="2" ry="3" fill="#7A1C1C"/><circle cx="24" cy="17" r="6" fill="#3E4B27"/><path d="M8 6 C14 3, 22 3, 28 6" stroke="#4E5E32" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-            <span>Оливки и антипасти</span><small class="tabular">от 450 ₽</small>
-          </button>
-          <button type="button" class="hero-tile" data-dept-link="dept-cheese">
-            <svg viewBox="0 0 34 26" aria-hidden="true"><path d="M4 20 L26 8 L30 20 Z" fill="#E3D4B4" stroke="#181615" stroke-width="1.2"/><circle cx="22" cy="15" r="1.6" fill="#C9B48E"/><circle cx="15" cy="17" r="1.2" fill="#C9B48E"/></svg>
-            <span>Сыры и колбасы</span><small class="tabular">от 390 ₽</small>
-          </button>
-        </div>
-      </div>
-      <div class="hero-media-wrap">
-        <div class="hero-video-frame" id="hero-video-box">
-          <!-- ЗАМЕНИТЬ: подставить реальный видеофайл нарезки хамона (mp4/webm) и постер клиента,
-               раскомментировав строку ниже. Пока файла нет — показывается SVG-заглушка под видео. -->
-          <!-- <source src="video/nash-hamon-cut.mp4" type="video/mp4"> -->
-          <svg viewBox="0 0 800 600" role="img" aria-label="Заглушка видео: окорок хамона на хамонере" id="hero-fallback-art">
-            <rect width="800" height="600" fill="#231D1A"/>
-            <rect x="0" y="470" width="800" height="130" fill="#1B1815"/>
-            <!-- Хамонера: стойка -->
-            <path d="M180 470 L260 470 L300 240 L270 240 Z" fill="#4E4438"/>
-            <path d="M620 470 L540 470 L500 240 L530 240 Z" fill="#4E4438"/>
-            <rect x="150" y="464" width="500" height="14" rx="4" fill="#5C5752"/>
-            <rect x="258" y="226" width="284" height="20" rx="6" fill="#5C5752"/>
-            <!-- Целая нога на стойке -->
-            <path d="M300 236 C380 176, 500 158, 560 186 C610 210, 616 248, 588 268 L560 286 C470 316, 360 300, 300 262 Z" fill="#7A1C1C"/>
-            <path d="M330 232 C400 196, 480 186, 548 206" stroke="#A03A32" stroke-width="10" fill="none" stroke-linecap="round"/>
-            <path d="M322 250 C400 220, 496 214, 566 240" stroke="#F6F5F0" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.85"/>
-            <path d="M336 262 C410 238, 500 234, 560 254" stroke="#E5DEC9" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.7"/>
-            <circle cx="578" cy="246" r="3" fill="#F6F5F0" opacity="0.9"/>
-            <circle cx="556" cy="228" r="2.4" fill="#F6F5F0" opacity="0.8"/>
-            <circle cx="520" cy="252" r="2" fill="#F6F5F0" opacity="0.8"/>
-            <!-- Копытце -->
-            <path d="M300 236 L272 216 L258 232 L286 258 Z" fill="#E3D4B4"/>
-            <rect x="248" y="216" width="18" height="24" rx="4" fill="#C9B48E"/>
-            <!-- Свежий срез - зона реза -->
-            <ellipse cx="348" cy="248" rx="46" ry="26" fill="#A03A32"/>
-            <ellipse cx="348" cy="248" rx="40" ry="21" fill="#B9524A"/>
-            <path d="M318 244 C334 234, 362 232, 382 240" stroke="#F6F5F0" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-            <path d="M322 256 C340 250, 366 250, 384 256" stroke="#F6F5F0" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
-            <!-- Тонкие ломтики, свисающие с края -->
-            <path d="M352 272 C356 300, 350 330, 336 352 L356 350 C366 324, 368 298, 364 274 Z" fill="#B9524A"/>
-            <path d="M384 270 C392 296, 388 322, 376 342 L392 338 C402 316, 402 292, 398 272 Z" fill="#A03A32"/>
-            <!-- Тарелка с ломтиками -->
-            <ellipse cx="200" cy="540" rx="120" ry="26" fill="#2A2521"/>
-            <ellipse cx="200" cy="534" rx="120" ry="24" fill="#3A332C"/>
-            <path d="M120 528 C150 508, 250 506, 282 526 C250 516, 152 518, 120 528 Z" fill="#B9524A"/>
-            <path d="M128 518 C160 500, 244 498, 274 516 C240 508, 162 510, 128 518 Z" fill="#C96A5F"/>
-            <!-- Оливки и веточка -->
-            <circle cx="420" cy="532" r="13" fill="#4E5E32"/>
-            <ellipse cx="425" cy="527" rx="3.4" ry="4.6" fill="#7A1C1C"/>
-            <circle cx="452" cy="540" r="11" fill="#3E4B27"/>
-            <path d="M410 512 C440 496, 480 494, 508 506" stroke="#4E5E32" stroke-width="4" fill="none" stroke-linecap="round"/>
-            <ellipse cx="440" cy="500" rx="5" ry="11" transform="rotate(-30 440 500)" fill="#4E5E32"/>
-            <ellipse cx="474" cy="498" rx="5" ry="11" transform="rotate(24 474 498)" fill="#3E4B27"/>
-            <text x="60" y="580" fill="#9E978F" font-family="Golos Text, sans-serif" font-size="15">Видеозаглушка: окорок на хамонере. Видео нарезки - от @nashhamon.spb</text>
-          </svg>
-        </div>
-        <div class="hero-caption">
-          <span>Срез хамона длительной выдержки с белыми кристаллами тирозина</span>
-          <span class="tabular">Сытный рынок · @nashhamon.spb</span>
-        </div>
-      </div>
-    </div>
-  </section>
+  <section class="hero-light"><div class="container hero-light-grid"><div class="hero-copy"><p class="hero-kicker">Лавка деликатесов · Сытный рынок</p><h1 class="hero-big">Хамон — главный герой.<br>Вкусы <em>вокруг</em> него</h1><p class="hero-sub">Нарезка, куски и целые ноги. Взвешиваем при приёмке — цена до рубля.</p><div class="hero-cta-row"><a href="#scenarios" class="btn-primary">Выбрать сценарий</a><a href="#catalog" class="btn-secondary" style="display:inline-flex;align-items:center;text-decoration:none;">Вся витрина</a></div><div class="hero-chips"><span class="hero-chip tabular">Выдержка 8–28+ мес</span><span class="hero-chip">Сытнинская, 4П · вт–вс 10:30–20:30</span><span class="hero-chip">Доставка по СПб день в день</span></div></div><div class="hero-art" aria-hidden="true"><svg viewBox="0 0 760 560" role="img" aria-label="Веер тонких ломтиков хамона">
+            <rect width="760" height="560" fill="#F4EDDE"/>
+            <ellipse cx="380" cy="470" rx="300" ry="34" fill="#EDE3CC"/>
+            <g transform="translate(380 430)">
+              <path d="M0 0 L-190 -70 Q-210 -80 -196 -94 L0 -30 Z" fill="#8E2A24"/>
+              <path d="M-186 -76 L-40 -42" stroke="#F6EFE2" stroke-width="4" fill="none" stroke-linecap="round"/>
+              <path d="M0 0 L-150 -120 Q-166 -134 -146 -142 L0 -34 Z" fill="#9E332B"/>
+              <path d="M-146 -126 L-20 -44" stroke="#F6EFE2" stroke-width="4" fill="none" stroke-linecap="round"/>
+              <path d="M0 0 L-90 -160 Q-80 -178 -58 -168 L0 -38 Z" fill="#B9524A"/>
+              <path d="M-84 -152 L-14 -46" stroke="#F6EFE2" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+              <path d="M0 0 L-20 -188 Q-8 -204 12 -192 L0 -40 Z" fill="#C96A5F"/>
+              <path d="M-14 -178 L-4 -48" stroke="#F6EFE2" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+              <path d="M0 0 L60 -176 Q84 -184 88 -164 L0 -42 Z" fill="#9E332B"/>
+              <path d="M56 -166 L0 -46" stroke="#F6EFE2" stroke-width="4" fill="none" stroke-linecap="round"/>
+              <path d="M0 0 L140 -140 Q160 -142 156 -122 L0 -44 Z" fill="#8E2A24"/>
+              <path d="M132 -134 L0 -46" stroke="#F6EFE2" stroke-width="4" fill="none" stroke-linecap="round"/>
+              <path d="M0 0 L200 -80 Q218 -72 206 -56 L0 -46 Z" fill="#B9524A"/>
+              <path d="M190 -76 L0 -48" stroke="#F6EFE2" stroke-width="4" fill="none" stroke-linecap="round"/>
+              <circle cx="-70" cy="-96" r="3" fill="#F6EFE2" opacity="0.9"/>
+              <circle cx="30" cy="-130" r="2.6" fill="#F6EFE2" opacity="0.9"/>
+              <circle cx="110" cy="-90" r="2.4" fill="#F6EFE2" opacity="0.85"/>
+              <circle cx="-120" cy="-52" r="2.2" fill="#F6EFE2" opacity="0.8"/>
+              <circle cx="240" cy="-30" r="13" fill="#5E6B33"/>
+              <ellipse cx="245" cy="-35" rx="3.2" ry="4.4" fill="#5B2824"/>
+              <path d="M212 -52 C240 -66, 276 -66, 300 -52" stroke="#5E6B33" stroke-width="4" fill="none" stroke-linecap="round"/>
+              <ellipse cx="238" cy="-62" rx="5" ry="11" transform="rotate(-24 238 -62)" fill="#5E6B33"/>
+              <ellipse cx="272" cy="-64" rx="5" ry="11" transform="rotate(20 272 -64)" fill="#4E5A29"/>
+              <path d="M0 0 L40 12 L34 26 L-6 14 Z" fill="#E3D4B4"/>
+            </g>
+            <text x="40" y="530" fill="#9B8B76" font-size="15" font-family="Golos Text, sans-serif">Фото клиента: веер нарезки хамона (макро)</text>
+          </svg></div></div></section>
 
-  <!-- ИСТОРИИ ЛАВКИ -->
+    <section id="scenarios" class="section" style="border-top:none;"><div class="container"><div class="section-head"><h2 class="section-title">Три сценария — выберите свой</h2><p class="section-subtitle">Хамон — главный герой. Вкусы собираем вокруг него: для себя, к столу и на подарок.</p></div><div class="scenarios-grid"><article class="scenario-card"><div class="scenario-label">Для себя</div><div class="scenario-name">Познакомиться с хамоном</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Три выдержки в одной коробке - найдёте свою.</p><ul class="scenario-list"><li>Дегустационный сет нарезок 3 × 100 г</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">1 150 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addProductToCart('hamon-tasting-sliced', this)">Собрать сценарий</button></article><article class="scenario-card"><div class="scenario-label">К столу</div><div class="scenario-name">Вкусный вечер</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Нарезка «22», крупные оливки и гриссини к бокалу.</p><ul class="scenario-list"><li>Нарезка хамона «22»</li><li>Оливки Gordal крупные</li><li>Гриссини хлебные палочки</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">1 430 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addSetToCart('evening', this)">Собрать сценарий</button></article><article class="scenario-card"><div class="scenario-label">На подарок</div><div class="scenario-name">Бокс «В подарок»</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Соберём и упакуем - останется подписать открытку.</p><ul class="scenario-list"><li>Нарезка хамона «22»</li><li>Оливки Manzanilla</li><li>Сыр овечий Манчего</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">2 300 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addSetToCart('gift', this)">Собрать сценарий</button></article></div></div></section>
+
+    <!-- ИСТОРИИ ЛАВКИ -->
   <section class="stories-section container" aria-label="Истории лавки">
     <div class="stories-strip" id="stories-strip"></div>
   </section>
@@ -895,12 +862,12 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 // =========================================================================
 var PRODUCTS = [
   { id: 'hamon-12-piece', country: 'ru', category: 'piece', title: 'Хамон «12», кусок в вакууме', agingMonths: 12,
-    description: 'Выдержка 12 месяцев по ГОСТ 34159-2017. Мягкий деликатный вкус - лучший кусок для знакомства с хамоном.',
+    description: 'Мягкий вкус - лучшее знакомство с хамоном.',
     kind: 'piece', pricePerKg: 2600,
     pieces: [{ id1c: '1c-h12-215', weightG: 215 }, { id1c: '1c-h12-290', weightG: 290 }, { id1c: '1c-h12-360', weightG: 360 }],
     packs: [], bulk: null },
   { id: 'hamon-16-piece', country: 'ru', category: 'piece', title: 'Хамон «16», кусок в вакууме', agingMonths: 16,
-    description: 'Выдержка 16 месяцев по ГОСТ 34159-2017. Плотный рубиновый срез, ореховая нота - золотая середина линейки.',
+    description: 'Рубиновый срез, ореховая нота.',
     kind: 'piece', pricePerKg: 3000,
     pieces: [{ id1c: '1c-h16-230', weightG: 230 }, { id1c: '1c-h16-300', weightG: 300 }, { id1c: '1c-h16-380', weightG: 380 }],
     packs: [], bulk: null },
@@ -956,59 +923,59 @@ var PRODUCTS = [
       { label: 'Сет 3 × 100 г', weightG: 300, price: 1150 }
     ], bulk: null },
   { id: 'olives-gordal', country: 'es', category: 'olives', title: 'Оливки Gordal крупные', agingMonths: null,
-    description: 'Крупные мясистые зелёные оливки из Андалусии с плотной хрустящей мякотью в пряном рассоле.',
+    description: 'Крупные зелёные, из Андалусии.',
     kind: 'pack', pricePerKg: 1800,
     pieces: [], packs: [{ label: 'Банка 350 г', weightG: 350, price: 590 }],
     bulk: { minG: 100, maxG: 1000, stepG: 50, pricePerKg: 1800 } },
   { id: 'olives-manzanilla', country: 'es', category: 'olives', title: 'Оливки Manzanilla', agingMonths: null,
-    description: 'Нежные испанские оливки без косточки с ярким маслянистым вкусом и травами.',
+    description: 'Нежные, без косточки.',
     kind: 'pack', pricePerKg: 1800,
     pieces: [], packs: [{ label: 'Упаковка 250 г', weightG: 250, price: 450 }],
     bulk: { minG: 100, maxG: 1000, stepG: 50, pricePerKg: 1800 } },
   { id: 'cheese-manchego', country: 'es', category: 'cheese', title: 'Сыр овечий Манчего', agingMonths: 12,
-    description: 'Плотный испанский выдержанный сыр с ореховым ароматом и пикантным послевкусием.',
+    description: 'Выдержанный овечий сыр.',
     kind: 'pack', pricePerKg: 4760,
     pieces: [], packs: [{ label: 'Кусок 250 г', weightG: 250, price: 1190 }], bulk: null },
   { id: 'chorizo-iberico', country: 'es', category: 'cheese', title: 'Чоризо сыровяленая', agingMonths: null,
-    description: 'Испанская колбаса из рубленой свинины с копчёной паприкой Pimentón и чесноком.',
+    description: 'Сыровяленая, с паприкой Pimentón.',
     kind: 'pack', pricePerKg: 3950,
     pieces: [], packs: [{ label: 'Упаковка 200 г', weightG: 200, price: 790 }], bulk: null },
 
   // [заглушка цены] — позиции Италии, Греции, Франции и Швейцарии, цены уточнить у Виталия
   { id: 'prosciutto-crudo', country: 'it', category: 'sliced', title: 'Прошутто крудо, нарезка', agingMonths: null,
-    description: 'Итальянская сыровяленая ветчина, тонкая нарезка в вакууме. 18 месяцев выдержки.',
+    description: 'Сыровяленая ветчина, 18 месяцев.',
     kind: 'pack', pricePerKg: 6900,
     pieces: [], packs: [
       { label: '100 г в вакууме', weightG: 100, price: 690 },
       { label: '150 г в вакууме', weightG: 150, price: 990 }
     ], bulk: null },
   { id: 'parmigiano-24', country: 'it', category: 'cheese', title: 'Пармиджано 24 месяца', agingMonths: 24,
-    description: 'Твёрдый итальянский сыр с кристаллами и глубоким вкусом. Откалываем нужный кусок при вас.',
+    description: 'Твёрдый, 24 месяца выдержки.',
     kind: 'pack', pricePerKg: 6400,
     pieces: [], packs: [{ label: 'Кусок 250 г', weightG: 250, price: 1600 }], bulk: null },
   { id: 'tomatoes-dried', country: 'it', category: 'olives', title: 'Вяленые томаты в масле', agingMonths: null,
-    description: 'Сушёные томаты с орегано и чесноком в оливковом масле. Антипасти к вину и сырам.',
+    description: 'С орегано, в оливковом масле.',
     kind: 'pack', pricePerKg: 3400,
     pieces: [], packs: [{ label: 'Банка 200 г', weightG: 200, price: 680 }], bulk: null },
   { id: 'grissini', country: 'it', category: 'cheese', title: 'Гриссини хлебные палочки', agingMonths: null,
-    description: 'Тонкие хрустящие палочки на оливковом масле. База для винной тарелки.',
+    description: 'Хрустящие, на оливковом масле.',
     kind: 'pack', pricePerKg: 1950,
     pieces: [], packs: [{ label: 'Упаковка 200 г', weightG: 200, price: 390 }], bulk: null },
   { id: 'olives-kalamata', country: 'gr', category: 'olives', title: 'Оливки Каламата', agingMonths: null,
-    description: 'Тёмные греческие оливки миндалевидной формы с винным ароматом.',
+    description: 'Тёмные, с винным ароматом.',
     kind: 'pack', pricePerKg: 1900,
     pieces: [], packs: [{ label: 'Банка 300 г', weightG: 300, price: 570 }],
     bulk: { minG: 100, maxG: 1000, stepG: 50, pricePerKg: 1900 } },
   { id: 'feta-herbs', country: 'gr', category: 'cheese', title: 'Фета в травах', agingMonths: null,
-    description: 'Греческий сыр в маринаде с орегано, розмарином и оливковым маслом.',
+    description: 'В маринаде с орегано.',
     kind: 'pack', pricePerKg: 3600,
     pieces: [], packs: [{ label: 'Упаковка 200 г', weightG: 200, price: 720 }], bulk: null },
   { id: 'comte-18', country: 'fr', category: 'cheese', title: 'Конт 18 месяцев', agingMonths: 18,
-    description: 'Французский твёрдый сыр с ореховой сладостью и плотной кристаллической текстурой.',
+    description: 'Ореховая сладость, 18 месяцев.',
     kind: 'pack', pricePerKg: 5900,
     pieces: [], packs: [{ label: 'Кусок 250 г', weightG: 250, price: 1475 }], bulk: null },
   { id: 'gruyere', country: 'ch', category: 'cheese', title: 'Грюйер выдержанный', agingMonths: 12,
-    description: 'Швейцарский сыр с плотной эластичной мякотью и фруктово-ореховым вкусом.',
+    description: 'Фруктово-ореховый вкус.',
     kind: 'pack', pricePerKg: 6200,
     pieces: [], packs: [{ label: 'Кусок 250 г', weightG: 250, price: 1550 }], bulk: null }
 ];
@@ -2499,6 +2466,8 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 
+window.addProductToCart = addProductToCart;
+window.addSetToCart = addSetToCart;
 })();
 </script>
 </body>
