@@ -54,6 +54,19 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 /* ШАПКА */
 .site-header { position: sticky; top: 0; z-index: 30; background-color: var(--paper-salt); border-bottom: 1px solid var(--bone-line); }
 .header-inner { display: flex; align-items: center; justify-content: space-between; min-height: 64px; gap: 16px; }
+.menu-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; min-width: 44px; padding: 0 12px; margin-left: -12px; border: 1px solid transparent; font-size: 0.875rem; font-weight: 500; border-radius: 2px; transition: border-color 0.15s ease; }
+.menu-toggle:hover { border-color: var(--bone-line); }
+@media (min-width: 900px) { .menu-toggle { display: none; } }
+.menu-group { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; }
+.menu-backdrop { position: fixed; inset: 0; z-index: 62; background-color: rgba(24, 22, 21, 0.55); opacity: 0; pointer-events: none; transition: opacity 0.28s ease; }
+.menu-backdrop.is-open { opacity: 1; pointer-events: auto; }
+.menu-drawer { position: fixed; top: 0; bottom: 0; left: 0; z-index: 63; width: min(320px, 86vw); background-color: var(--paper-salt); border-right: 1px solid var(--hoof-graphite); display: flex; flex-direction: column; padding: 14px 18px calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-106%); transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+.menu-drawer.is-open { transform: translate(0, 0); }
+.menu-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--bone-line); margin-bottom: 10px; }
+.menu-link { display: flex; align-items: center; min-height: 52px; font-size: 1.0625rem; font-weight: 500; text-decoration: none; color: var(--hoof-graphite); border-bottom: 1px solid var(--bone-line); transition: color 0.15s ease; }
+.menu-link:hover { color: var(--cured-ruby); }
+.menu-foot { margin-top: auto; padding-top: 16px; display: flex; flex-direction: column; gap: 6px; font-size: 0.875rem; color: var(--graphite-muted); }
+.menu-foot a { color: var(--hoof-graphite); font-weight: 600; text-decoration: none; }
 .brand-title { font-family: var(--font-serif); font-size: 1.65rem; font-weight: 700; letter-spacing: -0.01em; text-decoration: none; white-space: nowrap; }
 .main-nav { display: none; align-items: center; gap: 24px; }
 @media (min-width: 900px) { .main-nav { display: flex; } }
@@ -125,6 +138,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .story-action-btn.is-external { background-color: var(--hoof-graphite); border-color: var(--hoof-graphite); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
 
 /* СЕКЦИИ */
+#catalog, #sets, #aging, #delivery, #weight-system { scroll-margin-top: 76px; }
 .section { padding: 56px 0; border-bottom: 1px solid var(--bone-line); }
 @media (min-width: 900px) { .section { padding: 72px 0; } }
 .section-head { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; max-width: 68ch; }
@@ -342,7 +356,13 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 <!-- ШАПКА -->
 <header class="site-header">
   <div class="container header-inner">
-    <a href="#top" class="brand-title">Наш Хамон</a>
+    <div class="menu-group">
+      <button type="button" id="menu-toggle" class="menu-toggle" aria-label="Открыть меню" aria-expanded="false" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="menu-toggle-label">Меню</span>
+      </button>
+      <a href="#top" class="brand-title">Наш Хамон</a>
+    </div>
     <nav class="main-nav" aria-label="Основная навигация">
       <a href="#catalog">Каталог</a>
       <a href="#sets">Наборы</a>
@@ -356,6 +376,25 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
     </button>
   </div>
 </header>
+
+<!-- МЕНЮ (СЭНДВИЧ, МОБИЛЬНЫЕ) -->
+<div id="menu-backdrop" class="menu-backdrop" aria-hidden="true"></div>
+<nav id="menu-drawer" class="menu-drawer" role="dialog" aria-modal="true" aria-label="Меню сайта" aria-hidden="true">
+  <div class="menu-head">
+    <span class="brand-title">Наш Хамон</span>
+    <button type="button" id="menu-close-btn" class="cart-close" aria-label="Закрыть меню">Закрыть</button>
+  </div>
+  <a class="menu-link" href="#catalog">Каталог и куски</a>
+  <a class="menu-link" href="#sets">Готовые наборы</a>
+  <a class="menu-link" href="#weight-system">Как считаем вес</a>
+  <a class="menu-link" href="#aging">Гид по выдержке</a>
+  <a class="menu-link" href="#delivery">Доставка и оплата</a>
+  <div class="menu-foot">
+    <a href="tel:+79068960099" class="tabular">+7 (906) 896-00-99</a>
+    <span>Сытнинская ул., 4П, рынок «Сытный»</span>
+    <span class="tabular">вт–вс, 10:30–20:30</span>
+  </div>
+</nav>
 
 <main id="top">
 
@@ -1822,6 +1861,26 @@ function closeCart() {
   }
 }
 
+// Меню-сэндвич (мобильные): шторка слева с разделами и контактами
+var menuToggleEl = null;
+function openMenu(triggerEl) {
+  menuToggleEl = triggerEl || document.getElementById('menu-toggle');
+  document.getElementById('menu-backdrop').classList.add('is-open');
+  document.getElementById('menu-drawer').classList.add('is-open');
+  document.getElementById('menu-drawer').setAttribute('aria-hidden', 'false');
+  menuToggleEl.setAttribute('aria-expanded', 'true');
+  setTimeout(function () { document.getElementById('menu-close-btn').focus(); }, 60);
+}
+function closeMenu() {
+  document.getElementById('menu-backdrop').classList.remove('is-open');
+  document.getElementById('menu-drawer').classList.remove('is-open');
+  document.getElementById('menu-drawer').setAttribute('aria-hidden', 'true');
+  if (menuToggleEl) {
+    menuToggleEl.setAttribute('aria-expanded', 'false');
+    menuToggleEl.focus();
+  }
+}
+
 // =========================================================================
 // 8. ТЁМНЫЙ ТЕРМИНАЛ ВЕСОВ (магнит к реальным весам, два продукта)
 // =========================================================================
@@ -2404,6 +2463,14 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
   });
 
+  // Меню-сэндвич: открыть/закрыть, ссылки закрывают и ведут к разделу
+  document.getElementById('menu-toggle').addEventListener('click', function (e) { openMenu(e.currentTarget); });
+  document.getElementById('menu-close-btn').addEventListener('click', closeMenu);
+  document.getElementById('menu-backdrop').addEventListener('click', closeMenu);
+  document.querySelectorAll('.menu-link').forEach(function (link) {
+    link.addEventListener('click', function () { closeMenu(); });
+  });
+
   // Истории: управление
   document.getElementById('story-close-btn').addEventListener('click', closeStory);
   document.getElementById('story-next-btn').addEventListener('click', nextStory);
@@ -2424,6 +2491,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var playerOpen = document.getElementById('stories-player').classList.contains('is-open');
     if (e.key === 'Escape') {
       if (playerOpen) closeStory();
+      else if (document.getElementById('menu-drawer').classList.contains('is-open')) closeMenu();
       else if (document.getElementById('cart-sheet').classList.contains('is-open')) closeCart();
     }
     if (playerOpen && e.key === 'ArrowRight') nextStory();
