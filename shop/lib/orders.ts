@@ -138,7 +138,10 @@ export function resolveCart(inputs: CartItemInput[], reserved: Set<string>): Res
         qty: 1,
       });
     } else if (input.kind === 'custom') {
-      const avgW = product.pieces[0]?.weightG ?? 250;
+      // Решение Виталия: куски не выкладываем поштучно - считаем по среднему весу,
+      // точный вес менеджер подтвердит при связи с клиентом
+      const weights = product.pieces.map((pc) => pc.weightG);
+      const avgW = weights.length ? Math.round(weights.reduce((a, b) => a + b, 0) / weights.length) : 250;
       items.push({
         uid: nextUid(),
         productId: product.id,

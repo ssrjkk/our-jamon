@@ -18,7 +18,7 @@ export default function ScaleTerminal({ products }: { products: Product[] }) {
 
   const cfg = mode === 'hamon'
     ? { product: hamon!, pricePerKg: hamon!.pricePerKg, min: 180, max: 420, step: 1, snap: [230, 300, 380], label: 'Хамон «16», 16 мес',
-        hint: 'Ползунок притягивается к реальным весам кусков на складе: 230\u00A0г, 300\u00A0г, 380\u00A0г', chips: [230, 300, 380] }
+        hint: 'Как на весах при приёмке: тяните ползунок - цена пересчитывается до рубля', chips: [230, 300, 380] }
     : { product: olives!, pricePerKg: olives!.bulk!.pricePerKg, min: olives!.bulk!.minG, max: olives!.bulk!.maxG, step: olives!.bulk!.stepG, snap: [350], label: 'Оливки Gordal на развес',
         hint: 'Шаг 50\u00A0г. Фактический вес уточним на весах при фасовке (допуск ±15\u00A0г)', chips: [300, 350, 500] };
 

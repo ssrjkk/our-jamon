@@ -9,17 +9,19 @@ import { runPig } from './Animations';
 export default function HomeStories({ products, serverReservedPieceIds }: { products: Product[]; serverReservedPieceIds: string[] }) {
   const { addLine, reservedPieceIds } = useCart();
 
-  // Первый свободный кусок «16» — как в свежем распиле
+  // Первый свободный «кусочек» для истории - по среднему весу (механика Виталия)
   const hamon16 = products.find((p) => p.id === 'hamon-16-piece');
-  const reserved = new Set([...serverReservedPieceIds, ...reservedPieceIds]);
-  const piece = hamon16
-    ? hamon16.pieces.filter((p) => !reserved.has(p.id1c)).map((p) => ({
-        productId: hamon16.id,
-        pieceId1c: p.id1c,
-        weightG: p.weightG,
-        price: p.price ?? Math.round((p.weightG / 1000) * hamon16.pricePerKg),
-      }))[0] ?? null
-    : null;
+  let piece: { productId: string; pieceId1c: string; weightG: number; price: number } | null = null;
+  if (hamon16) {
+    const weights = hamon16.pieces.map((p) => p.weightG);
+    const avg = weights.length ? Math.round(weights.reduce((a, b) => a + b, 0) / weights.length) : 250;
+    piece = {
+      productId: hamon16.id,
+      pieceId1c: 'avg',
+      weightG: avg,
+      price: Math.round((avg / 1000) * hamon16.pricePerKg),
+    };
+  }
 
   return (
     <Stories
@@ -29,12 +31,12 @@ export default function HomeStories({ products, serverReservedPieceIds }: { prod
         addLine({
           productId: piece.productId,
           title: 'Хамон «16», кусок в вакууме',
-          label: `Кусок ${piece.weightG}\u00A0г`,
+          label: `Кусок ~${piece.weightG}\u00A0г (средний)`,
           price: piece.price,
           weightG: piece.weightG,
           requiresWeightCheck: true,
-          pieceId1c: piece.pieceId1c,
-          kind: 'piece',
+          pieceId1c: null,
+          kind: 'custom',
           qty: 1,
         });
         runPig();

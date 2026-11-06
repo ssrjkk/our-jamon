@@ -15,7 +15,7 @@ interface Props {
 // Кусок уникален: резервируется в корзине и на сервере, второй раз добавить нельзя.
 export default function ProductCard({ product, serverReservedPieceIds }: Props) {
   const { addLine, reservedPieceIds } = useCart();
-  const [sel, setSel] = useState<string>(() => firstAvailable(product, serverReservedPieceIds));
+  const [sel, setSel] = useState<string>(() => (product.kind === 'piece' ? 'avg' : 'pack-0'));
   const [bulkW, setBulkW] = useState<number>(product.bulk ? 350 : 0);
   const [added, setAdded] = useState(false);
   const [takenMsg, setTakenMsg] = useState('');
@@ -29,8 +29,11 @@ export default function ProductCard({ product, serverReservedPieceIds }: Props) 
 
   const active = useMemo(() => {
     if (product.kind === 'piece') {
+      // Решение Виталия: куски не выкладываем поштучно - средний вес, подтверждение при связи
+      const weights = product.pieces.map((p) => p.weightG);
+      const avgW = weights.length ? Math.round(weights.reduce((a, b) => a + b, 0) / weights.length) : 250;
+      const legFixed = typeof product.pieces[0]?.price === 'number' ? product.pieces[0].price : null;
       if (sel === 'custom') {
-        const avgW = product.pieces[0]?.weightG ?? 250;
         return {
           price: Math.round((avgW / 1000) * product.pricePerKg),
           caption: 'Ориентир - точный вес согласуем',
@@ -41,16 +44,15 @@ export default function ProductCard({ product, serverReservedPieceIds }: Props) 
           requiresWeightCheck: true,
         };
       }
-      const piece = product.pieces.find((p) => p.id1c === sel) || product.pieces[0];
-      const taken = reserved.has(piece.id1c);
-      const fixed = piece.price;
       return {
-        price: fixed ?? Math.round((piece.weightG / 1000) * product.pricePerKg),
-        caption: `Точная цена за ${formatWeightLabel(piece.weightG)}`,
-        canAdd: !taken,
-        label: `Кусок ${formatWeightLabel(piece.weightG)}`,
-        weightG: piece.weightG,
-        pieceId1c: piece.id1c,
+        price: legFixed ?? Math.round((avgW / 1000) * product.pricePerKg),
+        caption: legFixed !== null
+          ? 'Фиксированная цена за ногу'
+          : `Средний вес ${formatWeightLabel(avgW)} - подтвердим при связи`,
+        canAdd: true,
+        label: (product.category === 'leg' ? 'Нога ' : 'Кусок ') + formatWeightLabel(avgW),
+        weightG: avgW,
+        pieceId1c: null,
         requiresWeightCheck: true,
       };
     }
@@ -77,7 +79,7 @@ export default function ProductCard({ product, serverReservedPieceIds }: Props) 
       pieceId1c: null,
       requiresWeightCheck: false,
     };
-  }, [product, sel, bulkW, reserved]);
+  }, [product, sel, bulkW]);
 
   function onAdd() {
     if (!active.canAdd) {
@@ -92,16 +94,10 @@ export default function ProductCard({ product, serverReservedPieceIds }: Props) 
       weightG: active.weightG,
       requiresWeightCheck: active.requiresWeightCheck,
       pieceId1c: active.pieceId1c,
-      kind: product.kind === 'piece' && active.pieceId1c ? 'piece' : sel === 'bulk' ? 'bulk' : sel === 'custom' ? 'custom' : 'pack',
+      kind: product.kind === 'piece' ? (sel === 'custom' ? 'custom' : 'custom') : sel === 'bulk' ? 'bulk' : 'pack',
       packIdx: sel.startsWith('pack-') ? parseInt(sel.slice(5), 10) : undefined,
       qty: 1,
     });
-    // Кусок уходит в резерв: переключаем выбор на следующий свободный
-    if (active.pieceId1c) {
-      const next = product.pieces.find((p) => !reserved.has(p.id1c) && p.id1c !== active.pieceId1c);
-      setSel(next ? next.id1c : 'custom');
-      setTakenMsg(`Кусок ${active.label.toLowerCase()} добавлен в корзину.`);
-    }
     // Фирменные анимации
     if (product.category === 'olives') {
       bounceOlives(stageRef.current);
@@ -136,29 +132,21 @@ export default function ProductCard({ product, serverReservedPieceIds }: Props) 
         {product.kind === 'piece' ? (
           <>
             <div className="selector-caption">
-              <span>Взвешенные куски в наличии:</span>
-              <span>1 кусок = 1 экземпляр</span>
+              <span>{product.category === 'leg' ? 'Вес ноги (средний):' : 'Кусок (средний вес):'}</span>
             </div>
-            <div className="options-wrap" role="radiogroup" aria-label="Выбор куска по весу">
-              {product.pieces.map((pc) => {
-                const taken = reserved.has(pc.id1c);
-                const price = pc.price ?? Math.round((pc.weightG / 1000) * product.pricePerKg);
-                return (
-                  <button
-                    key={pc.id1c}
-                    type="button"
-                    className="option-chip tabular"
-                    role="radio"
-                    aria-checked={sel === pc.id1c}
-                    onClick={() => !taken && setSel(pc.id1c)}
-                    disabled={taken}
-                    title={taken ? 'Этот кусок уже в корзине' : undefined}
-                  >
-                    <span>{formatWeightLabel(pc.weightG)}</span>
-                    <span className="chip-sub">{taken ? 'В корзине' : formatRub(price)}</span>
-                  </button>
-                );
-              })}
+            <div className="options-wrap" role="radiogroup" aria-label="Вес">
+              <button type="button" className="option-chip tabular" role="radio" aria-checked={sel !== 'custom'}>
+                <span>{product.category === 'leg' ? 'Целая нога' : 'Кусок'}</span>
+                <span className="chip-sub">
+                  {typeof product.pieces[0]?.price === 'number'
+                    ? formatRub(product.pieces[0].price)
+                    : `~${formatWeightLabel(
+                        product.pieces.length
+                          ? Math.round(product.pieces.reduce((a, p) => a + p.weightG, 0) / product.pieces.length)
+                          : 250,
+                      )}`}
+                </span>
+              </button>
               {product.category === 'piece' && (
                 <button
                   type="button"
@@ -167,7 +155,7 @@ export default function ProductCard({ product, serverReservedPieceIds }: Props) 
                   aria-checked={sel === 'custom'}
                   onClick={() => setSel('custom')}
                 >
-                  <span>Под заказ</span>
+                  <span>Отрез под заказ</span>
                   <span className="chip-sub">Свой вес</span>
                 </button>
               )}
@@ -175,7 +163,7 @@ export default function ProductCard({ product, serverReservedPieceIds }: Props) 
             <div className="custom-cut-note">
               {sel === 'custom'
                 ? 'Точный вес и сумму согласуем при сборке и пришлём ссылку на оплату.'
-                : takenMsg || 'Кусок взвешен при приёмке. Второй раз тот же кусок добавить нельзя.'}
+                : 'Кусок взвешен при приёмке. Подтвердим вес и остатки, когда свяжемся с вами по заказу.'}
             </div>
           </>
         ) : (
@@ -248,13 +236,6 @@ export default function ProductCard({ product, serverReservedPieceIds }: Props) 
       </div>
     </article>
   );
-}
-
-function firstAvailable(product: Product, reserved: string[]): string {
-  const res = new Set(reserved);
-  const avail = product.pieces.find((p) => !res.has(p.id1c));
-  if (product.kind === 'piece') return avail ? avail.id1c : 'custom';
-  return 'pack-0';
 }
 
 function countryName(c: string): string {
