@@ -1003,17 +1003,7 @@ var PRODUCTS = [
   { id: 'gruyere', country: 'ch', category: 'cheese', title: 'Грюйер выдержанный', agingMonths: 12,
     description: 'Фруктово-ореховый вкус.',
     kind: 'pack', pricePerKg: 6200,
-    pieces: [], packs: [{ label: 'Кусок 250 г', weightG: 250, price: 1550 }], bulk: null }
-];
-
-// Наборы: components ссылаются на pack-опции товаров (индексы массива packs)
-var SETS = [
-  { id: 'evening', kicker: 'Набор к столу', title: 'Вкусный вечер', featured: true,
-    desc: 'Собрали то, что чаще всего берут одним махом к бокалу.',
-    components: [
-      { productId: 'hamon-sliced-22', optionIdx: 0 },
-
-
+    pieces: [], packs: [{ label: 'Кусок 250 г', weightG: 250, price: 1550 }], bulk: null },
   { id: 'hamonera-pine', country: 'ru', category: 'extras', title: 'Хамонера из сосны', agingMonths: null,
     description: 'Подставка для целой ноги. Продаётся отдельно от окорока. [заглушка цены]',
     kind: 'pack', pricePerKg: 0,
@@ -1033,7 +1023,18 @@ var SETS = [
       { label: 'Сертификат на 3 000 ₽', weightG: 0, price: 3000 },
       { label: 'Сертификат на 5 000 ₽', weightG: 0, price: 5000 },
       { label: 'Сертификат на 10 000 ₽', weightG: 0, price: 10000 }
-    ], bulk: null },      { productId: 'olives-gordal', optionIdx: 0 },
+    ], bulk: null },
+];
+
+// Наборы: components ссылаются на pack-опции товаров (индексы массива packs)
+var SETS = [
+  { id: 'evening', kicker: 'Набор к столу', title: 'Вкусный вечер', featured: true,
+    desc: 'Собрали то, что чаще всего берут одним махом к бокалу.',
+    components: [
+      { productId: 'hamon-sliced-22', optionIdx: 0 },
+
+
+        { productId: 'olives-gordal', optionIdx: 0 },      { productId: 'olives-gordal', optionIdx: 0 },
       { productId: 'grissini', optionIdx: 0 }
     ] },
   { id: 'gift', kicker: 'Подарочный набор', title: 'Бокс «В подарок»',
