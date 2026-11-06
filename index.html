@@ -1,0 +1,2240 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Наш Хамон — хамон, оливки и сыры в Санкт-Петербурге</title>
+<meta name="description" content="Испанский хамон выдержки от 8 до 28+ месяцев: нарезка, куски и целые ноги. Оливки, сыры, готовые наборы. Лавка на Сытном рынке в Санкт-Петербурге, доставка по СПб и России.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@600;700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+<style>
+:root {
+  --paper-salt: #F6F5F0;
+  --fat-white: #FFFFFF;
+  --hoof-graphite: #181615;
+  --graphite-muted: #5C5752;
+  --cured-ruby: #7A1C1C;
+  --cured-ruby-hover: #5E1414;
+  --brine-olive: #4E5E32;
+  --brine-olive-soft: #E9EFE0;
+  --bone-line: #DDD8CE;
+  --surface-tint: #EFECE4;
+  --error-red: #9E2A2B;
+  --font-serif: 'Cormorant', Georgia, serif;
+  --font-sans: 'Golos Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  --container: 1280px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  scroll-behavior: smooth;
+  background-color: var(--paper-salt);
+  color: var(--hoof-graphite);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 900px) { body { padding-bottom: 0; } }
+a, button, input, select, textarea { font: inherit; color: inherit; }
+button { background: none; border: none; cursor: pointer; touch-action: manipulation; }
+:focus-visible { outline: 2px solid var(--cured-ruby); outline-offset: 2px; }
+.tabular { font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+.container { width: 100%; max-width: var(--container); margin: 0 auto; padding: 0 16px; }
+@media (min-width: 768px) { .container { padding: 0 32px; } }
+
+/* ШАПКА */
+.site-header { position: sticky; top: 0; z-index: 30; background-color: var(--paper-salt); border-bottom: 1px solid var(--bone-line); }
+.header-inner { display: flex; align-items: center; justify-content: space-between; min-height: 64px; gap: 16px; }
+.brand-title { font-family: var(--font-serif); font-size: 1.65rem; font-weight: 700; letter-spacing: -0.01em; text-decoration: none; white-space: nowrap; }
+.main-nav { display: none; align-items: center; gap: 24px; }
+@media (min-width: 900px) { .main-nav { display: flex; } }
+.main-nav a { text-decoration: none; font-size: 0.9375rem; color: var(--graphite-muted); padding: 10px 0; transition: color 0.15s ease; min-height: 44px; display: inline-flex; align-items: center; }
+.main-nav a:hover { color: var(--hoof-graphite); }
+.cart-trigger { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; border: 1px solid var(--hoof-graphite); background-color: var(--fat-white); font-size: 0.9375rem; font-weight: 500; transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
+.cart-trigger:active { transform: scale(0.97); }
+.cart-count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 6px; background-color: var(--cured-ruby); color: var(--fat-white); font-size: 0.8125rem; font-weight: 600; border-radius: 2px; }
+
+/* ПЕРВЫЙ ЭКРАН */
+.hero { padding: 28px 0 48px; border-bottom: 1px solid var(--bone-line); }
+@media (min-width: 900px) { .hero { padding: 56px 0 72px; } }
+.hero-grid { display: grid; grid-template-columns: 1fr; gap: 32px; align-items: end; }
+@media (min-width: 960px) { .hero-grid { grid-template-columns: 5fr 7fr; gap: 48px; } }
+.hero-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+.hero-location { font-size: 0.875rem; color: var(--graphite-muted); border-left: 2px solid var(--cured-ruby); padding-left: 10px; }
+.hero-title { font-family: var(--font-serif); font-size: clamp(2.35rem, 4.6vw, 4.1rem); font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; max-width: 16ch; }
+.hero-line-mask { display: block; overflow: hidden; padding-bottom: 0.06em; }
+.hero-line-inner { display: block; will-change: transform; }
+.hero-lead { font-size: 1.0625rem; color: var(--graphite-muted); max-width: 52ch; line-height: 1.55; }
+.btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 24px; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.9375rem; text-decoration: none; border: 1px solid var(--cured-ruby); border-radius: 2px; transition: background-color 0.15s ease, transform 0.15s ease; }
+.btn-primary:hover { background-color: var(--cured-ruby-hover); }
+.btn-primary:active { transform: scale(0.97); }
+.hero-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; width: 100%; padding-top: 16px; border-top: 1px solid var(--bone-line); font-size: 0.875rem; }
+.hero-facts dt { color: var(--graphite-muted); margin-bottom: 2px; }
+.hero-facts dd { font-weight: 600; }
+.hero-media-wrap { position: relative; width: 100%; }
+.hero-video-frame { position: relative; width: 100%; aspect-ratio: 4 / 3; background-color: #231D1A; border: 1px solid var(--hoof-graphite); overflow: hidden; }
+.hero-video-frame video, .hero-video-frame svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-caption { display: flex; justify-content: space-between; gap: 16px; padding-top: 10px; font-size: 0.8125rem; color: var(--graphite-muted); }
+
+/* ИСТОРИИ */
+.stories-section { padding: 20px 0 8px; }
+.stories-strip { display: flex; gap: 18px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: none; }
+.stories-strip::-webkit-scrollbar { display: none; }
+.story-bubble { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; min-width: 76px; }
+.story-ring { width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--cured-ruby); padding: 3px; transition: transform 0.15s ease; }
+.story-ring.is-seen { border-color: var(--bone-line); }
+.story-bubble:active .story-ring { transform: scale(0.96); }
+.story-art { width: 100%; height: 100%; border-radius: 50%; background-color: var(--surface-tint); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.story-art svg { width: 44px; height: 44px; }
+.story-label { font-size: 0.75rem; color: var(--graphite-muted); text-align: center; max-width: 84px; }
+.stories-player { position: fixed; inset: 0; z-index: 80; background-color: rgba(24, 22, 21, 0.92); display: none; align-items: center; justify-content: center; padding: 16px; }
+.stories-player.is-open { display: flex; }
+.stories-frame { position: relative; width: 100%; max-width: 380px; background-color: var(--paper-salt); border: 1px solid var(--bone-line); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.story-bars { display: flex; gap: 6px; }
+.story-bars span { flex: 1; height: 3px; background-color: var(--bone-line); border-radius: 2px; overflow: hidden; position: relative; }
+.story-bars span i { position: absolute; inset: 0; background-color: var(--cured-ruby); transform: scaleX(0); transform-origin: left; }
+.story-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.story-head-title { font-family: var(--font-serif); font-size: 1.15rem; font-weight: 700; }
+.story-close { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bone-line); font-size: 0.875rem; background-color: var(--fat-white); }
+.story-visual { aspect-ratio: 1 / 1; background-color: var(--surface-tint); border: 1px solid var(--bone-line); display: flex; align-items: center; justify-content: center; }
+.story-visual svg { width: 62%; height: 62%; }
+.story-text { font-size: 0.9375rem; color: var(--graphite-muted); line-height: 1.55; min-height: 3.1em; }
+.story-nav-row { display: flex; align-items: center; gap: 10px; }
+.story-step-btn { min-height: 44px; padding: 0 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.8125rem; flex: 1; }
+.story-action-btn { min-height: 48px; padding: 0 16px; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.9375rem; border-radius: 2px; flex: 2.2; transition: background-color 0.15s ease, transform 0.15s ease; }
+.story-action-btn:hover { background-color: var(--cured-ruby-hover); }
+.story-action-btn:active { transform: scale(0.97); }
+.story-action-btn:disabled { background-color: var(--bone-line); color: var(--graphite-muted); cursor: not-allowed; }
+.story-action-btn.is-external { background-color: var(--hoof-graphite); border-color: var(--hoof-graphite); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+
+/* СЕКЦИИ */
+.section { padding: 56px 0; border-bottom: 1px solid var(--bone-line); }
+@media (min-width: 900px) { .section { padding: 72px 0; } }
+.section-head { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; max-width: 68ch; }
+.section-title { font-family: var(--font-serif); font-size: clamp(1.85rem, 3.2vw, 2.75rem); font-weight: 600; line-height: 1.1; letter-spacing: -0.01em; }
+.section-subtitle { color: var(--graphite-muted); font-size: 1rem; max-width: 64ch; }
+
+/* ТРЁХУРОВНЕВЫЕ ФИЛЬТРЫ */
+.catalog-controls { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--bone-line); }
+.filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.filter-label { font-size: 0.8125rem; color: var(--graphite-muted); margin-right: 2px; min-width: 84px; }
+@media (max-width: 560px) { .filter-label { min-width: 100%; } }
+.filter-btn { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.875rem; font-weight: 500; color: var(--hoof-graphite); display: inline-flex; align-items: center; gap: 8px; border-radius: 2px; transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
+.filter-btn:hover { border-color: var(--graphite-muted); }
+.filter-btn:active { transform: scale(0.97); }
+.filter-btn[aria-pressed="true"] { background-color: var(--hoof-graphite); color: var(--fat-white); border-color: var(--hoof-graphite); }
+.flag-svg { width: 20px; height: 20px; flex: 0 0 auto; }
+
+/* СЕТКА КАТАЛОГА */
+.catalog-grid { display: grid; grid-template-columns: 1fr; border-top: 1px solid var(--bone-line); border-left: 1px solid var(--bone-line); }
+@media (min-width: 680px) { .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1080px) { .catalog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.product-card { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; background-color: var(--fat-white); border-right: 1px solid var(--bone-line); border-bottom: 1px solid var(--bone-line); padding: 20px; will-change: transform, opacity; }
+.card-media { position: relative; width: 100%; aspect-ratio: 4 / 3; background-color: var(--surface-tint); border: 1px solid var(--bone-line); overflow: hidden; }
+.card-media svg { width: 100%; height: 100%; display: block; }
+.olive-stage { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; }
+.card-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-top: 12px; }
+.card-title { font-family: var(--font-serif); font-size: 1.4rem; font-weight: 700; line-height: 1.18; }
+.rate-per-100 { font-size: 0.8125rem; font-weight: 600; color: var(--graphite-muted); white-space: nowrap; padding: 3px 8px; background-color: var(--paper-salt); border: 1px solid var(--bone-line); }
+.card-meta { font-size: 0.8125rem; color: var(--cured-ruby); font-weight: 500; margin-top: 4px; }
+.card-desc { font-size: 0.9375rem; color: var(--graphite-muted); margin-top: 8px; max-width: 60ch; }
+.selector-dynamic-slot { border-top: 1px solid var(--bone-line); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; min-height: 132px; }
+.selector-caption { font-size: 0.8125rem; color: var(--graphite-muted); display: flex; justify-content: space-between; gap: 8px; }
+.options-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.option-chip { min-height: 44px; padding: 6px 12px; border: 1px solid var(--bone-line); background-color: var(--paper-salt); font-size: 0.8125rem; font-weight: 500; display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; line-height: 1.2; border-radius: 2px; transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
+.option-chip:active:not([disabled]) { transform: scale(0.97); }
+.option-chip[aria-checked="true"] { border-color: var(--hoof-graphite); background-color: var(--hoof-graphite); color: var(--fat-white); }
+.option-chip[data-olive="true"][aria-checked="true"] { background-color: var(--brine-olive); border-color: var(--brine-olive); }
+.option-chip[disabled] { opacity: 0.48; text-decoration: line-through; cursor: not-allowed; }
+.chip-sub { font-size: 0.7rem; opacity: 0.8; }
+.custom-cut-note, .piece-status-note { font-size: 0.8125rem; padding: 8px 10px; background-color: var(--paper-salt); border-left: 2px solid var(--cured-ruby); color: var(--hoof-graphite); min-height: 38px; display: flex; align-items: center; line-height: 1.45; }
+.bulk-slider-box { padding: 10px 12px; background-color: var(--paper-salt); border: 1px solid var(--bone-line); display: flex; flex-direction: column; gap: 8px; }
+.bulk-slider-box input[type="range"] { width: 100%; accent-color: var(--brine-olive); height: 28px; cursor: pointer; }
+.tolerance-hint { font-size: 0.75rem; color: var(--graphite-muted); }
+.card-footer { border-top: 1px solid var(--bone-line); padding-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.price-stack { display: flex; flex-direction: column; }
+.price-label { font-size: 0.75rem; color: var(--graphite-muted); }
+.price-value { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; min-width: 7ch; display: inline-block; }
+.add-btn { min-height: 44px; padding: 10px 16px; background-color: var(--hoof-graphite); color: var(--fat-white); font-size: 0.875rem; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 172px; border-radius: 2px; transition: background-color 0.15s ease, transform 0.15s ease; }
+.add-btn:hover:not([disabled]) { background-color: var(--cured-ruby); }
+.add-btn:active:not([disabled]) { transform: scale(0.97); }
+.add-btn[disabled] { background-color: var(--bone-line); color: var(--graphite-muted); cursor: not-allowed; }
+.check-svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2.2; fill: none; stroke-dasharray: 24; stroke-dashoffset: 24; }
+
+/* НАБОРЫ */
+.sets-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 760px) { .sets-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.set-card { background-color: var(--fat-white); border: 1px solid var(--bone-line); padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+.set-card.featured { background-color: var(--surface-tint); }
+.set-kicker { font-size: 0.8125rem; font-weight: 600; color: var(--brine-olive); }
+.set-title { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 700; line-height: 1.15; }
+.set-list { list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; color: var(--graphite-muted); flex: 1; }
+.set-list li { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--bone-line); padding-bottom: 8px; }
+.set-total-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.set-total { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; }
+.set-add-btn { min-height: 48px; width: 100%; background-color: var(--hoof-graphite); color: var(--fat-white); font-weight: 500; font-size: 0.9375rem; border-radius: 2px; transition: background-color 0.15s ease, transform 0.15s ease; }
+.set-add-btn:hover { background-color: var(--cured-ruby); }
+.set-add-btn:active { transform: scale(0.97); }
+
+/* ТЁМНЫЙ БЛОК ВЕСОВ */
+.section-dark { background-color: var(--hoof-graphite); color: var(--paper-salt); padding: 64px 0; }
+.section-dark .section-subtitle { color: #C8C2B8; }
+.scale-bento { display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 28px; }
+@media (min-width: 920px) { .scale-bento { grid-template-columns: 7fr 5fr; } }
+.scale-panel { border: 1px solid #35312E; background-color: #211E1C; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px; }
+.scale-switch { display: flex; flex-wrap: wrap; gap: 8px; }
+.scale-switch-btn { min-height: 44px; padding: 8px 14px; border: 1px solid #4A443F; color: var(--paper-salt); font-size: 0.875rem; font-weight: 500; border-radius: 2px; transition: background-color 0.15s ease, border-color 0.15s ease; }
+.scale-switch-btn[aria-pressed="true"] { background-color: var(--cured-ruby); border-color: var(--cured-ruby); }
+.scale-readout { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px; background-color: #141211; border: 1px solid #35312E; }
+.readout-cell { display: flex; flex-direction: column; gap: 4px; }
+.readout-label { font-size: 0.75rem; color: #9E978F; }
+.readout-digits { font-size: clamp(1.15rem, 2.5vw, 1.85rem); font-weight: 600; color: #F6F5F0; }
+.readout-digits.highlight { color: #E3B261; }
+.scale-range-wrap input[type="range"] { width: 100%; accent-color: var(--cured-ruby); height: 32px; cursor: pointer; }
+.scale-range-label { display: block; font-size: 0.8125rem; color: #C8C2B8; margin-bottom: 6px; }
+.magnet-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.magnet-btn { min-height: 44px; padding: 8px 14px; border: 1px solid #4A443F; color: var(--paper-salt); font-size: 0.8125rem; background-color: transparent; border-radius: 2px; transition: background-color 0.15s ease, border-color 0.15s ease; }
+.magnet-btn[aria-pressed="true"] { background-color: var(--cured-ruby); border-color: var(--cured-ruby); }
+.scale-add-btn { min-height: 48px; background-color: var(--paper-salt); color: var(--hoof-graphite); font-weight: 600; font-size: 0.9375rem; border-radius: 2px; transition: transform 0.15s ease, background-color 0.15s ease; }
+.scale-add-btn:hover { background-color: #E3B261; }
+.scale-add-btn:active { transform: scale(0.97); }
+.scale-info-panel h3 { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 600; margin-bottom: 12px; }
+.scale-info-panel p { font-size: 0.9375rem; color: #C8C2B8; line-height: 1.6; margin-bottom: 12px; }
+.scale-info-foot { font-size: 0.8125rem; color: #9E978F; border-top: 1px solid #35312E; padding-top: 12px; }
+
+/* ВЫДЕРЖКА И ДОСТАВКА */
+.bento-3 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 860px) { .bento-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.bento-card { background-color: var(--fat-white); border: 1px solid var(--bone-line); padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.bento-period { font-size: 0.875rem; font-weight: 600; color: var(--cured-ruby); }
+.bento-title { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 700; line-height: 1.15; }
+.bento-list { list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; color: var(--graphite-muted); flex: 1; }
+.bento-btn { min-height: 44px; padding: 0 14px; border: 1px solid var(--cured-ruby); color: var(--cured-ruby); background-color: transparent; font-size: 0.875rem; font-weight: 500; text-align: left; border-radius: 2px; transition: background-color 0.15s ease, color 0.15s ease; }
+.bento-btn:hover { background-color: var(--cured-ruby); color: var(--fat-white); }
+.tyrosine-callout { margin-top: 16px; padding: 20px 24px; background-color: var(--surface-tint); border: 1px solid var(--bone-line); display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
+.tyrosine-callout strong { font-family: var(--font-serif); font-size: 1.2rem; }
+.tyrosine-callout p { font-size: 0.9375rem; color: var(--graphite-muted); }
+.delivery-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 768px) { .delivery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.delivery-grid p { font-size: 0.9375rem; color: var(--graphite-muted); }
+.delivery-note { font-size: 0.8125rem; color: var(--graphite-muted); margin-top: 16px; }
+
+/* ПОДВАЛ */
+.site-footer { padding: 48px 0 64px; background-color: var(--surface-tint); font-size: 0.9375rem; }
+.footer-grid { display: grid; grid-template-columns: 1fr; gap: 28px; }
+@media (min-width: 800px) { .footer-grid { grid-template-columns: 2fr 1fr 1fr; } }
+.footer-links { list-style: none; display: flex; flex-direction: column; gap: 8px; color: var(--graphite-muted); }
+.footer-links a { color: var(--hoof-graphite); text-decoration: underline; text-underline-offset: 3px; }
+.footer-caption { font-size: 0.8125rem; color: var(--graphite-muted); margin-top: 8px; }
+
+/* НИЖНЯ МОБИЛЬНАЯ ПАНЕЛЬ */
+.mobile-bottom-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 28; background-color: var(--hoof-graphite); color: var(--fat-white); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #35312E; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+@media (min-width: 900px) { .mobile-bottom-bar { display: none; } }
+.mobile-bar-btn { min-height: 44px; padding: 0 18px; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.875rem; border-radius: 2px; }
+
+/* КОРЗИНА */
+.cart-backdrop { position: fixed; inset: 0; z-index: 50; background-color: rgba(24, 22, 21, 0.55); opacity: 0; pointer-events: none; transition: opacity 0.28s ease; }
+.cart-backdrop.is-open { opacity: 1; pointer-events: auto; }
+.cart-sheet { position: fixed; z-index: 51; background-color: var(--paper-salt); display: flex; flex-direction: column; justify-content: space-between; left: 0; right: 0; bottom: 0; max-height: 92vh; border-top: 1px solid var(--hoof-graphite); transform: translateY(102%); transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+.cart-sheet.is-open { transform: translate(0, 0); }
+@media (min-width: 768px) {
+  .cart-sheet { top: 0; bottom: 0; left: auto; right: 0; width: 100%; max-width: 480px; max-height: 100vh; border-top: none; border-left: 1px solid var(--hoof-graphite); transform: translateX(102%); }
+}
+.cart-head { padding: 18px 20px; background-color: var(--fat-white); border-bottom: 1px solid var(--bone-line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cart-head-title { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; }
+.cart-head-sub { font-size: 0.75rem; color: var(--graphite-muted); }
+.cart-close { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bone-line); font-size: 0.8125rem; background-color: var(--paper-salt); }
+.cart-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; flex: 1; }
+.cart-items-list { display: flex; flex-direction: column; gap: 10px; }
+.cart-item-row { background-color: var(--fat-white); border: 1px solid var(--bone-line); padding: 12px 14px; overflow: hidden; }
+.cart-item-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.cart-item-title { font-size: 0.9375rem; font-weight: 600; display: block; }
+.cart-item-sub { font-size: 0.8125rem; color: var(--graphite-muted); }
+.cart-remove-btn { min-height: 44px; padding: 0 8px; font-size: 0.8125rem; color: var(--graphite-muted); text-decoration: underline; }
+.cart-empty-state { padding: 32px 16px; text-align: center; border: 1px solid var(--bone-line); background-color: var(--fat-white); display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.cart-empty-state p { color: var(--graphite-muted); }
+.cart-progress { padding: 12px 14px; background-color: var(--fat-white); border: 1px solid var(--bone-line); display: flex; flex-direction: column; gap: 8px; }
+.cart-progress-label { font-size: 0.8125rem; color: var(--graphite-muted); }
+.cart-progress-track { height: 6px; background-color: var(--surface-tint); border: 1px solid var(--bone-line); overflow: hidden; }
+.cart-progress-fill { height: 100%; background-color: var(--brine-olive); width: 0%; transition: width 0.3s ease; }
+.cart-addons { display: flex; flex-wrap: wrap; gap: 8px; }
+.addon-chip { min-height: 44px; padding: 8px 12px; border: 1px dashed var(--bone-line); background-color: var(--fat-white); font-size: 0.8125rem; display: inline-flex; align-items: center; gap: 8px; border-radius: 2px; transition: border-color 0.15s ease, transform 0.15s ease; }
+.addon-chip:hover { border-color: var(--brine-olive); }
+.addon-chip:active { transform: scale(0.97); }
+.addon-plus { font-weight: 600; color: var(--brine-olive); }
+.scenario-banner { padding: 12px 14px; background-color: var(--surface-tint); border-left: 3px solid var(--cured-ruby); font-size: 0.8125rem; line-height: 1.45; }
+.form-field { display: flex; flex-direction: column; gap: 6px; }
+.form-field label { font-size: 0.8125rem; font-weight: 500; }
+.form-input { min-height: 44px; padding: 10px 12px; background-color: var(--fat-white); border: 1px solid var(--bone-line); font-size: 0.9375rem; border-radius: 2px; }
+.form-input[aria-invalid="true"] { border-color: var(--error-red); }
+.delivery-radio-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.delivery-option-btn { min-height: 48px; padding: 8px 10px; border: 1px solid var(--bone-line); background-color: var(--fat-white); text-align: left; font-size: 0.8125rem; display: flex; flex-direction: column; justify-content: center; border-radius: 2px; }
+.delivery-option-btn[aria-checked="true"] { border-color: var(--hoof-graphite); background-color: var(--hoof-graphite); color: var(--fat-white); }
+.delivery-option-btn .deliv-cost { font-size: 0.75rem; opacity: 0.8; }
+.delivery-option-btn .deliv-cost.is-free { color: #7da34e; }
+.delivery-option-btn[aria-checked="true"] .deliv-cost.is-free { color: #E9EFE0; }
+.pvz-row { display: flex; gap: 8px; }
+.pvz-row .form-input { flex: 1; }
+.btn-secondary { min-height: 44px; padding: 0 14px; border: 1px solid var(--hoof-graphite); background-color: var(--paper-salt); font-size: 0.8125rem; font-weight: 500; white-space: nowrap; border-radius: 2px; }
+.messenger-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.messenger-chip { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.8125rem; font-weight: 500; border-radius: 2px; }
+.messenger-chip[aria-pressed="true"] { background-color: var(--brine-olive); border-color: var(--brine-olive); color: var(--fat-white); }
+.form-status-box { padding: 12px; font-size: 0.875rem; border: 1px solid var(--bone-line); background-color: var(--fat-white); line-height: 1.5; }
+.form-status-box.error { border-color: var(--cured-ruby); color: var(--cured-ruby); }
+.form-status-box.success { border-color: var(--brine-olive); background-color: var(--brine-olive-soft); }
+.cart-foot { padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px)); background-color: var(--fat-white); border-top: 1px solid var(--bone-line); display: flex; flex-direction: column; gap: 12px; }
+.cart-total-line { display: flex; justify-content: space-between; align-items: baseline; }
+.cart-total-label { font-size: 0.875rem; color: var(--graphite-muted); }
+.cart-total-sum { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; }
+#submit-order-btn { width: 100%; }
+#submit-order-btn[disabled] { opacity: 0.6; cursor: wait; }
+
+/* СВИНКА И ПОЛЁТ В КОРЗИНУ */
+.pig-runner-layer { position: fixed; left: 0; bottom: 12px; width: 140px; height: 92px; pointer-events: none; z-index: 60; opacity: 0; transform: translateX(-180px); }
+@media (max-width: 899px) { .pig-runner-layer { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); } }
+.flying-token { position: fixed; left: 0; top: 0; width: 28px; height: 28px; pointer-events: none; z-index: 70; will-change: transform, opacity; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ШАПКА -->
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="#top" class="brand-title">Наш Хамон</a>
+    <nav class="main-nav" aria-label="Основная навигация">
+      <a href="#catalog">Каталог</a>
+      <a href="#sets">Наборы</a>
+      <a href="#weight-system">Как считаем вес</a>
+      <a href="#aging">Выдержка</a>
+      <a href="#delivery">Доставка и оплата</a>
+    </nav>
+    <button type="button" id="header-cart-btn" class="cart-trigger" aria-label="Открыть корзину" aria-expanded="false" aria-haspopup="dialog">
+      <span>Корзина</span>
+      <span id="header-cart-count" class="cart-count-badge tabular">0</span>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ПЕРВЫЙ ЭКРАН -->
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <p class="hero-location">Санкт-Петербург, Сытнинская&nbsp;ул., 4П — фуд-аллея рынка «Сытный»</p>
+        <h1 id="hero-heading" class="hero-title">
+          <span class="hero-line-mask"><span class="hero-line-inner">Испанский хамон,</span></span>
+          <span class="hero-line-mask"><span class="hero-line-inner">оливки и сыры</span></span>
+          <span class="hero-line-mask"><span class="hero-line-inner">в Петербурге</span></span>
+        </h1>
+        <p class="hero-lead">Нарезка в вакууме, куски от 200&nbsp;г и целые ноги на кости. Каждый кусок взвешиваем при приёмке: вы выбираете конкретный кусок по весу, а точную сумму видите сразу.</p>
+        <a href="#catalog" class="btn-primary">Выбрать кусок</a>
+        <dl class="hero-facts">
+          <div>
+            <dt>Выдержка окороков</dt>
+            <dd class="tabular">от 8 до 28+ месяцев</dd>
+          </div>
+          <div>
+            <dt>Лавка открыта</dt>
+            <dd class="tabular">вт–вс, 10:30–20:30</dd>
+          </div>
+        </dl>
+      </div>
+      <div class="hero-media-wrap">
+        <div class="hero-video-frame" id="hero-video-box">
+          <!-- ЗАМЕНИТЬ: подставить реальный видеофайл нарезки хамона (mp4/webm) и постер клиента,
+               раскомментировав строку ниже. Пока файла нет — показывается SVG-заглушка под видео. -->
+          <!-- <source src="video/nash-hamon-cut.mp4" type="video/mp4"> -->
+          <svg viewBox="0 0 800 600" role="img" aria-label="Заглушка видео: тонкий срез хамона на хамонере" id="hero-fallback-art">
+            <rect width="800" height="600" fill="#231D1A"/>
+            <path d="M90 420 C220 260, 480 210, 710 290 L670 460 C460 430, 240 470, 90 420 Z" fill="#7A1C1C"/>
+            <path d="M130 400 C260 295, 470 260, 665 320" stroke="#F6F5F0" stroke-width="8" stroke-linecap="round" fill="none"/>
+            <path d="M180 430 C320 360, 490 345, 640 385" stroke="#E5DEC9" stroke-width="5" stroke-linecap="round" fill="none"/>
+            <line x1="60" y1="490" x2="740" y2="490" stroke="#5C5752" stroke-width="2"/>
+            <text x="60" y="535" fill="#F6F5F0" font-family="Golos Text, sans-serif" font-size="18">Видеозаглушка: нарезка хамона</text>
+          </svg>
+        </div>
+        <div class="hero-caption">
+          <span>Срез хамона длительной выдержки с белыми кристаллами тирозина</span>
+          <span class="tabular">Сытный рынок · @nashhamon.spb</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ИСТОРИИ ЛАВКИ -->
+  <section class="stories-section container" aria-label="Истории лавки">
+    <div class="stories-strip" id="stories-strip"></div>
+  </section>
+
+  <!-- КАТАЛОГ -->
+  <section id="catalog" class="section" style="border-top:none;">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Витрина и выбор кусков по весу</h2>
+        <p class="section-subtitle">Фасованные позиции оплачиваются сразу. Для кусков хамона, целых ног и оливок на развес мы проверяем выбор на складе и присылаем ссылку на точную сумму.</p>
+      </div>
+
+      <div class="catalog-controls">
+        <div class="filter-row" role="group" aria-label="Фильтр по стране происхождения">
+          <span class="filter-label">Страна:</span>
+          <button type="button" class="filter-btn" data-filter-country="all" aria-pressed="true">Все страны</button>
+          <button type="button" class="filter-btn" data-filter-country="es" aria-pressed="false">
+            <svg class="flag-svg" viewBox="0 0 20 20" aria-hidden="true"><defs><clipPath id="flag-clip-es"><circle cx="10" cy="10" r="9"/></clipPath></defs><g clip-path="url(#flag-clip-es)"><rect width="20" height="20" fill="#C60B1E"/><rect y="5" width="20" height="10" fill="#FFC400"/></g><circle cx="10" cy="10" r="9" fill="none" stroke="var(--bone-line)" stroke-width="1"/></svg>
+            Испания
+          </button>
+          <button type="button" class="filter-btn" data-filter-country="it" aria-pressed="false">
+            <svg class="flag-svg" viewBox="0 0 20 20" aria-hidden="true"><defs><clipPath id="flag-clip-it"><circle cx="10" cy="10" r="9"/></clipPath></defs><g clip-path="url(#flag-clip-it)"><rect width="7" height="20" fill="#009246"/><rect x="7" width="6" height="20" fill="#F6F5F0"/><rect x="13" width="7" height="20" fill="#CE2B37"/></g><circle cx="10" cy="10" r="9" fill="none" stroke="var(--bone-line)" stroke-width="1"/></svg>
+            Италия
+          </button>
+          <button type="button" class="filter-btn" data-filter-country="gr" aria-pressed="false">
+            <svg class="flag-svg" viewBox="0 0 20 20" aria-hidden="true"><defs><clipPath id="flag-clip-gr"><circle cx="10" cy="10" r="9"/></clipPath></defs><g clip-path="url(#flag-clip-gr)"><rect width="20" height="20" fill="#0D5EAF"/><rect y="3" width="20" height="2.4" fill="#F6F5F0"/><rect y="8" width="20" height="2.4" fill="#F6F5F0"/><rect y="13" width="20" height="2.4" fill="#F6F5F0"/><rect x="3" y="0" width="6" height="6.5" fill="#0D5EAF"/><rect x="5.3" width="1.6" height="6.5" fill="#F6F5F0"/><rect x="3" y="2.4" width="6" height="1.6" fill="#F6F5F0"/></g><circle cx="10" cy="10" r="9" fill="none" stroke="var(--bone-line)" stroke-width="1"/></svg>
+            Греция
+          </button>
+          <button type="button" class="filter-btn" data-filter-country="frch" aria-pressed="false">
+            <svg class="flag-svg" viewBox="0 0 20 20" aria-hidden="true"><defs><clipPath id="flag-clip-frch"><circle cx="10" cy="10" r="9"/></clipPath></defs><g clip-path="url(#flag-clip-frch)"><rect width="20" height="20" fill="#EF3340"/><rect x="7" y="7" width="6" height="6" fill="#F6F5F0"/></g><circle cx="10" cy="10" r="9" fill="none" stroke="var(--bone-line)" stroke-width="1"/></svg>
+            Франция и Швейцария
+          </button>
+        </div>
+
+        <div class="filter-row" role="group" aria-label="Фильтр по отделу">
+          <span class="filter-label">Отдел:</span>
+          <button type="button" class="filter-btn" data-filter-cat="all" aria-pressed="true">Все отделы</button>
+          <button type="button" class="filter-btn" data-filter-cat="sliced" aria-pressed="false">Хамон в нарезке</button>
+          <button type="button" class="filter-btn" data-filter-cat="piece" aria-pressed="false">Хамон куском</button>
+          <button type="button" class="filter-btn" data-filter-cat="leg" aria-pressed="false">Целые ноги</button>
+          <button type="button" class="filter-btn" data-filter-cat="olives" aria-pressed="false">Оливки и антипасти</button>
+          <button type="button" class="filter-btn" data-filter-cat="cheese" aria-pressed="false">Сыры и колбасы</button>
+          <button type="button" class="filter-btn" data-filter-cat="sets" aria-pressed="false">Наборы</button>
+        </div>
+
+        <div class="filter-row" role="group" aria-label="Фильтр по выдержке хамона">
+          <span class="filter-label">Выдержка:</span>
+          <button type="button" class="filter-btn" data-filter-aging="all" aria-pressed="true">Любая</button>
+          <button type="button" class="filter-btn" data-filter-aging="8-12" aria-pressed="false">8–12 мес</button>
+          <button type="button" class="filter-btn" data-filter-aging="14-18" aria-pressed="false">14–18 мес</button>
+          <button type="button" class="filter-btn" data-filter-aging="24" aria-pressed="false">24+ мес</button>
+        </div>
+      </div>
+
+      <div id="catalog-grid" class="catalog-grid" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- НАБОРЫ -->
+  <section id="sets" class="section" style="border-top:none;">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Соберём вкусный вечер, подарок или набор к столу</h2>
+        <p class="section-subtitle">Готовые сочетания из витрины лавки: собираем в вакуумной упаковке и отправляем в день заказа. Один клик — и весь набор в корзине.</p>
+      </div>
+      <div id="sets-grid" class="sets-grid"></div>
+    </div>
+  </section>
+
+  <!-- КАК СЧИТАЕМ ВЕС -->
+  <section id="weight-system" class="section-dark">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Как считаем вес куска</h2>
+        <p class="section-subtitle">Все куски хамона приходят разного веса. Мы взвешиваем каждый кусок при приёмке и заносим в учётную систему, поэтому цена считается по фактическому весу до рубля.</p>
+      </div>
+      <div class="scale-bento">
+        <div class="scale-panel">
+          <div>
+            <div class="scale-switch" role="group" aria-label="Выбор продукта для расчёта">
+              <button type="button" class="scale-switch-btn" data-scale-product="hamon" aria-pressed="true">Хамон Reserva 18 мес</button>
+              <button type="button" class="scale-switch-btn" data-scale-product="olives" aria-pressed="false">Оливки Gordal на развес</button>
+            </div>
+          </div>
+          <div class="scale-readout tabular" aria-live="polite">
+            <div class="readout-cell">
+              <span class="readout-label">Вес</span>
+              <span id="demo-scale-weight" class="readout-digits">215&nbsp;г</span>
+            </div>
+            <div class="readout-cell">
+              <span class="readout-label">Цена за 1 кг</span>
+              <span id="demo-scale-rate" class="readout-digits">6&nbsp;500&nbsp;₽</span>
+            </div>
+            <div class="readout-cell">
+              <span class="readout-label">Итого</span>
+              <span id="demo-scale-price" class="readout-digits highlight">1&nbsp;398&nbsp;₽</span>
+            </div>
+          </div>
+          <div class="scale-range-wrap">
+            <label class="scale-range-label" for="demo-scale-range" id="demo-scale-hint">Ползунок притягивается к реальным весам кусков на складе: 215&nbsp;г, 260&nbsp;г, 340&nbsp;г</label>
+            <input id="demo-scale-range" type="range" min="180" max="420" step="1" value="215">
+          </div>
+          <div class="magnet-chips" role="group" aria-label="Быстрый выбор веса" id="demo-scale-chips"></div>
+          <button type="button" id="scale-add-btn" class="scale-add-btn">Добавить порцию в корзину</button>
+        </div>
+        <div class="scale-panel scale-info-panel">
+          <h3>Почему оплата куска проходит в два шага</h3>
+          <p>1. Вы выбираете конкретный кусок по весу и отправляете заказ без регистрации.</p>
+          <p>2. Мы находим именно этот кусок на Сытном рынке, проверяем вакуумную упаковку и подтверждаем вес.</p>
+          <p>3. Приходит ссылка на оплату точной суммы в Telegram, WhatsApp или SMS — как удобнее.</p>
+          <div class="scale-info-foot">Для фиксированной нарезки, банок оливок и сыров оплата открывается сразу при оформлении.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ВЫДЕРЖКА -->
+  <section id="aging" class="section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Выдержка от 8 до 28+ месяцев</h2>
+        <p class="section-subtitle">Срок созревания определяет плотность мякоти, сладость жира и глубину орехового послевкусия.</p>
+      </div>
+      <div class="bento-3">
+        <article class="bento-card">
+          <div>
+            <div class="bento-period">8–12 месяцев</div>
+            <h3 class="bento-title">Bodega</h3>
+          </div>
+          <ul class="bento-list">
+            <li><strong>Текстура:</strong> мягкая, сочная, легко режется тонкими ломтиками.</li>
+            <li><strong>Вкус:</strong> деликатный, с умеренной солью и чистым мясным профилем.</li>
+            <li><strong>С чем подавать:</strong> тёплая чиабатта с томатом, спелая дыня, инжир, молодые сухие вина.</li>
+          </ul>
+          <button type="button" class="bento-btn" data-aging-link="8-12">Показать хамон этой выдержки</button>
+        </article>
+        <article class="bento-card">
+          <div>
+            <div class="bento-period">14–18 месяцев</div>
+            <h3 class="bento-title">Reserva</h3>
+          </div>
+          <ul class="bento-list">
+            <li><strong>Текстура:</strong> плотный рубиновый срез с золотистой жировой прослойкой.</li>
+            <li><strong>Вкус:</strong> насыщенный, с заметной ореховой нотой и долгим послевкусием.</li>
+            <li><strong>С чем подавать:</strong> овечий сыр Манчего, крупные оливки Gordal, красное сухое Темпранильо.</li>
+          </ul>
+          <button type="button" class="bento-btn" data-aging-link="14-18">Показать хамон этой выдержки</button>
+        </article>
+        <article class="bento-card">
+          <div>
+            <div class="bento-period">24–28+ месяцев</div>
+            <h3 class="bento-title">Gran Reserva</h3>
+          </div>
+          <ul class="bento-list">
+            <li><strong>Текстура:</strong> тёмно-бордовая вяленая мякоть, жир тает уже при комнатной температуре.</li>
+            <li><strong>Вкус:</strong> концентрированный умами, сухофрукты, жареный фундук.</li>
+            <li><strong>С чем подавать:</strong> сольно без хлеба, с сухим хересом или брютом Cava.</li>
+          </ul>
+          <button type="button" class="bento-btn" data-aging-link="24">Показать хамон этой выдержки</button>
+        </article>
+      </div>
+      <div class="tyrosine-callout">
+        <strong>Что означают белые точки на срезе хамона</strong>
+        <p>Мелкие белые вкрапления в мякоти — кристаллы аминокислоты тирозина. Они образуются естественным путём при долгом созревании и считаются знаком качественного выдержанного окорока.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ДОСТАВКА И ОПЛАТА -->
+  <section id="delivery" class="section" style="border-top:none;">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Доставка из Санкт-Петербурга и оплата</h2>
+        <p class="section-subtitle">Отправляем заказы в вакуумной упаковке по Санкт-Петербургу курьером день в день и по всей России через пункты выдачи.</p>
+      </div>
+      <!-- ЗАМЕНИТЬ: уточнить реальные тарифы и сроки доставки для каждой службы -->
+      <div class="delivery-grid">
+        <div class="bento-card">
+          <h3 class="bento-title">Яндекс Доставка и Drivee по СПб</h3>
+          <p>Экспресс-доставка курьером до двери в день сборки заказа. Тарифы считаются при оформлении в корзине. <span class="tabular">[заглушка тарифов]</span></p>
+        </div>
+        <div class="bento-card">
+          <h3 class="bento-title">СДЭК — пункты выдачи</h3>
+          <p>Вакуумная упаковка сохраняет хамон, колбасы и сыры в дороге. Доставка до выбранного пункта выдачи по СПб и России. <span class="tabular">[заглушка тарифов]</span></p>
+        </div>
+        <div class="bento-card">
+          <h3 class="bento-title">Самовывоз с Сытного рынка</h3>
+          <p>Сытнинская улица, 4П, фуд-аллея рынка «Сытный». Вторник–воскресенье, 10:30–20:30. Заказ отложим на ваше имя.</p>
+        </div>
+        <div class="bento-card">
+          <h3 class="bento-title">Оплата через эквайринг Т-Банка</h3>
+          <p>Банковская карта или СБП через защищённую платёжную страницу. Чек приходит автоматически. Весовые позиции оплачиваются по подтверждённому весу.</p>
+        </div>
+      </div>
+      <p class="delivery-note">Маршрут до лавки и отзывы — в Яндекс&nbsp;Картах, ссылка в подвале сайта.</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- ПОДВАЛ -->
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div>
+      <div class="brand-title" style="margin-bottom:8px;">Наш Хамон</div>
+      <p style="color:var(--graphite-muted);max-width:44ch;">Лавка испанского хамона, оливок и сыров в Санкт-Петербурге. Каждый кусок взвешиваем при приёмке и храним в вакуумной упаковке.</p>
+      <p class="footer-caption">Соберём вкусный вечер, подарок или набор к столу.</p>
+    </div>
+    <div>
+      <strong style="display:block;margin-bottom:8px;">Контакты</strong>
+      <ul class="footer-links">
+        <li>Санкт-Петербург, Сытнинская ул., 4П — фуд-аллея рынка «Сытный»</li>
+        <li>Вторник–воскресенье, 10:30–20:30</li>
+        <li><a href="tel:+79068960099" class="tabular">+7 (906) 896-00-99</a></li>
+        <li><a href="mailto:619896@mail.ru">619896@mail.ru</a></li>
+      </ul>
+    </div>
+    <div>
+      <strong style="display:block;margin-bottom:8px;">Мы на связи</strong>
+      <ul class="footer-links">
+        <li><a href="https://t.me/mvn_ge" target="_blank" rel="noopener">Telegram лавки</a></li>
+        <li><a href="https://wa.me/79068960099" target="_blank" rel="noopener">WhatsApp</a></li>
+        <li><a href="https://vk.com/nashhamon_spb" target="_blank" rel="noopener">ВКонтакте</a></li>
+        <li><a href="https://instagram.com/nashhamon.spb" target="_blank" rel="noopener">Instagram @nashhamon.spb</a></li>
+        <li><a href="https://yandex.ru/maps/-/CXq~AInl" target="_blank" rel="noopener">Маршрут в Яндекс Картах</a></li>
+        <li><a href="https://app.samosale.ru/Nash_khamon/nfc" target="_blank" rel="noopener">Программа лояльности Samosale</a></li>
+      </ul>
+      <!-- ЗАМЕНИТЬ: вписать реквизиты продавца (ИП/ООО, ИНН, ОГРНИП) -->
+      <p class="footer-caption">[Заглушка реквизитов: ИП/ООО, ИНН, ОГРНИП]</p>
+    </div>
+  </div>
+</footer>
+
+<!-- НИЖНЯ МОБИЛЬНАЯ ПАНЕЛЬ -->
+<div class="mobile-bottom-bar" role="region" aria-label="Панель быстрого перехода в корзину">
+  <div>
+    <div style="font-size:0.75rem;color:#C8C2B8;">Ваш заказ</div>
+    <div id="mobile-bar-summary" class="tabular" style="font-weight:600;font-size:0.9375rem;">Пока пусто</div>
+  </div>
+  <button type="button" id="mobile-cart-btn" class="mobile-bar-btn">Открыть корзину</button>
+</div>
+
+<!-- ШТОРКА КОРЗИНЫ -->
+<div id="cart-backdrop" class="cart-backdrop" aria-hidden="true"></div>
+<aside id="cart-sheet" class="cart-sheet" role="dialog" aria-modal="true" aria-labelledby="cart-dialog-title" aria-hidden="true">
+  <div class="cart-head">
+    <div>
+      <h2 id="cart-dialog-title" class="cart-head-title">Корзина</h2>
+      <p class="cart-head-sub">Без регистрации и личного кабинета</p>
+    </div>
+    <button type="button" id="cart-close-btn" class="cart-close" aria-label="Закрыть корзину">Закрыть</button>
+  </div>
+  <div class="cart-body" id="cart-body">
+    <div id="cart-items-list" class="cart-items-list"></div>
+    <div id="cart-empty-state" class="cart-empty-state">
+      <p>В корзине пока нет деликатесов.</p>
+      <button type="button" id="empty-to-catalog-btn" class="btn-primary">Выбрать кусок</button>
+    </div>
+    <div id="cart-checkout-area" style="display:none;flex-direction:column;gap:16px;">
+      <div id="cart-scenario-banner" class="scenario-banner"></div>
+      <div id="cart-progress" class="cart-progress" hidden>
+        <span id="cart-progress-label" class="cart-progress-label"></span>
+        <div class="cart-progress-track"><div id="cart-progress-fill" class="cart-progress-fill"></div></div>
+      </div>
+      <div class="cart-addons" id="cart-addons" aria-label="Быстрое добавление к заказу"></div>
+      <form id="order-form" novalidate style="display:flex;flex-direction:column;gap:14px;">
+        <div class="form-field">
+          <label for="customer-name">Ваше имя</label>
+          <input id="customer-name" name="name" type="text" class="form-input" placeholder="Например, Алексей" autocomplete="name" required>
+        </div>
+        <div class="form-field">
+          <label for="customer-phone">Телефон для связи и ссылки на оплату</label>
+          <input id="customer-phone" name="phone" type="tel" class="form-input tabular" placeholder="+7 (___) ___-__-__" autocomplete="tel" required>
+        </div>
+        <div class="form-field">
+          <label id="deliv-label">Способ доставки из Санкт-Петербурга</label>
+          <div class="delivery-radio-grid" role="radiogroup" aria-labelledby="deliv-label">
+            <button type="button" class="delivery-option-btn" data-deliv-id="cdek" data-deliv-cost="290" role="radio" aria-checked="true">
+              <strong>СДЭК (ПВЗ)</strong>
+              <span class="deliv-cost tabular">от 290&nbsp;₽</span>
+            </button>
+            <button type="button" class="delivery-option-btn" data-deliv-id="yandex" data-deliv-cost="350" role="radio" aria-checked="false">
+              <strong>Яндекс Доставка</strong>
+              <span class="deliv-cost tabular">от 350&nbsp;₽</span>
+            </button>
+            <button type="button" class="delivery-option-btn" data-deliv-id="drivee" data-deliv-cost="300" role="radio" aria-checked="false">
+              <strong>Drivee Курьер</strong>
+              <span class="deliv-cost tabular">от 300&nbsp;₽</span>
+            </button>
+            <button type="button" class="delivery-option-btn" data-deliv-id="pickup" data-deliv-cost="0" role="radio" aria-checked="false">
+              <strong>Самовывоз СПб</strong>
+              <span class="deliv-cost tabular">0&nbsp;₽</span>
+            </button>
+          </div>
+        </div>
+        <div id="cdek-pvz-block" class="form-field">
+          <label for="cdek-pvz-input">Пункт выдачи СДЭК</label>
+          <div class="pvz-row">
+            <input id="cdek-pvz-input" type="text" class="form-input" value="Санкт-Петербург, Большой пр. П.С., 34 [заглушка ПВЗ]">
+            <button type="button" id="cdek-map-btn" class="btn-secondary">Выбрать на карте</button>
+          </div>
+        </div>
+        <div id="courier-address-block" class="form-field" hidden>
+          <label for="courier-address-input">Адрес доставки в Санкт-Петербурге</label>
+          <input id="courier-address-input" type="text" class="form-input" placeholder="Улица, дом, квартира или офис" autocomplete="street-address">
+        </div>
+        <div id="messenger-block" class="form-field" hidden>
+          <label id="messenger-label">Куда прислать ссылку на оплату</label>
+          <div class="messenger-row" role="group" aria-labelledby="messenger-label">
+            <button type="button" class="messenger-chip" data-messenger="Telegram" aria-pressed="true">Telegram</button>
+            <button type="button" class="messenger-chip" data-messenger="WhatsApp" aria-pressed="false">WhatsApp</button>
+            <button type="button" class="messenger-chip" data-messenger="SMS" aria-pressed="false">SMS</button>
+          </div>
+        </div>
+        <div id="form-feedback" class="form-status-box" style="display:none;" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+  <div class="cart-foot" id="cart-foot" style="display:none;">
+    <div class="cart-total-line">
+      <span class="cart-total-label">Итого с доставкой:</span>
+      <strong id="cart-total-sum" class="cart-total-sum tabular">0&nbsp;₽</strong>
+    </div>
+    <button type="submit" form="order-form" id="submit-order-btn" class="btn-primary">Перейти к оплате</button>
+  </div>
+</aside>
+
+<!-- ПЛЕЕР ИСТОРИЙ -->
+<div id="stories-player" class="stories-player" role="dialog" aria-modal="true" aria-label="Просмотр истории" aria-hidden="true">
+  <div class="stories-frame">
+    <div class="story-bars" id="story-bars"></div>
+    <div class="story-head">
+      <div class="story-head-title" id="story-title"></div>
+      <button type="button" id="story-close-btn" class="story-close" aria-label="Закрыть истории">Закрыть</button>
+    </div>
+    <div class="story-visual" id="story-visual" aria-hidden="true"></div>
+    <p class="story-text" id="story-text"></p>
+    <div class="story-nav-row">
+      <button type="button" id="story-prev-btn" class="story-step-btn">Предыдущая</button>
+      <button type="button" id="story-next-btn" class="story-step-btn">Следующая</button>
+    </div>
+    <div id="story-action-slot"></div>
+  </div>
+</div>
+
+<!-- СВИНКА С ОКОРОКОМ -->
+<div id="pig-runner-layer" class="pig-runner-layer" aria-hidden="true">
+  <svg viewBox="0 0 160 105" width="140" height="92" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g id="pig-body-group">
+      <g id="pig-tail" style="transform-origin: 24px 54px;">
+        <path d="M24 54 C12 48, 12 38, 20 40" stroke="#181615" stroke-width="3" stroke-linecap="round"/>
+      </g>
+      <g id="pig-leg-bl" style="transform-origin: 42px 68px;">
+        <rect x="39" y="66" width="6" height="22" rx="3" fill="#181615"/>
+      </g>
+      <g id="pig-leg-br" style="transform-origin: 54px 68px;">
+        <rect x="51" y="66" width="6" height="22" rx="3" fill="#7A1C1C"/>
+      </g>
+      <g id="pig-leg-fl" style="transform-origin: 86px 68px;">
+        <rect x="83" y="66" width="6" height="22" rx="3" fill="#181615"/>
+      </g>
+      <rect x="24" y="38" width="76" height="34" rx="17" fill="#181615"/>
+      <g id="pig-head">
+        <rect x="84" y="28" width="34" height="28" rx="12" fill="#181615"/>
+        <rect x="112" y="36" width="10" height="14" rx="4" fill="#7A1C1C"/>
+        <circle cx="104" cy="38" r="2.2" fill="#F6F5F0"/>
+      </g>
+      <g id="pig-ear" style="transform-origin: 94px 30px;">
+        <path d="M88 30 L96 17 L103 29 Z" fill="#7A1C1C"/>
+      </g>
+      <g id="pig-front-arm" style="transform-origin: 96px 56px;">
+        <rect x="94" y="52" width="24" height="6" rx="3" fill="#181615"/>
+        <g id="pig-held-ham">
+          <path d="M114 30 C126 22, 142 30, 138 44 C135 53, 124 56, 117 50 L110 58 L106 54 L113 46 Z" fill="#7A1C1C"/>
+          <path d="M122 35 Q129 38 131 44" stroke="#F6F5F0" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+        </g>
+      </g>
+    </g>
+  </svg>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+// =========================================================================
+// 1. ДАННЫЕ ТОВАРОВ (СТРУКТУРА ПОД ВЫГРУЗКУ 1С:УНФ 3.0)
+// ИНТЕГРАЦИЯ 1С: заменить массив на fetch('/api/v1/products') — формат тот же.
+// Демо-цены стран кроме Испании — заглушки [заглушка цены], помечены в README.
+// =========================================================================
+var PRODUCTS = [
+  { id: 'hamon-reserva-18-piece', country: 'es', category: 'piece', title: 'Хамон Reserva, кусок в вакууме', agingMonths: 18,
+    description: 'Выдержка 18 месяцев. Плотный рубиновый срез с золотистым жиром и ореховым послевкусием.',
+    kind: 'piece', pricePerKg: 6500,
+    pieces: [{ id1c: '1c-res18-215', weightG: 215 }, { id1c: '1c-res18-260', weightG: 260 }, { id1c: '1c-res18-340', weightG: 340 }],
+    packs: [], bulk: null },
+  { id: 'hamon-gran-reserva-24-piece', country: 'es', category: 'piece', title: 'Хамон Gran Reserva, кусок в вакууме', agingMonths: 24,
+    description: 'Выдержка 24 месяца. Тёмно-бордовая мякоть с кристаллами тирозина, тающий жир и долгое послевкусие.',
+    kind: 'piece', pricePerKg: 8200,
+    pieces: [{ id1c: '1c-gr24-230', weightG: 230 }, { id1c: '1c-gr24-295', weightG: 295 }, { id1c: '1c-gr24-410', weightG: 410 }],
+    packs: [], bulk: null },
+  { id: 'hamon-leg-28', country: 'es', category: 'leg', title: 'Целая нога хамона на кости', agingMonths: 28,
+    description: 'Выдержка 28+ месяцев. Целый окорок длительного созревания для дома, события или подарка.',
+    kind: 'piece', pricePerKg: 5450,
+    pieces: [{ id1c: '1c-leg28-6400', weightG: 6400 }, { id1c: '1c-leg28-7200', weightG: 7200 }],
+    packs: [], bulk: null },
+  { id: 'hamon-gran-reserva-sliced', country: 'es', category: 'sliced', title: 'Нарезка хамона Gran Reserva', agingMonths: 24,
+    description: 'Тонкие слайсы выдержки 24 месяца в вакуумной упаковке. Готовы к подаче сразу после открытия.',
+    kind: 'pack', pricePerKg: 8900,
+    pieces: [], packs: [
+      { label: '50 г в вакууме', weightG: 50, price: 460 },
+      { label: '100 г в вакууме', weightG: 100, price: 890 },
+      { label: '150 г в вакууме', weightG: 150, price: 1290 }
+    ], bulk: null },
+  { id: 'hamon-bodega-sliced', country: 'es', category: 'sliced', title: 'Нарезка хамона Bodega', agingMonths: 10,
+    description: 'Мягкий хамон 10 месяцев выдержки с деликатной солёностью. Для брускетт и винной тарелки.',
+    kind: 'pack', pricePerKg: 6900,
+    pieces: [], packs: [
+      { label: '100 г в вакууме', weightG: 100, price: 690 },
+      { label: '150 г в вакууме', weightG: 150, price: 990 }
+    ], bulk: null },
+  { id: 'olives-gordal', country: 'es', category: 'olives', title: 'Оливки Gordal крупные', agingMonths: null,
+    description: 'Крупные мясистые зелёные оливки из Андалусии с плотной хрустящей мякотью в пряном рассоле.',
+    kind: 'pack', pricePerKg: 1800,
+    pieces: [], packs: [{ label: 'Банка 350 г', weightG: 350, price: 590 }],
+    bulk: { minG: 100, maxG: 1000, stepG: 50, pricePerKg: 1800 } },
+  { id: 'olives-manzanilla', country: 'es', category: 'olives', title: 'Оливки Manzanilla', agingMonths: null,
+    description: 'Нежные испанские оливки без косточки с ярким маслянистым вкусом и травами.',
+    kind: 'pack', pricePerKg: 1800,
+    pieces: [], packs: [{ label: 'Упаковка 250 г', weightG: 250, price: 450 }],
+    bulk: { minG: 100, maxG: 1000, stepG: 50, pricePerKg: 1800 } },
+  { id: 'cheese-manchego', country: 'es', category: 'cheese', title: 'Сыр овечий Манчего', agingMonths: 12,
+    description: 'Плотный испанский выдержанный сыр с ореховым ароматом и пикантным послевкусием.',
+    kind: 'pack', pricePerKg: 4760,
+    pieces: [], packs: [{ label: 'Кусок 250 г', weightG: 250, price: 1190 }], bulk: null },
+  { id: 'chorizo-iberico', country: 'es', category: 'cheese', title: 'Чоризо сыровяленая', agingMonths: null,
+    description: 'Испанская колбаса из рубленой свинины с копчёной паприкой Pimentón и чесноком.',
+    kind: 'pack', pricePerKg: 3950,
+    pieces: [], packs: [{ label: 'Упаковка 200 г', weightG: 200, price: 790 }], bulk: null },
+
+  // [заглушка цены] — позиции Италии, Греции, Франции и Швейцарии, цены уточнить у Виталия
+  { id: 'prosciutto-crudo', country: 'it', category: 'sliced', title: 'Прошутто крудо, нарезка', agingMonths: null,
+    description: 'Итальянская сыровяленая ветчина, тонкая нарезка в вакууме. 18 месяцев выдержки.',
+    kind: 'pack', pricePerKg: 6900,
+    pieces: [], packs: [
+      { label: '100 г в вакууме', weightG: 100, price: 690 },
+      { label: '150 г в вакууме', weightG: 150, price: 990 }
+    ], bulk: null },
+  { id: 'parmigiano-24', country: 'it', category: 'cheese', title: 'Пармиджано 24 месяца', agingMonths: 24,
+    description: 'Твёрдый итальянский сыр с кристаллами и глубоким вкусом. Откалываем нужный кусок при вас.',
+    kind: 'pack', pricePerKg: 6400,
+    pieces: [], packs: [{ label: 'Кусок 250 г', weightG: 250, price: 1600 }], bulk: null },
+  { id: 'tomatoes-dried', country: 'it', category: 'olives', title: 'Вяленые томаты в масле', agingMonths: null,
+    description: 'Сушёные томаты с орегано и чесноком в оливковом масле. Антипасти к вину и сырам.',
+    kind: 'pack', pricePerKg: 3400,
+    pieces: [], packs: [{ label: 'Банка 200 г', weightG: 200, price: 680 }], bulk: null },
+  { id: 'grissini', country: 'it', category: 'cheese', title: 'Гриссини хлебные палочки', agingMonths: null,
+    description: 'Тонкие хрустящие палочки на оливковом масле. База для винной тарелки.',
+    kind: 'pack', pricePerKg: 1950,
+    pieces: [], packs: [{ label: 'Упаковка 200 г', weightG: 200, price: 390 }], bulk: null },
+  { id: 'olives-kalamata', country: 'gr', category: 'olives', title: 'Оливки Каламата', agingMonths: null,
+    description: 'Тёмные греческие оливки миндалевидной формы с винным ароматом.',
+    kind: 'pack', pricePerKg: 1900,
+    pieces: [], packs: [{ label: 'Банка 300 г', weightG: 300, price: 570 }],
+    bulk: { minG: 100, maxG: 1000, stepG: 50, pricePerKg: 1900 } },
+  { id: 'feta-herbs', country: 'gr', category: 'cheese', title: 'Фета в травах', agingMonths: null,
+    description: 'Греческий сыр в маринаде с орегано, розмарином и оливковым маслом.',
+    kind: 'pack', pricePerKg: 3600,
+    pieces: [], packs: [{ label: 'Упаковка 200 г', weightG: 200, price: 720 }], bulk: null },
+  { id: 'comte-18', country: 'fr', category: 'cheese', title: 'Конт 18 месяцев', agingMonths: 18,
+    description: 'Французский твёрдый сыр с ореховой сладостью и плотной кристаллической текстурой.',
+    kind: 'pack', pricePerKg: 5900,
+    pieces: [], packs: [{ label: 'Кусок 250 г', weightG: 250, price: 1475 }], bulk: null },
+  { id: 'gruyere', country: 'ch', category: 'cheese', title: 'Грюйер выдержанный', agingMonths: 12,
+    description: 'Швейцарский сыр с плотной эластичной мякотью и фруктово-ореховым вкусом.',
+    kind: 'pack', pricePerKg: 6200,
+    pieces: [], packs: [{ label: 'Кусок 250 г', weightG: 250, price: 1550 }], bulk: null }
+];
+
+// Наборы: components ссылаются на pack-опции товаров (индексы массива packs)
+var SETS = [
+  { id: 'evening', kicker: 'Набор к столу', title: 'Вкусный вечер', featured: true,
+    desc: 'Собрали то, что чаще всего берут одним махом к бокалу.',
+    components: [
+      { productId: 'hamon-gran-reserva-sliced', optionIdx: 1 },
+      { productId: 'olives-gordal', optionIdx: 0 },
+      { productId: 'grissini', optionIdx: 0 }
+    ] },
+  { id: 'gift', kicker: 'Подарочный набор', title: 'Бокс «В подарок»',
+    desc: 'Нарезка длительной выдержки, оливки и выдержанный сыр — в аккуратной сборке.',
+    components: [
+      { productId: 'hamon-gran-reserva-sliced', optionIdx: 2 },
+      { productId: 'olives-manzanilla', optionIdx: 0 },
+      { productId: 'cheese-manchego', optionIdx: 0 }
+    ] },
+  { id: 'wine', kicker: 'Тарелка к вину', title: 'Винная тарелка',
+    desc: 'Мягкий Bodega, сыровяленая чоризо и крупные Gordal.',
+    components: [
+      { productId: 'hamon-bodega-sliced', optionIdx: 1 },
+      { productId: 'chorizo-iberico', optionIdx: 0 },
+      { productId: 'olives-gordal', optionIdx: 0 }
+    ] }
+];
+
+// ЗАМЕНИТЬ: порог бесплатной доставки курьером по СПб — согласовать с Виталием
+var FREE_DELIVERY_FROM = 3000;
+var DELIVERY_NAMES = { cdek: 'СДЭК (ПВЗ)', yandex: 'Яндекс Доставка', drivee: 'Drivee Курьер', pickup: 'Самовывоз' };
+
+// =========================================================================
+// 2. МАТЕМАТИКА ЦЕН И ФОРМАТИРОВАНИЕ
+// =========================================================================
+function calcPiecePrice(weightG, pricePerKg) { return Math.round((weightG / 1000) * pricePerKg); }
+function calcPricePer100g(pricePerKg) { return Math.round(pricePerKg / 10); }
+function formatRub(num) {
+  return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0') + '\u00A0₽';
+}
+function formatWeightLabel(weightG) {
+  if (weightG >= 1000) {
+    var kg = (weightG / 1000).toFixed(1).replace('.', ',');
+    return kg + '\u00A0кг';
+  }
+  return String(weightG) + '\u00A0г';
+}
+function prefersReducedMotion() {
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+var COUNTRY_NAMES = { es: 'Испания', it: 'Италия', gr: 'Греция', fr: 'Франция', ch: 'Швейцария' };
+
+// =========================================================================
+// 3. СОСТОЯНИЕ МАГАЗИНА И LOCALSTORAGE
+// =========================================================================
+var state = {
+  filterCountry: 'all',
+  filterCat: 'all',
+  filterAging: 'all',
+  selectedOptionByProduct: {},
+  bulkWeightByProduct: {},
+  statusMessageByProduct: {},
+  cart: [],
+  customer: {
+    name: '', phone: '',
+    deliveryId: 'cdek', deliveryCost: 290,
+    cdekPvz: 'Санкт-Петербург, Большой пр. П.С., 34 [заглушка ПВЗ]',
+    courierAddress: '',
+    messenger: 'Telegram'
+  },
+  lastPigRunTime: 0,
+  lastFocusedTrigger: null
+};
+
+function loadPersistedState() {
+  try {
+    var rawCart = localStorage.getItem('nh_cart_v1');
+    if (rawCart) {
+      var parsed = JSON.parse(rawCart);
+      if (Array.isArray(parsed)) state.cart = parsed;
+    }
+    var rawCust = localStorage.getItem('nh_customer_v1');
+    if (rawCust) {
+      var parsedCust = JSON.parse(rawCust);
+      if (parsedCust && typeof parsedCust === 'object') {
+        for (var key in state.customer) {
+          if (Object.prototype.hasOwnProperty.call(parsedCust, key)) {
+            state.customer[key] = parsedCust[key];
+          }
+        }
+      }
+    }
+  } catch (e) { /* localStorage заблокирован в приватном режиме */ }
+}
+function savePersistedState() {
+  try {
+    localStorage.setItem('nh_cart_v1', JSON.stringify(state.cart));
+    localStorage.setItem('nh_customer_v1', JSON.stringify(state.customer));
+  } catch (e) { /* игнорируем ошибки квоты */ }
+}
+function isPieceInCart(id1c) {
+  return state.cart.some(function (item) { return item.pieceId1c === id1c; });
+}
+function findProduct(id) {
+  for (var i = 0; i < PRODUCTS.length; i++) { if (PRODUCTS[i].id === id) return PRODUCTS[i]; }
+  return null;
+}
+function initProductSelections() {
+  PRODUCTS.forEach(function (p) {
+    if (p.kind === 'piece') {
+      var available = p.pieces.filter(function (pc) { return !isPieceInCart(pc.id1c); })[0];
+      state.selectedOptionByProduct[p.id] = available ? available.id1c : 'custom-cut';
+    } else {
+      state.selectedOptionByProduct[p.id] = 'pack-0';
+      if (p.bulk) state.bulkWeightByProduct[p.id] = 350;
+    }
+  });
+}
+
+// =========================================================================
+// 4. SVG-ЗАГЛУШКИ КАРТОЧЕК (ПРОПОРЦИИ 4:3)
+// ЗАМЕНИТЬ: фото продукции @nashhamon.spb, <img loading="lazy" width="400" height="300">
+// =========================================================================
+function placeholderArt(product) {
+  if (product.category === 'olives') {
+    return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
+      '<rect width="400" height="300" fill="#EAE6DC"/>' +
+      '<circle cx="155" cy="155" r="44" fill="#4E5E32"/>' +
+      '<ellipse cx="168" cy="145" rx="10" ry="14" fill="#7A1C1C"/>' +
+      '<circle cx="235" cy="168" r="38" fill="#3E4B27"/>' +
+      '<ellipse cx="222" cy="160" rx="8" ry="12" fill="#7A1C1C"/>' +
+      '<path d="M120 110 Q160 90 205 105" stroke="#4E5E32" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 — ' + product.title + '</text>' +
+      '</svg>';
+  }
+  if (product.category === 'cheese') {
+    return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
+      '<rect width="400" height="300" fill="#EFECE4"/>' +
+      '<polygon points="90,205 295,120 295,215" fill="#E3D4B4" stroke="#181615" stroke-width="2"/>' +
+      '<circle cx="240" cy="165" r="6" fill="#D9C49C"/>' +
+      '<circle cx="200" cy="185" r="4" fill="#D9C49C"/>' +
+      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 — ' + product.title + '</text>' +
+      '</svg>';
+  }
+  if (product.category === 'leg') {
+    return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
+      '<rect width="400" height="300" fill="#EAE5DC"/>' +
+      '<path d="M120 230 L280 230 L270 210 L130 210 Z" fill="#5C5752"/>' +
+      '<rect x="196" y="90" width="8" height="120" fill="#5C5752"/>' +
+      '<path d="M120 100 C200 70, 300 80, 288 150 C280 190, 190 200, 130 170 Z" fill="#7A1C1C"/>' +
+      '<path d="M150 115 C210 95, 265 100, 280 130" stroke="#F6F5F0" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+      '<ellipse cx="126" cy="118" rx="10" ry="14" fill="#E3D4B4"/>' +
+      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 — ' + product.title + '</text>' +
+      '</svg>';
+  }
+  return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
+    '<rect width="400" height="300" fill="#EAE5DC"/>' +
+    '<path d="M65 195 C135 110, 255 100, 335 148 L315 220 C225 205, 130 225, 65 195 Z" fill="#7A1C1C"/>' +
+    '<path d="M95 182 C165 135, 250 128, 312 162" stroke="#F6F5F0" stroke-width="5" stroke-linecap="round" fill="none"/>' +
+    '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 — ' + product.title + '</text>' +
+    '</svg>';
+}
+
+// =========================================================================
+// 5. РЕНДЕР КАТАЛОГА
+// =========================================================================
+function matchesFilters(product) {
+  if (state.filterCountry !== 'all') {
+    if (state.filterCountry === 'frch') {
+      if (product.country !== 'fr' && product.country !== 'ch') return false;
+    } else if (product.country !== state.filterCountry) {
+      return false;
+    }
+  }
+  if (state.filterCat !== 'all' && product.category !== state.filterCat) return false;
+  if (state.filterAging !== 'all') {
+    if (!product.agingMonths) return false;
+    if (state.filterAging === '8-12' && (product.agingMonths < 8 || product.agingMonths > 12)) return false;
+    if (state.filterAging === '14-18' && (product.agingMonths < 14 || product.agingMonths > 18)) return false;
+    if (state.filterAging === '24' && product.agingMonths < 24) return false;
+  }
+  return true;
+}
+
+function getActiveProductData(product) {
+  var sel = state.selectedOptionByProduct[product.id];
+  if (product.kind === 'piece') {
+    if (sel === 'custom-cut') {
+      var avgW = product.pieces[0] ? product.pieces[0].weightG : 250;
+      return {
+        mode: 'custom-cut',
+        price: calcPiecePrice(avgW, product.pricePerKg),
+        priceCaption: 'Ориентир — точный вес согласуем',
+        canAdd: true,
+        label: 'Индивидуальный отрез под заказ',
+        weightG: avgW,
+        requiresWeightCheck: true
+      };
+    }
+    var pieceObj = product.pieces.filter(function (pc) { return pc.id1c === sel; })[0] || product.pieces[0];
+    var alreadyInCart = isPieceInCart(pieceObj.id1c);
+    return {
+      mode: 'piece',
+      pieceId1c: pieceObj.id1c,
+      weightG: pieceObj.weightG,
+      price: calcPiecePrice(pieceObj.weightG, product.pricePerKg),
+      priceCaption: 'Точная цена за ' + formatWeightLabel(pieceObj.weightG),
+      canAdd: !alreadyInCart,
+      label: 'Кусок ' + formatWeightLabel(pieceObj.weightG),
+      requiresWeightCheck: true
+    };
+  }
+  if (sel === 'bulk' && product.bulk) {
+    var w = state.bulkWeightByProduct[product.id] || 350;
+    return {
+      mode: 'bulk',
+      weightG: w,
+      price: calcPiecePrice(w, product.bulk.pricePerKg),
+      priceCaption: 'На развес ' + w + '\u00A0г',
+      canAdd: true,
+      label: 'На развес ' + w + '\u00A0г',
+      requiresWeightCheck: true
+    };
+  }
+  var idx = sel && sel.indexOf('pack-') === 0 ? parseInt(sel.replace('pack-', ''), 10) : 0;
+  var pack = product.packs[idx] || product.packs[0];
+  return {
+    mode: 'pack',
+    weightG: pack.weightG,
+    price: pack.price,
+    priceCaption: pack.label,
+    canAdd: true,
+    label: pack.label,
+    requiresWeightCheck: false
+  };
+}
+
+function renderCatalog(withFlip) {
+  var grid = document.getElementById('catalog-grid');
+  var oldPositions = {};
+  if (withFlip && !prefersReducedMotion() && window.gsap) {
+    grid.querySelectorAll('.product-card').forEach(function (el) {
+      oldPositions[el.getAttribute('data-product-id')] = el.getBoundingClientRect();
+    });
+  }
+
+  var visible = PRODUCTS.filter(matchesFilters);
+  if (visible.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:40px 20px;background:var(--fat-white);border-right:1px solid var(--bone-line);border-bottom:1px solid var(--bone-line);">' +
+      '<p style="margin-bottom:12px;color:var(--graphite-muted);">По выбранному сочетанию страны, отдела и выдержки ничего не нашлось.</p>' +
+      '<button type="button" class="filter-btn" id="reset-filters-btn">Показать все товары</button></div>';
+    var resetBtn = document.getElementById('reset-filters-btn');
+    if (resetBtn) resetBtn.addEventListener('click', function () {
+      state.filterCountry = 'all'; state.filterCat = 'all'; state.filterAging = 'all';
+      syncFilterButtonsUI(); renderCatalog(true);
+    });
+    return;
+  }
+
+  grid.innerHTML = visible.map(function (product) {
+    var active = getActiveProductData(product);
+    var per100 = calcPricePer100g(product.pricePerKg);
+    var sel = state.selectedOptionByProduct[product.id];
+    var statusMsg = state.statusMessageByProduct[product.id] || '';
+    var metaText = COUNTRY_NAMES[product.country] || '';
+    if (product.agingMonths) {
+      metaText += ' · Выдержка ' + product.agingMonths + '\u00A0мес.';
+    }
+
+    var optionsHtml;
+    if (product.kind === 'piece') {
+      var pieceButtons = product.pieces.map(function (pc) {
+        var taken = isPieceInCart(pc.id1c);
+        var checked = sel === pc.id1c;
+        var piecePrice = calcPiecePrice(pc.weightG, product.pricePerKg);
+        return '<button type="button" class="option-chip tabular" role="radio" aria-checked="' + checked + '"' +
+          ' data-action="select-option" data-product-id="' + product.id + '" data-option-val="' + pc.id1c + '"' +
+          (taken ? ' disabled title="Этот кусок уже в вашей корзине"' : '') + '>' +
+          '<span>' + formatWeightLabel(pc.weightG) + '</span>' +
+          '<span class="chip-sub">' + (taken ? 'В корзине' : formatRub(piecePrice)) + '</span>' +
+          '</button>';
+      }).join('');
+      var customNote;
+      if (sel === 'custom-cut') {
+        customNote = 'Точный вес и сумму согласуем при сборке и пришлём ссылку на оплату.';
+      } else if (statusMsg) {
+        customNote = statusMsg;
+      } else {
+        customNote = 'Кусок взвешен при приёмке. Второй раз тот же кусок добавить нельзя.';
+      }
+      optionsHtml =
+        '<div class="selector-caption"><span>Взвешенные куски в наличии:</span><span>1 кусок = 1 экземпляр</span></div>' +
+        '<div class="options-wrap" role="radiogroup" aria-label="Выбор куска по весу">' + pieceButtons +
+        (product.category === 'piece'
+          ? '<button type="button" class="option-chip" role="radio" aria-checked="' + (sel === 'custom-cut') + '"' +
+            ' data-action="select-option" data-product-id="' + product.id + '" data-option-val="custom-cut">' +
+            '<span>Под заказ</span><span class="chip-sub">Свой вес</span></button>'
+          : '') +
+        '</div>' +
+        '<div class="custom-cut-note">' + customNote + '</div>';
+    } else {
+      var packButtons = product.packs.map(function (pk, idx) {
+        var val = 'pack-' + idx;
+        var checked = sel === val;
+        return '<button type="button" class="option-chip tabular" role="radio" aria-checked="' + checked + '"' +
+          ' data-action="select-option" data-product-id="' + product.id + '" data-option-val="' + val + '">' +
+          '<span>' + pk.label + '</span><span class="chip-sub">' + formatRub(pk.price) + '</span>' +
+          '</button>';
+      }).join('');
+      var bulkButton = product.bulk
+        ? '<button type="button" class="option-chip" role="radio" aria-checked="' + (sel === 'bulk') + '"' +
+          ' data-olive="' + (product.category === 'olives') + '"' +
+          ' data-action="select-option" data-product-id="' + product.id + '" data-option-val="bulk">' +
+          '<span>На развес</span><span class="chip-sub">' + product.bulk.minG + '–' + product.bulk.maxG + '\u00A0г</span></button>'
+        : '';
+      var bulkSlider = (product.bulk && sel === 'bulk')
+        ? '<div class="bulk-slider-box">' +
+          '<div style="display:flex;justify-content:space-between;font-size:0.8125rem;">' +
+          '<span>Вес порции: <strong class="tabular" id="bulk-weight-label-' + product.id + '">' + active.weightG + '\u00A0г</strong></span>' +
+          '<span class="tabular">' + formatRub(calcPricePer100g(product.bulk.pricePerKg)) + ' / 100\u00A0г</span></div>' +
+          '<input type="range" min="' + product.bulk.minG + '" max="' + product.bulk.maxG + '" step="' + product.bulk.stepG + '"' +
+          ' value="' + active.weightG + '" aria-label="Вес оливок на развес в граммах"' +
+          ' data-action="bulk-range" data-product-id="' + product.id + '">' +
+          '<div class="tolerance-hint">Точный вес определим на весах при фасовке (допуск ±15\u00A0г [допуск уточнить]).</div>' +
+          '</div>'
+        : '';
+      optionsHtml =
+        '<div class="selector-caption"><span>Выберите фасовку:</span></div>' +
+        '<div class="options-wrap" role="radiogroup" aria-label="Выбор фасовки">' + packButtons + bulkButton + '</div>' +
+        bulkSlider;
+    }
+
+    return '<article class="product-card" data-product-id="' + product.id + '">' +
+      '<div>' +
+      '<div class="card-media">' + placeholderArt(product) +
+      '<div class="olive-stage" id="olive-stage-' + product.id + '" aria-hidden="true"></div></div>' +
+      '<div class="card-header-row"><h3 class="card-title">' + product.title + '</h3>' +
+      '<span class="rate-per-100 tabular">' + formatRub(per100) + ' / 100\u00A0г</span></div>' +
+      '<div class="card-meta tabular">' + metaText + '</div>' +
+      '<p class="card-desc">' + product.description + '</p>' +
+      '</div>' +
+      '<div class="selector-dynamic-slot">' + optionsHtml +
+      '<div class="card-footer">' +
+      '<div class="price-stack"><span class="price-label" id="price-caption-' + product.id + '">' + active.priceCaption + '</span>' +
+      '<strong class="price-value tabular" id="price-val-' + product.id + '" data-current-price="' + active.price + '">' + formatRub(active.price) + '</strong></div>' +
+      '<button type="button" class="add-btn" data-action="add-to-cart" data-product-id="' + product.id + '"' +
+      (!active.canAdd ? ' disabled' : '') + '>' +
+      '<span class="btn-text">' + (active.canAdd ? 'Добавить в корзину' : 'Кусок в корзине') + '</span>' +
+      '</button></div></div>' +
+      '</article>';
+  }).join('');
+
+  // FLIP-перестроение при смене фильтров
+  if (withFlip && !prefersReducedMotion() && window.gsap) {
+    grid.querySelectorAll('.product-card').forEach(function (el) {
+      var prev = oldPositions[el.getAttribute('data-product-id')];
+      if (prev) {
+        var next = el.getBoundingClientRect();
+        var dx = prev.left - next.left;
+        var dy = prev.top - next.top;
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+          gsap.fromTo(el, { x: dx, y: dy }, { x: 0, y: 0, duration: 0.32, ease: 'power2.out' });
+        }
+      } else {
+        gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.25 });
+      }
+    });
+  }
+}
+
+// =========================================================================
+// 6. АНИМАЦИИ (оливки, свинка, счётчик цены, полёт в корзину)
+// =========================================================================
+function animatePriceChange(el, fromVal, toVal) {
+  if (!el) return;
+  if (prefersReducedMotion() || !window.gsap || fromVal === toVal) {
+    el.textContent = formatRub(toVal);
+    if (el.getAttribute('data-current-price') !== null) el.setAttribute('data-current-price', String(toVal));
+    return;
+  }
+  var proxy = { val: fromVal };
+  gsap.to(proxy, {
+    val: toVal, duration: 0.3, ease: 'power2.out',
+    onUpdate: function () { el.textContent = formatRub(Math.round(proxy.val)); },
+    onComplete: function () { el.setAttribute('data-current-price', String(toVal)); }
+  });
+}
+
+function createOliveNode() {
+  var wrap = document.createElement('div');
+  wrap.style.position = 'absolute';
+  wrap.style.width = '26px';
+  wrap.style.height = '26px';
+  wrap.style.left = '0';
+  wrap.style.top = '0';
+  wrap.innerHTML = '<svg viewBox="0 0 28 28" width="26" height="26" fill="none">' +
+    '<ellipse cx="14" cy="14" rx="11" ry="9.5" fill="#4E5E32" stroke="#181615" stroke-width="1.2"/>' +
+    '<ellipse cx="18" cy="13" rx="3.2" ry="4.2" fill="#7A1C1C"/>' +
+    '<path d="M8 10 Q11 7 15 8" stroke="#F6F5F0" stroke-width="1.4" stroke-linecap="round" opacity="0.75" fill="none"/>' +
+    '</svg>';
+  return wrap;
+}
+
+// Фирменная сцена A: оливки падают на «пол» карточки и подпрыгивают с затуханием
+function bounceOlivesInCard(productId) {
+  if (prefersReducedMotion() || !window.gsap) return;
+  var stage = document.getElementById('olive-stage-' + productId);
+  if (!stage) return;
+  var stageRect = stage.getBoundingClientRect();
+  var floorY = stageRect.height - 28;
+  var count = 4;
+  for (var i = 0; i < count; i++) {
+    (function (i) {
+      var olive = createOliveNode();
+      var startX = 28 + i * ((stageRect.width - 70) / (count - 1));
+      var angle = (i % 2 === 0 ? 1 : -1) * (12 + i * 5);
+      stage.appendChild(olive);
+      var tl = gsap.timeline({ delay: i * 0.075, onComplete: function () { olive.remove(); } });
+      gsap.set(olive, { x: startX, y: -28, rotation: -angle });
+      tl.to(olive, { y: floorY, scaleY: 1.1, scaleX: 0.92, rotation: 0, duration: 0.24, ease: 'power2.in' })
+        .to(olive, { scaleY: 0.8, scaleX: 1.15, duration: 0.06 })
+        .to(olive, { y: floorY - 56, scaleY: 1.06, scaleX: 0.95, rotation: angle, duration: 0.2, ease: 'power2.out' })
+        .to(olive, { y: floorY, scaleY: 1.08, scaleX: 0.94, duration: 0.2, ease: 'power2.in' })
+        .to(olive, { scaleY: 0.84, scaleX: 1.12, duration: 0.05 })
+        .to(olive, { y: floorY - 24, scaleY: 1.02, scaleX: 0.98, rotation: -angle * 0.5, duration: 0.14, ease: 'power2.out' })
+        .to(olive, { y: floorY, scaleY: 1, scaleX: 1, rotation: 0, duration: 0.14, ease: 'power2.in' })
+        .to(olive, { opacity: 0, duration: 0.15, delay: 0.05 });
+    })(i);
+  }
+}
+
+// Полёт оливки/окорока по дуге Безье в иконку корзины + упругий счётчик
+function flyTokenToCart(startRect, tokenType) {
+  var cartBtn = window.innerWidth >= 900
+    ? document.getElementById('header-cart-btn')
+    : document.getElementById('mobile-cart-btn');
+  var badge = document.getElementById('header-cart-count');
+  if (prefersReducedMotion() || !window.gsap || !cartBtn) {
+    if (badge && window.gsap && !prefersReducedMotion()) {
+      gsap.fromTo(badge, { scale: 1.3 }, { scale: 1, duration: 0.25 });
+    }
+    return;
+  }
+  var targetRect = cartBtn.getBoundingClientRect();
+  var token = document.createElement('div');
+  token.className = 'flying-token';
+  token.innerHTML = tokenType === 'olive'
+    ? '<svg viewBox="0 0 28 28" width="26" height="26"><ellipse cx="14" cy="14" rx="11" ry="9.5" fill="#4E5E32" stroke="#181615" stroke-width="1.2"/><ellipse cx="18" cy="13" rx="3.2" ry="4.2" fill="#7A1C1C"/></svg>'
+    : '<svg viewBox="0 0 36 36" width="30" height="30"><path d="M10 10 C20 4, 32 10, 29 22 C26 30, 16 31, 11 26 Z" fill="#7A1C1C"/><path d="M14 15 C19 12, 24 14, 26 19" stroke="#F6F5F0" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
+  document.body.appendChild(token);
+
+  var startX = startRect.left + startRect.width / 2 - 14;
+  var startY = startRect.top + startRect.height / 2 - 14;
+  var endX = targetRect.left + targetRect.width / 2 - 14;
+  var endY = targetRect.top + targetRect.height / 2 - 14;
+  gsap.set(token, { x: startX, y: startY });
+  var proxy = { t: 0 };
+  var peakY = Math.min(startY, endY) - 90;
+  gsap.to(proxy, {
+    t: 1, duration: 0.58, ease: 'power2.inOut',
+    onUpdate: function () {
+      var p = proxy.t;
+      var curX = startX + (endX - startX) * p;
+      var curY = (1 - p) * (1 - p) * startY + 2 * (1 - p) * p * peakY + p * p * endY;
+      gsap.set(token, { x: curX, y: curY, rotation: p * 180, scale: 1 - p * 0.25 });
+    },
+    onComplete: function () {
+      token.remove();
+      gsap.fromTo(badge, { scale: 1.35 }, { scale: 1, duration: 0.28, ease: 'back.out(2)' });
+    }
+  });
+}
+
+// Фирменная сцена B: свинка пробегает по нижней кромке (не чаще раза в 8 секунд)
+function triggerPigRunner() {
+  var now = Date.now();
+  var badge = document.getElementById('header-cart-count');
+  if (prefersReducedMotion() || !window.gsap || (now - state.lastPigRunTime < 8000)) {
+    if (badge && window.gsap && !prefersReducedMotion()) {
+      gsap.fromTo(badge, { scale: 1.3 }, { scale: 1, duration: 0.25 });
+    }
+    return;
+  }
+  state.lastPigRunTime = now;
+  var layer = document.getElementById('pig-runner-layer');
+  var bodyGroup = document.getElementById('pig-body-group');
+  var legBL = document.getElementById('pig-leg-bl');
+  var legBR = document.getElementById('pig-leg-br');
+  var legFL = document.getElementById('pig-leg-fl');
+  var ear = document.getElementById('pig-ear');
+  var tail = document.getElementById('pig-tail');
+  var arm = document.getElementById('pig-front-arm');
+  var heldHam = document.getElementById('pig-held-ham');
+
+  var vw = window.innerWidth;
+  var stopX = Math.min(vw * 0.68, vw - 180);
+  gsap.killTweensOf([layer, bodyGroup, legBL, legBR, legFL, ear, tail, arm, heldHam]);
+  gsap.set(layer, { x: -160, opacity: 1 });
+  gsap.set(heldHam, { opacity: 1, scale: 1 });
+
+  var gaitTl = gsap.timeline({ repeat: 9, yoyo: true });
+  gaitTl.fromTo([legBL, legFL], { rotation: -25 }, { rotation: 25, duration: 0.14, ease: 'sine.inOut' }, 0)
+    .fromTo(legBR, { rotation: 25 }, { rotation: -25, duration: 0.14, ease: 'sine.inOut' }, 0)
+    .fromTo(bodyGroup, { y: 0 }, { y: -5, duration: 0.14, ease: 'sine.inOut' }, 0)
+    .fromTo(ear, { rotation: -8 }, { rotation: 10, duration: 0.14, ease: 'sine.inOut' }, 0.03)
+    .fromTo(tail, { rotation: -12 }, { rotation: 14, duration: 0.14, ease: 'sine.inOut' }, 0.04)
+    .fromTo(arm, { rotation: -6 }, { rotation: 8, duration: 0.14, ease: 'sine.inOut' }, 0.02);
+
+  var mainTl = gsap.timeline();
+  mainTl.to(layer, {
+    x: stopX, duration: 1.85, ease: 'power1.out',
+    onComplete: function () {
+      var hamRect = heldHam.getBoundingClientRect();
+      gsap.set(heldHam, { opacity: 0 });
+      flyTokenToCart(hamRect, 'ham');
+    }
+  }).to(layer, {
+    x: vw + 180, duration: 0.85, ease: 'power1.in',
+    onComplete: function () { gsap.set(layer, { opacity: 0 }); }
+  });
+}
+
+// =========================================================================
+// 7. КОРЗИНА
+// =========================================================================
+function pushCartItem(item) {
+  item.uid = 'item-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+  state.cart.push(item);
+  savePersistedState();
+  updateCartUI();
+}
+
+function addProductToCart(productId, triggerBtn) {
+  var product = findProduct(productId);
+  if (!product) return;
+  var active = getActiveProductData(product);
+  if (!active.canAdd) {
+    state.statusMessageByProduct[product.id] = 'Этот кусок уже лежит в вашей корзине — выберите другой вес.';
+    renderCatalog(false);
+    return;
+  }
+  pushCartItem({
+    productId: product.id,
+    title: product.title,
+    label: active.label,
+    price: active.price,
+    weightG: active.weightG,
+    requiresWeightCheck: active.requiresWeightCheck,
+    pieceId1c: active.pieceId1c || null
+  });
+  if (active.mode === 'piece') {
+    var nextAvailable = product.pieces.filter(function (pc) { return !isPieceInCart(pc.id1c); })[0];
+    state.selectedOptionByProduct[product.id] = nextAvailable ? nextAvailable.id1c : 'custom-cut';
+    state.statusMessageByProduct[product.id] = 'Кусок ' + formatWeightLabel(active.weightG) + ' добавлен в корзину.';
+  }
+  if (triggerBtn) {
+    triggerBtn.innerHTML = '<svg class="check-svg" viewBox="0 0 24 24" aria-hidden="true"><polyline points="4 12 10 18 20 6"/></svg><span>Добавлено</span>';
+    var svgPath = triggerBtn.querySelector('.check-svg');
+    if (svgPath && window.gsap && !prefersReducedMotion()) {
+      gsap.to(svgPath, { strokeDashoffset: 0, duration: 0.25 });
+    }
+    setTimeout(function () { renderCatalog(false); }, 420);
+  } else {
+    renderCatalog(false);
+  }
+  if (product.category === 'olives') {
+    bounceOlivesInCard(product.id);
+    if (triggerBtn) flyTokenToCart(triggerBtn.getBoundingClientRect(), 'olive');
+  } else if (['piece', 'leg', 'sliced'].indexOf(product.category) !== -1) {
+    triggerPigRunner();
+  } else if (triggerBtn) {
+    flyTokenToCart(triggerBtn.getBoundingClientRect(), 'ham');
+  }
+}
+
+function addBulkPortion(product, weightG, pricePerKg, sourceRect) {
+  pushCartItem({
+    productId: product.id,
+    title: product.title,
+    label: 'На развес ' + formatWeightLabel(weightG),
+    price: calcPiecePrice(weightG, pricePerKg),
+    weightG: weightG,
+    requiresWeightCheck: true,
+    pieceId1c: null
+  });
+  if (product.category === 'olives') {
+    bounceOlivesInCard(product.id);
+    if (sourceRect) flyTokenToCart(sourceRect, 'olive');
+  } else {
+    triggerPigRunner();
+  }
+}
+
+function addSetToCart(setId, triggerBtn) {
+  var setData = SETS.filter(function (s) { return s.id === setId; })[0];
+  if (!setData) return;
+  setData.components.forEach(function (component) {
+    var product = findProduct(component.productId);
+    if (!product || !product.packs[component.optionIdx]) return;
+    var pack = product.packs[component.optionIdx];
+    pushCartItem({
+      productId: product.id,
+      title: product.title,
+      label: pack.label,
+      price: pack.price,
+      weightG: pack.weightG,
+      requiresWeightCheck: false,
+      pieceId1c: null
+    });
+  });
+  if (triggerBtn) {
+    var original = triggerBtn.textContent;
+    triggerBtn.textContent = 'Набор добавлен';
+    triggerBtn.disabled = true;
+    setTimeout(function () { triggerBtn.textContent = original; triggerBtn.disabled = false; }, 900);
+    flyTokenToCart(triggerBtn.getBoundingClientRect(), 'ham');
+  }
+}
+
+function removeCartItem(uid, rowEl) {
+  var finalize = function () {
+    state.cart = state.cart.filter(function (item) { return item.uid !== uid; });
+    savePersistedState();
+    updateCartUI();
+    renderCatalog(false);
+  };
+  if (rowEl && window.gsap && !prefersReducedMotion()) {
+    gsap.to(rowEl, {
+      height: 0, opacity: 0, paddingTop: 0, paddingBottom: 0, marginTop: 0, marginBottom: 0,
+      duration: 0.24, ease: 'power2.inOut', onComplete: finalize
+    });
+  } else {
+    finalize();
+  }
+}
+
+function cartItemsSum() {
+  return state.cart.reduce(function (acc, item) { return acc + item.price; }, 0);
+}
+
+function effectiveDeliveryCost() {
+  var sum = cartItemsSum();
+  if (state.customer.deliveryId === 'pickup') return 0;
+  if ((state.customer.deliveryId === 'yandex' || state.customer.deliveryId === 'drivee') && sum >= FREE_DELIVERY_FROM) {
+    return 0;
+  }
+  return state.customer.deliveryCost;
+}
+
+function updateCartUI() {
+  var count = state.cart.length;
+  document.getElementById('header-cart-count').textContent = String(count);
+  var mobileSummary = document.getElementById('mobile-bar-summary');
+  if (count === 0) {
+    mobileSummary.textContent = 'Пока пусто';
+  } else {
+    mobileSummary.textContent = count + ' поз. · ' + formatRub(cartItemsSum());
+  }
+
+  var listEl = document.getElementById('cart-items-list');
+  var emptyEl = document.getElementById('cart-empty-state');
+  var checkoutEl = document.getElementById('cart-checkout-area');
+  var footEl = document.getElementById('cart-foot');
+  var bannerEl = document.getElementById('cart-scenario-banner');
+  var submitBtn = document.getElementById('submit-order-btn');
+  var progressEl = document.getElementById('cart-progress');
+  var progressLabel = document.getElementById('cart-progress-label');
+  var progressFill = document.getElementById('cart-progress-fill');
+  var addonsEl = document.getElementById('cart-addons');
+  var messengerBlock = document.getElementById('messenger-block');
+
+  if (count === 0) {
+    listEl.innerHTML = '';
+    emptyEl.style.display = 'flex';
+    checkoutEl.style.display = 'none';
+    footEl.style.display = 'none';
+    progressEl.hidden = true;
+    addonsEl.innerHTML = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  checkoutEl.style.display = 'flex';
+  footEl.style.display = 'flex';
+
+  listEl.innerHTML = state.cart.map(function (item) {
+    return '<div class="cart-item-row" data-cart-uid="' + item.uid + '">' +
+      '<div class="cart-item-top">' +
+      '<div><strong class="cart-item-title">' + item.title + '</strong>' +
+      '<span class="cart-item-sub">' + item.label + '</span></div>' +
+      '<div style="text-align:right;"><strong class="tabular" style="display:block;">' + formatRub(item.price) + '</strong>' +
+      '<button type="button" class="cart-remove-btn" data-remove-uid="' + item.uid + '">Удалить</button></div>' +
+      '</div></div>';
+  }).join('');
+
+  var needsWeightCheck = state.cart.some(function (item) { return item.requiresWeightCheck; });
+  if (needsWeightCheck) {
+    bannerEl.textContent = 'В заказе есть весовой кусок или развес. Менеджер подтвердит вес на складе, и мы пришлём ссылку на оплату в ' + state.customer.messenger + '.';
+    submitBtn.textContent = 'Отправить на проверку веса';
+    messengerBlock.hidden = false;
+  } else {
+    bannerEl.textContent = 'В корзине только фиксированные упаковки. Сразу после нажатия откроется платёжная страница Т-Банка.';
+    submitBtn.textContent = 'Перейти к оплате';
+    messengerBlock.hidden = true;
+  }
+
+  // Шкала бесплатной доставки курьером по СПб
+  var sum = cartItemsSum();
+  var isCourier = state.customer.deliveryId === 'yandex' || state.customer.deliveryId === 'drivee';
+  if (isCourier && sum < FREE_DELIVERY_FROM) {
+    progressEl.hidden = false;
+    progressLabel.textContent = 'До бесплатной доставки курьером: ещё ' + formatRub(FREE_DELIVERY_FROM - sum);
+    progressFill.style.width = Math.min(100, Math.round((sum / FREE_DELIVERY_FROM) * 100)) + '%';
+  } else {
+    progressEl.hidden = true;
+  }
+
+  // Быстрые добавки к заказу
+  var addons = [
+    { productId: 'olives-gordal', optionIdx: 0, name: 'Оливки Gordal, банка 350 г' },
+    { productId: 'grissini', optionIdx: 0, name: 'Гриссини, 200 г' }
+  ];
+  addonsEl.innerHTML = '<span class="filter-label" style="min-width:auto;">Добавить к заказу:</span>' + addons.map(function (addon) {
+    var product = findProduct(addon.productId);
+    var pack = product && product.packs[addon.optionIdx];
+    if (!pack) return '';
+    return '<button type="button" class="addon-chip" data-addon-product="' + addon.productId + '" data-addon-idx="' + addon.optionIdx + '">' +
+      '<span class="addon-plus">+</span> ' + addon.name + ' · ' + formatRub(pack.price) + '</button>';
+  }).join('');
+
+  var totalWithDeliv = sum + effectiveDeliveryCost();
+  document.getElementById('cart-total-sum').textContent = formatRub(totalWithDeliv);
+  refreshDeliveryCostLabels();
+}
+
+function refreshDeliveryCostLabels() {
+  var sum = cartItemsSum();
+  document.querySelectorAll('.delivery-option-btn').forEach(function (btn) {
+    var id = btn.getAttribute('data-deliv-id');
+    var costEl = btn.querySelector('.deliv-cost');
+    var baseCost = parseInt(btn.getAttribute('data-deliv-cost'), 10);
+    if (id === 'yandex' || id === 'drivee') {
+      if (sum >= FREE_DELIVERY_FROM) {
+        costEl.textContent = 'бесплатно';
+        costEl.classList.add('is-free');
+        return;
+      }
+      costEl.classList.remove('is-free');
+      costEl.textContent = 'от ' + formatRub(baseCost).replace('\u00A0₽', '\u00A0₽');
+    }
+  });
+}
+
+function openCart(triggerEl) {
+  state.lastFocusedTrigger = triggerEl || document.activeElement;
+  document.getElementById('cart-backdrop').classList.add('is-open');
+  document.getElementById('cart-sheet').classList.add('is-open');
+  document.getElementById('cart-sheet').setAttribute('aria-hidden', 'false');
+  document.getElementById('header-cart-btn').setAttribute('aria-expanded', 'true');
+  setTimeout(function () { document.getElementById('cart-close-btn').focus(); }, 60);
+}
+function closeCart() {
+  document.getElementById('cart-backdrop').classList.remove('is-open');
+  document.getElementById('cart-sheet').classList.remove('is-open');
+  document.getElementById('cart-sheet').setAttribute('aria-hidden', 'true');
+  document.getElementById('header-cart-btn').setAttribute('aria-expanded', 'false');
+  if (state.lastFocusedTrigger && typeof state.lastFocusedTrigger.focus === 'function') {
+    state.lastFocusedTrigger.focus();
+  }
+}
+
+// =========================================================================
+// 8. ТЁМНЫЙ ТЕРМИНАЛ ВЕСОВ (магнит к реальным весам, два продукта)
+// =========================================================================
+var SCALE_PRODUCTS = {
+  hamon: {
+    name: 'Хамон Reserva 18 мес',
+    pricePerKg: 6500, minG: 180, maxG: 420, stepG: 1,
+    snap: [215, 260, 340], snapToleranceG: 7,
+    chips: [215, 260, 340],
+    hint: 'Ползунок притягивается к реальным весам кусков на складе: 215\u00A0г, 260\u00A0г, 340\u00A0г'
+  },
+  olives: {
+    name: 'Оливки Gordal на развес',
+    pricePerKg: 1800, minG: 100, maxG: 1000, stepG: 50,
+    snap: [350], snapToleranceG: 0,
+    chips: [300, 350, 500],
+    hint: 'Шаг 50\u00A0г. Фактический вес уточним на весах при фасовке (допуск ±15\u00A0г)'
+  }
+};
+var currentScaleProduct = 'hamon';
+var currentScaleGrams = 215;
+var scalePrice = 1398;
+
+function initDemoScale() {
+  var range = document.getElementById('demo-scale-range');
+  var weightOut = document.getElementById('demo-scale-weight');
+  var rateOut = document.getElementById('demo-scale-rate');
+  var priceOut = document.getElementById('demo-scale-price');
+  var chipsEl = document.getElementById('demo-scale-chips');
+  var hintEl = document.getElementById('demo-scale-hint');
+
+  function renderChips() {
+    var cfg = SCALE_PRODUCTS[currentScaleProduct];
+    chipsEl.innerHTML = cfg.chips.map(function (w) {
+      return '<button type="button" class="magnet-btn tabular" data-demo-weight="' + w + '" aria-pressed="false">Порция ' + w + '\u00A0г</button>';
+    }).join('');
+    chipsEl.querySelectorAll('[data-demo-weight]').forEach(function (btn) {
+      btn.addEventListener('click', function () { setDemoWeight(btn.getAttribute('data-demo-weight')); });
+    });
+  }
+
+  function setDemoWeight(rawWeight) {
+    var cfg = SCALE_PRODUCTS[currentScaleProduct];
+    var w = parseInt(rawWeight, 10);
+    if (isNaN(w)) return;
+    for (var i = 0; i < cfg.snap.length; i++) {
+      if (Math.abs(w - cfg.snap[i]) <= cfg.snapToleranceG) { w = cfg.snap[i]; break; }
+    }
+    currentScaleGrams = w;
+    range.value = String(w);
+    weightOut.textContent = formatWeightLabel(w);
+    rateOut.textContent = formatRub(cfg.pricePerKg);
+    var nextPrice = calcPiecePrice(w, cfg.pricePerKg);
+    animatePriceChange(priceOut, scalePrice, nextPrice);
+    scalePrice = nextPrice;
+    chipsEl.querySelectorAll('[data-demo-weight]').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(parseInt(btn.getAttribute('data-demo-weight'), 10) === w));
+    });
+  }
+
+  function switchProduct(key) {
+    currentScaleProduct = key;
+    var cfg = SCALE_PRODUCTS[key];
+    range.min = String(cfg.minG);
+    range.max = String(cfg.maxG);
+    range.step = String(cfg.stepG);
+    hintEl.textContent = cfg.hint;
+    document.querySelectorAll('.scale-switch-btn').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(btn.getAttribute('data-scale-product') === key));
+    });
+    renderChips();
+    setDemoWeight(cfg.snap[0] || 350);
+  }
+
+  range.addEventListener('input', function (e) { setDemoWeight(e.target.value); });
+  document.querySelectorAll('.scale-switch-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { switchProduct(btn.getAttribute('data-scale-product')); });
+  });
+  document.getElementById('scale-add-btn').addEventListener('click', function () {
+    var cfg = SCALE_PRODUCTS[currentScaleProduct];
+    var product = findProduct(currentScaleProduct === 'hamon' ? 'hamon-reserva-18-piece' : 'olives-gordal');
+    addBulkPortion(product, currentScaleGrams, cfg.pricePerKg, this.getBoundingClientRect());
+    openCart(this);
+  });
+
+  switchProduct('hamon');
+}
+
+// =========================================================================
+// 9. НАБОРЫ
+// =========================================================================
+function renderSets() {
+  var grid = document.getElementById('sets-grid');
+  grid.innerHTML = SETS.map(function (set) {
+    var rows = [];
+    var total = 0;
+    set.components.forEach(function (component) {
+      var product = findProduct(component.productId);
+      if (!product) return;
+      var pack = product.packs[component.optionIdx];
+      if (!pack) return;
+      total += pack.price;
+      rows.push('<li><span>' + product.title + '</span><span class="tabular" style="white-space:nowrap;">' + formatRub(pack.price) + '</span></li>');
+    });
+    return '<article class="set-card' + (set.featured ? ' featured' : '') + '">' +
+      '<div><div class="set-kicker">' + set.kicker + '</div>' +
+      '<h3 class="set-title">' + set.title + '</h3>' +
+      '<p style="font-size:0.9375rem;color:var(--graphite-muted);margin-top:6px;">' + set.desc + '</p></div>' +
+      '<ul class="set-list">' + rows.join('') + '</ul>' +
+      '<div class="set-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Набор целиком</span>' +
+      '<span class="set-total tabular">' + formatRub(total) + '</span></div>' +
+      '<button type="button" class="set-add-btn" data-set-add="' + set.id + '">Добавить весь набор в корзину</button>' +
+      '</article>';
+  }).join('');
+  grid.querySelectorAll('[data-set-add]').forEach(function (btn) {
+    btn.addEventListener('click', function () { addSetToCart(btn.getAttribute('data-set-add'), btn); });
+  });
+}
+
+// =========================================================================
+// 10. ИСТОРИИ
+// =========================================================================
+var STORY_ART = {
+  cut: '<svg viewBox="0 0 96 96" fill="none"><path d="M20 70 L76 70 L72 62 L24 62 Z" fill="#5C5752"/><rect x="46" y="26" width="4" height="38" fill="#5C5752"/><path d="M24 30 C48 20, 76 24, 72 46 C68 60, 40 62, 26 52 Z" fill="#7A1C1C"/><path d="M32 38 C48 30, 62 32, 68 42" stroke="#F6F5F0" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="34" rx="4" ry="6" fill="#E3D4B4"/></svg>',
+  evening: '<svg viewBox="0 0 96 96" fill="none"><ellipse cx="48" cy="64" rx="30" ry="8" fill="#DDD8CE"/><circle cx="34" cy="52" r="10" fill="#4E5E32"/><ellipse cx="38" cy="50" rx="2.4" ry="3.4" fill="#7A1C1C"/><circle cx="58" cy="50" r="8" fill="#3E4B27"/><rect x="68" y="38" width="4" height="20" fill="#5C5752"/><path d="M56 24 C64 20, 72 22, 70 30 C68 36, 58 36, 56 30 Z" fill="#7A1C1C"/></svg>',
+  weigh: '<svg viewBox="0 0 96 96" fill="none"><rect x="24" y="58" width="48" height="18" rx="4" fill="#181615"/><rect x="32" y="30" width="32" height="24" rx="3" fill="#F6F5F0" stroke="#181615" stroke-width="2"/><text x="36" y="47" font-family="Golos Text, sans-serif" font-size="12" fill="#7A1C1C">215</text><rect x="30" y="24" width="36" height="4" rx="2" fill="#181615"/></svg>',
+  aging: '<svg viewBox="0 0 96 96" fill="none"><path d="M20 72 C36 68, 44 56, 52 40 C58 28, 68 22, 78 20" stroke="#7A1C1C" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="34" cy="66" r="3" fill="#DDD8CE"/><circle cx="52" cy="44" r="3" fill="#F6F5F0"/><circle cx="70" cy="26" r="3" fill="#F6F5F0"/><circle cx="76" cy="30" r="1.6" fill="#F6F5F0"/><circle cx="66" cy="24" r="1.6" fill="#F6F5F0"/></svg>',
+  shop: '<svg viewBox="0 0 96 96" fill="none"><rect x="22" y="40" width="52" height="34" fill="#F6F5F0" stroke="#181615" stroke-width="2"/><path d="M18 40 L78 40 L72 26 L24 26 Z" fill="#7A1C1C"/><rect x="40" y="52" width="16" height="22" fill="#4E5E32"/><rect x="60" y="48" width="8" height="8" fill="#DDD8CE"/></svg>'
+};
+
+var STORIES = [
+  { id: 'cut', label: 'Свежий распил', title: 'Кусок только что взвесили',
+    text: 'Хамон Reserva 18 месяцев, взвешен при приёмке. Цена по фактическому весу — до рубля.',
+    action: 'piece' },
+  { id: 'evening', label: 'Вкусный вечер', title: 'Набор к столу одним кликом',
+    text: 'Нарезка Gran Reserva, крупные Gordal и гриссини. Добавим весь набор в корзину сразу.',
+    action: 'set', setId: 'evening', setLabel: 'Добавить весь набор' },
+  { id: 'weigh', label: 'Как вешаем', title: 'Почему цена до рубля',
+    text: 'Каждый кусок взвешиваем при приёмке. Выбираете конкретный кусок — сумма видна сразу.',
+    action: 'scroll', target: 'weight-system', label2: 'Посчитать на весах' },
+  { id: 'aging', label: 'Выдержка', title: 'От Bodega до Gran Reserva',
+    text: '8–12 месяцев — мягкий вкус. 24–28+ — тёмный срез с кристаллами тирозина.',
+    action: 'scroll', target: 'aging', label2: 'Открыть гид по выдержке' },
+  { id: 'shop', label: 'Лавка на Сытном', title: 'Как нас найти',
+    text: 'Сытнинская улица, 4П, фуд-аллея рынка «Сытный». Вторник–воскресенье, 10:30–20:30.',
+    action: 'external', href: 'https://yandex.ru/maps/-/CXq~AInl', label2: 'Построить маршрут' }
+];
+
+var currentStoryIndex = 0;
+var storyTimer = null;
+var storyElapsed = 0;
+var storyPaused = false;
+var STORY_DURATION_MS = 5000;
+
+function renderStoriesStrip() {
+  var strip = document.getElementById('stories-strip');
+  strip.innerHTML = STORIES.map(function (story, idx) {
+    return '<button type="button" class="story-bubble" data-story-idx="' + idx + '" aria-label="История: ' + story.label + '">' +
+      '<span class="story-ring"><span class="story-art">' + STORY_ART[story.id] + '</span></span>' +
+      '<span class="story-label">' + story.label + '</span></button>';
+  }).join('');
+  strip.querySelectorAll('[data-story-idx]').forEach(function (btn) {
+    btn.addEventListener('click', function () { openStory(parseInt(btn.getAttribute('data-story-idx'), 10)); });
+  });
+}
+
+function renderStoryBars() {
+  var bars = document.getElementById('story-bars');
+  bars.innerHTML = STORIES.map(function (_, i) {
+    var fill = '0';
+    if (i < currentStoryIndex) fill = '1';
+    else if (i === currentStoryIndex) fill = String(storyElapsed / STORY_DURATION_MS);
+    return '<span aria-hidden="true"><i style="transform:scaleX(' + fill + ')"></i></span>';
+  }).join('');
+}
+
+function renderStoryAction() {
+  var story = STORIES[currentStoryIndex];
+  var slot = document.getElementById('story-action-slot');
+  if (story.action === 'piece') {
+    var product = findProduct('hamon-reserva-18-piece');
+    var piece = product && product.pieces.filter(function (pc) { return !isPieceInCart(pc.id1c); })[0];
+    if (piece) {
+      var price = calcPiecePrice(piece.weightG, product.pricePerKg);
+      slot.innerHTML = '<button type="button" id="story-action-btn" class="story-action-btn tabular">Забрать кусок ' +
+        piece.weightG + '\u00A0г за ' + formatRub(price) + '</button>';
+      document.getElementById('story-action-btn').addEventListener('click', function () {
+        pushCartItem({
+          productId: product.id, title: product.title,
+          label: 'Кусок ' + formatWeightLabel(piece.weightG),
+          price: price, weightG: piece.weightG, requiresWeightCheck: true, pieceId1c: piece.id1c
+        });
+        var nextAvailable = product.pieces.filter(function (pc) { return !isPieceInCart(pc.id1c); })[0];
+        state.selectedOptionByProduct[product.id] = nextAvailable ? nextAvailable.id1c : 'custom-cut';
+        renderCatalog(false);
+        closeStory();
+        openCart(document.getElementById('header-cart-btn'));
+      });
+    } else {
+      slot.innerHTML = '<button type="button" class="story-action-btn" disabled>Куски уже разобрали</button>';
+    }
+  } else if (story.action === 'set') {
+    slot.innerHTML = '<button type="button" id="story-action-btn" class="story-action-btn">' + story.setLabel + '</button>';
+    document.getElementById('story-action-btn').addEventListener('click', function () {
+      addSetToCart(story.setId, null);
+      closeStory();
+      openCart(document.getElementById('header-cart-btn'));
+    });
+  } else if (story.action === 'scroll') {
+    slot.innerHTML = '<button type="button" id="story-action-btn" class="story-action-btn">' + story.label2 + '</button>';
+    document.getElementById('story-action-btn').addEventListener('click', function () {
+      closeStory();
+      document.getElementById(story.target).scrollIntoView({ behavior: 'smooth' });
+    });
+  } else if (story.action === 'external') {
+    slot.innerHTML = '<a id="story-action-btn" class="story-action-btn is-external" href="' + story.href + '" target="_blank" rel="noopener">' + story.label2 + '</a>';
+  } else {
+    slot.innerHTML = '';
+  }
+}
+
+function renderStory() {
+  var story = STORIES[currentStoryIndex];
+  document.getElementById('story-title').textContent = story.title;
+  document.getElementById('story-text').textContent = story.text;
+  document.getElementById('story-visual').innerHTML = STORY_ART[story.id];
+  renderStoryBars();
+  renderStoryAction();
+}
+
+function startStoryTimer() {
+  stopStoryTimer();
+  storyElapsed = 0;
+  storyPaused = false;
+  var lastTick = Date.now();
+  storyTimer = setInterval(function () {
+    if (storyPaused) { lastTick = Date.now(); return; }
+    var now = Date.now();
+    storyElapsed += now - lastTick;
+    lastTick = now;
+    if (storyElapsed >= STORY_DURATION_MS) {
+      nextStory();
+    } else {
+      renderStoryBars();
+    }
+  }, 100);
+}
+function stopStoryTimer() {
+  if (storyTimer) { clearInterval(storyTimer); storyTimer = null; }
+}
+function nextStory() {
+  currentStoryIndex = (currentStoryIndex + 1) % STORIES.length;
+  renderStory();
+  startStoryTimer();
+}
+function prevStory() {
+  currentStoryIndex = (currentStoryIndex - 1 + STORIES.length) % STORIES.length;
+  renderStory();
+  startStoryTimer();
+}
+function openStory(idx) {
+  currentStoryIndex = idx;
+  renderStory();
+  var player = document.getElementById('stories-player');
+  player.classList.add('is-open');
+  player.setAttribute('aria-hidden', 'false');
+  startStoryTimer();
+}
+function closeStory() {
+  stopStoryTimer();
+  var player = document.getElementById('stories-player');
+  player.classList.remove('is-open');
+  player.setAttribute('aria-hidden', 'true');
+}
+
+// =========================================================================
+// 11. ФИЛЬТРЫ, ФОРМА, МАСКА ТЕЛЕФОНА, ОТПРАВКА
+// =========================================================================
+function syncFilterButtonsUI() {
+  document.querySelectorAll('[data-filter-country]').forEach(function (btn) {
+    btn.setAttribute('aria-pressed', String(btn.getAttribute('data-filter-country') === state.filterCountry));
+  });
+  document.querySelectorAll('[data-filter-cat]').forEach(function (btn) {
+    btn.setAttribute('aria-pressed', String(btn.getAttribute('data-filter-cat') === state.filterCat));
+  });
+  document.querySelectorAll('[data-filter-aging]').forEach(function (btn) {
+    btn.setAttribute('aria-pressed', String(btn.getAttribute('data-filter-aging') === state.filterAging));
+  });
+}
+
+function updateSingleCardNumbers(productId) {
+  var product = findProduct(productId);
+  if (!product) return;
+  var active = getActiveProductData(product);
+  var priceEl = document.getElementById('price-val-' + productId);
+  var capEl = document.getElementById('price-caption-' + productId);
+  if (capEl) capEl.textContent = active.priceCaption;
+  if (priceEl) {
+    var prevPrice = parseInt(priceEl.getAttribute('data-current-price') || active.price, 10);
+    animatePriceChange(priceEl, prevPrice, active.price);
+  }
+}
+
+function formatPhoneMask(raw) {
+  var digits = raw.replace(/\D/g, '');
+  if (digits.indexOf('8') === 0) digits = '7' + digits.slice(1);
+  if (digits.indexOf('7') !== 0) digits = '7' + digits;
+  digits = digits.slice(0, 11);
+  var out = '+7';
+  if (digits.length > 1) out += ' (' + digits.slice(1, 4);
+  if (digits.length >= 4) out += ') ' + digits.slice(4, 7);
+  if (digits.length >= 7) out += '-' + digits.slice(7, 9);
+  if (digits.length >= 9) out += '-' + digits.slice(9, 11);
+  return out;
+}
+
+function initCheckoutForm() {
+  var nameInput = document.getElementById('customer-name');
+  var phoneInput = document.getElementById('customer-phone');
+  var pvzInput = document.getElementById('cdek-pvz-input');
+  var addrInput = document.getElementById('courier-address-input');
+  var form = document.getElementById('order-form');
+  var feedback = document.getElementById('form-feedback');
+
+  nameInput.value = state.customer.name;
+  phoneInput.value = state.customer.phone;
+  pvzInput.value = state.customer.cdekPvz;
+  addrInput.value = state.customer.courierAddress;
+  document.querySelectorAll('.messenger-chip').forEach(function (chip) {
+    chip.setAttribute('aria-pressed', String(chip.getAttribute('data-messenger') === state.customer.messenger));
+  });
+
+  nameInput.addEventListener('input', function () {
+    state.customer.name = nameInput.value.trim();
+    savePersistedState();
+  });
+  phoneInput.addEventListener('input', function () {
+    phoneInput.value = formatPhoneMask(phoneInput.value);
+    state.customer.phone = phoneInput.value;
+    savePersistedState();
+  });
+  addrInput.addEventListener('input', function () {
+    state.customer.courierAddress = addrInput.value.trim();
+    savePersistedState();
+  });
+  pvzInput.addEventListener('input', function () {
+    state.customer.cdekPvz = pvzInput.value;
+    savePersistedState();
+  });
+
+  document.querySelectorAll('.delivery-option-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.delivery-option-btn').forEach(function (b) { b.setAttribute('aria-checked', 'false'); });
+      btn.setAttribute('aria-checked', 'true');
+      state.customer.deliveryId = btn.getAttribute('data-deliv-id');
+      state.customer.deliveryCost = parseInt(btn.getAttribute('data-deliv-cost'), 10);
+      document.getElementById('cdek-pvz-block').hidden = state.customer.deliveryId !== 'cdek';
+      document.getElementById('courier-address-block').hidden = !(state.customer.deliveryId === 'yandex' || state.customer.deliveryId === 'drivee');
+      savePersistedState();
+      updateCartUI();
+    });
+  });
+
+  document.querySelectorAll('.messenger-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      document.querySelectorAll('.messenger-chip').forEach(function (c) { c.setAttribute('aria-pressed', 'false'); });
+      chip.setAttribute('aria-pressed', 'true');
+      state.customer.messenger = chip.getAttribute('data-messenger');
+      savePersistedState();
+      updateCartUI();
+    });
+  });
+
+  // ИНТЕГРАЦИЯ СДЭК: подключить виджет выбора ПВЗ (ISDEKWidjet / ApiShip) вместо заглушки
+  document.getElementById('cdek-map-btn').addEventListener('click', function () {
+    var samples = [
+      'Санкт-Петербург, Каменноостровский пр., 42 (ПВЗ СДЭК)',
+      'Санкт-Петербург, Невский пр., 114 (ПВЗ СДЭК)',
+      'Москва, ул. Маросейка, 9/2 (ПВЗ СДЭК)'
+    ];
+    var next = samples[Math.floor(Math.random() * samples.length)];
+    pvzInput.value = next;
+    state.customer.cdekPvz = next;
+    savePersistedState();
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    feedback.style.display = 'none';
+    feedback.className = 'form-status-box';
+    var phoneDigits = phoneInput.value.replace(/\D/g, '');
+    if (!nameInput.value.trim()) {
+      feedback.textContent = 'Укажите ваше имя, чтобы мы знали, к кому обращаться.';
+      feedback.classList.add('error');
+      feedback.style.display = 'block';
+      nameInput.setAttribute('aria-invalid', 'true');
+      nameInput.focus();
+      return;
+    }
+    nameInput.removeAttribute('aria-invalid');
+    if (phoneDigits.length !== 11) {
+      feedback.textContent = 'Введите полный номер телефона с кодом оператора (+7 и 10 цифр).';
+      feedback.classList.add('error');
+      feedback.style.display = 'block';
+      phoneInput.setAttribute('aria-invalid', 'true');
+      phoneInput.focus();
+      return;
+    }
+    phoneInput.removeAttribute('aria-invalid');
+
+    var submitBtn = document.getElementById('submit-order-btn');
+    var originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Отправляем заказ…';
+    feedback.textContent = '';
+    feedback.style.display = 'block';
+    feedback.classList.add('success');
+    feedback.textContent = 'Собираем заказ и передаём в лавку…';
+
+    var needsWeightCheck = state.cart.some(function (item) { return item.requiresWeightCheck; });
+    var orderNumber = 'NH-' + String(Math.floor(1000 + Math.random() * 9000));
+
+    // ИНТЕГРАЦИЯ 1С: POST /api/v1/orders — JSON заказа в 1С:УНФ 3.0
+    // ИНТЕГРАЦИЯ Т-БАНК: для фиксированной фасовки — Init в T-Bank Acquiring API, редирект на PaymentURL
+    setTimeout(function () {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+      if (needsWeightCheck) {
+        feedback.innerHTML = '<strong>Заказ №\u00A0' + orderNumber + ' принят на проверку веса.</strong><br>Зарезервируем выбранный кусок на Сытном рынке и пришлём ссылку Т-Банка на точную сумму в ' + state.customer.messenger + '.';
+      } else {
+        feedback.innerHTML = '<strong>Заказ №\u00A0' + orderNumber + ' сформирован.</strong><br>[Заглушка эквайринга Т-Банка: здесь откроется платёжная страница]';
+      }
+      state.cart = [];
+      initProductSelections();
+      savePersistedState();
+      updateCartUI();
+      renderCatalog(false);
+    }, 700);
+  });
+}
+
+// =========================================================================
+// 12. ИНИЦИАЛИЗАЦИЯ И СОБЫТИЯ ДОКУМЕНТА
+// =========================================================================
+document.addEventListener('DOMContentLoaded', function () {
+  loadPersistedState();
+  initProductSelections();
+  renderStoriesStrip();
+  renderSets();
+  renderCatalog(false);
+  updateCartUI();
+  initDemoScale();
+  initCheckoutForm();
+
+  // Оркеcтрованное появление первого экрана (единственный «громкий» момент)
+  if (window.gsap && !prefersReducedMotion()) {
+    gsap.fromTo('.hero-line-inner',
+      { yPercent: 105 },
+      { yPercent: 0, duration: 0.68, stagger: 0.08, ease: 'power3.out' }
+    );
+    gsap.fromTo('#hero-video-box',
+      { opacity: 0 },
+      { opacity: 1, duration: 0.72, ease: 'power2.out' }
+    );
+  }
+
+  // Фильтры: страны
+  document.querySelectorAll('[data-filter-country]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.filterCountry = btn.getAttribute('data-filter-country');
+      syncFilterButtonsUI();
+      renderCatalog(true);
+    });
+  });
+
+  // Фильтры: отделы (Наборы — переход к секции наборов)
+  document.querySelectorAll('[data-filter-cat]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var val = btn.getAttribute('data-filter-cat');
+      if (val === 'sets') {
+        document.getElementById('sets').scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      state.filterCat = val;
+      syncFilterButtonsUI();
+      renderCatalog(true);
+      if (val === 'olives') {
+        var firstOlive = PRODUCTS.filter(function (p) { return p.category === 'olives'; })[0];
+        if (firstOlive) setTimeout(function () { bounceOlivesInCard(firstOlive.id); }, 120);
+      }
+    });
+  });
+
+  // Фильтры: выдержка
+  document.querySelectorAll('[data-filter-aging]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.filterAging = btn.getAttribute('data-filter-aging');
+      syncFilterButtonsUI();
+      renderCatalog(true);
+    });
+  });
+
+  // Кнопки в карточках выдержки фильтруют каталог
+  document.querySelectorAll('[data-aging-link]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.filterAging = btn.getAttribute('data-aging-link');
+      syncFilterButtonsUI();
+      renderCatalog(true);
+      document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  // Делегирование кликов в каталоге
+  document.getElementById('catalog-grid').addEventListener('click', function (e) {
+    var optBtn = e.target.closest('[data-action="select-option"]');
+    if (optBtn && !optBtn.disabled) {
+      var prodId = optBtn.getAttribute('data-product-id');
+      state.selectedOptionByProduct[prodId] = optBtn.getAttribute('data-option-val');
+      state.statusMessageByProduct[prodId] = '';
+      var prevEl = document.getElementById('price-val-' + prodId);
+      var prevPrice = prevEl ? parseInt(prevEl.getAttribute('data-current-price') || '0', 10) : 0;
+      renderCatalog(false);
+      var product = findProduct(prodId);
+      if (product) {
+        var nextEl = document.getElementById('price-val-' + prodId);
+        var nextActive = getActiveProductData(product);
+        animatePriceChange(nextEl, prevPrice, nextActive.price);
+        if (product.category === 'olives') bounceOlivesInCard(prodId);
+      }
+      return;
+    }
+    var addBtn = e.target.closest('[data-action="add-to-cart"]');
+    if (addBtn && !addBtn.disabled) {
+      addProductToCart(addBtn.getAttribute('data-product-id'), addBtn);
+    }
+  });
+
+  // Ползунок развеса — пересчёт на лету
+  document.getElementById('catalog-grid').addEventListener('input', function (e) {
+    var range = e.target.closest('[data-action="bulk-range"]');
+    if (!range) return;
+    var prodId = range.getAttribute('data-product-id');
+    var w = parseInt(range.value, 10);
+    state.bulkWeightByProduct[prodId] = w;
+    var wLabel = document.getElementById('bulk-weight-label-' + prodId);
+    if (wLabel) wLabel.textContent = w + '\u00A0г';
+    updateSingleCardNumbers(prodId);
+  });
+
+  // Добавки в корзине
+  document.getElementById('cart-addons').addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-addon-product]');
+    if (!chip) return;
+    var product = findProduct(chip.getAttribute('data-addon-product'));
+    var idx = parseInt(chip.getAttribute('data-addon-idx'), 10);
+    if (!product || !product.packs[idx]) return;
+    var pack = product.packs[idx];
+    pushCartItem({
+      productId: product.id, title: product.title, label: pack.label,
+      price: pack.price, weightG: pack.weightG, requiresWeightCheck: false, pieceId1c: null
+    });
+    bounceOlivesInCard(product.id);
+  });
+
+  // Удаление из корзины
+  document.getElementById('cart-items-list').addEventListener('click', function (e) {
+    var rmBtn = e.target.closest('[data-remove-uid]');
+    if (!rmBtn) return;
+    removeCartItem(rmBtn.getAttribute('data-remove-uid'), rmBtn.closest('.cart-item-row'));
+  });
+
+  // Корзина: открыть/закрыть
+  document.getElementById('header-cart-btn').addEventListener('click', function (e) { openCart(e.currentTarget); });
+  document.getElementById('mobile-cart-btn').addEventListener('click', function (e) { openCart(e.currentTarget); });
+  document.getElementById('cart-close-btn').addEventListener('click', closeCart);
+  document.getElementById('cart-backdrop').addEventListener('click', closeCart);
+  document.getElementById('empty-to-catalog-btn').addEventListener('click', function () {
+    closeCart();
+    document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  // Истории: управление
+  document.getElementById('story-close-btn').addEventListener('click', closeStory);
+  document.getElementById('story-next-btn').addEventListener('click', nextStory);
+  document.getElementById('story-prev-btn').addEventListener('click', prevStory);
+  var player = document.getElementById('stories-player');
+  player.addEventListener('pointerdown', function (e) {
+    if (e.target.closest('button') || e.target.closest('a')) return;
+    storyPaused = true;
+  });
+  player.addEventListener('pointerup', function () { storyPaused = false; });
+  player.addEventListener('pointercancel', function () { storyPaused = false; });
+  player.addEventListener('click', function (e) {
+    if (e.target === player) closeStory();
+  });
+
+  // Клавиатура: Esc закрывает верхний слой, стрелки листают истории
+  document.addEventListener('keydown', function (e) {
+    var playerOpen = document.getElementById('stories-player').classList.contains('is-open');
+    if (e.key === 'Escape') {
+      if (playerOpen) closeStory();
+      else if (document.getElementById('cart-sheet').classList.contains('is-open')) closeCart();
+    }
+    if (playerOpen && e.key === 'ArrowRight') nextStory();
+    if (playerOpen && e.key === 'ArrowLeft') prevStory();
+  });
+});
+
+})();
+</script>
+</body>
+</html>
