@@ -22,6 +22,7 @@ export const CATEGORY_TITLES: Record<string, { title: string; note: string }> = 
   leg: { title: 'Целые ноги и палеты', note: 'Окорока выдержки 24-26 месяцев с фиксированной ценой за ногу и лопатки (палета) - хамонера покупается отдельно.' },
   olives: { title: 'Оливки и антипасти', note: 'Банки фиксированной фасовки и оливки на развес с ползунком веса.' },
   cheese: { title: 'Сыры и колбасы', note: 'Манчего, чоризо и выдержанные сыры Италии, Греции, Франции и Швейцарии.' },
+  extras: { title: 'Хамонеры и подарки', note: 'Подставки, нож для нарезки и подарочные сертификаты.' },
 };
 
 export const DEPT_ORDER: { cat: string; id: string }[] = [
@@ -30,6 +31,7 @@ export const DEPT_ORDER: { cat: string; id: string }[] = [
   { cat: 'leg', id: 'dept-leg' },
   { cat: 'olives', id: 'dept-olives' },
   { cat: 'cheese', id: 'dept-cheese' },
+  { cat: 'extras', id: 'dept-extras' },
 ];
 
 export const PRODUCTS: Product[] = [
@@ -148,6 +150,26 @@ export const PRODUCTS: Product[] = [
     description: 'Фруктово-ореховый вкус.',
     kind: 'pack', pricePerKg: 6200,
     pieces: [], packs: [{ label: 'Кусок 250 г', weightG: 250, price: 1550 }], bulk: null },
+  { id: 'hamonera-pine', country: 'ru', category: 'extras', title: 'Хамонера из сосны', agingMonths: null,
+    description: 'Подставка для целой ноги. Продаётся отдельно от окорока. [заглушка цены]',
+    kind: 'pack', pricePerKg: 0,
+    pieces: [], packs: [{ label: 'Хамонера', weightG: 0, price: 3500 }], bulk: null },
+  { id: 'hamonera-oak', country: 'ru', category: 'extras', title: 'Хамонера из дуба', agingMonths: null,
+    description: 'Массивная подставка из дуба - на годы. [заглушка цены]',
+    kind: 'pack', pricePerKg: 0,
+    pieces: [], packs: [{ label: 'Хамонера', weightG: 0, price: 5900 }], bulk: null },
+  { id: 'hamon-knife', country: 'ru', category: 'extras', title: 'Нож для хамона, 24 см', agingMonths: null,
+    description: 'Длинный гибкий нож для тонкой нарезки. [заглушка цены]',
+    kind: 'pack', pricePerKg: 0,
+    pieces: [], packs: [{ label: 'Нож 24 см', weightG: 0, price: 3900 }], bulk: null },
+  { id: 'gift-certificate', country: 'ru', category: 'extras', title: 'Подарочный сертификат', agingMonths: null,
+    description: 'Именной, с индивидуальным номером. Оплатит покупку целиком или частично.',
+    kind: 'pack', pricePerKg: 0,
+    pieces: [], packs: [
+      { label: 'Сертификат на 3 000 ₽', weightG: 0, price: 3000 },
+      { label: 'Сертификат на 5 000 ₽', weightG: 0, price: 5000 },
+      { label: 'Сертификат на 10 000 ₽', weightG: 0, price: 10000 }
+    ], bulk: null },
 ];
 
 export function findProduct(id: string): Product | undefined {

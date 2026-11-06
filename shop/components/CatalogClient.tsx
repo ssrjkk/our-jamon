@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Product } from '@/lib/types';
 import { CATEGORY_TITLES, DEPT_ORDER, COUNTRY_NAMES } from '@/lib/products';
@@ -13,7 +13,6 @@ export default function CatalogClient({ products, serverReservedPieceIds }: { pr
   const [country, setCountry] = useState<'all' | string>('all');
   const [aging, setAging] = useState<'all' | string>('all');
   const [activeDept, setActiveDept] = useState('dept-piece');
-  const navRef = useRef<HTMLDivElement>(null);
 
   // Из карточек выдержки на главной: /catalog?aging=24
   useEffect(() => {
@@ -38,33 +37,12 @@ export default function CatalogClient({ products, serverReservedPieceIds }: { pr
     });
   }, [products, country, aging]);
 
-  // Scrollspy отделов
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) setActiveDept(entry.target.id);
-        }
-      },
-      { rootMargin: '-35% 0px -55% 0px' },
-    );
-    DEPT_ORDER.forEach(({ id }) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [matches]);
-
   function jumpToDept(id: string) {
-    let el = document.getElementById(id);
-    if (!el) {
-      // Отдел скрыт фильтрами — сбрасываем их и пробуем снова
-      setCountry('all');
-      setAging('all');
-      el = document.getElementById(id);
-    }
-    el?.scrollIntoView({ behavior: 'smooth' });
+    setActiveDept(id);
   }
+
+  const dept = DEPT_ORDER.filter((d) => d.id === activeDept)[0] || DEPT_ORDER[0];
+  const deptItems = matches.filter((p) => p.category === dept.cat);
 
   const agingBtn = (val: 'all' | string, label: string) => (
     <button type="button" className="filter-btn tabular" aria-pressed={aging === val} onClick={() => setAging(val)}>{label}</button>
@@ -100,49 +78,46 @@ export default function CatalogClient({ products, serverReservedPieceIds }: { pr
       </div>
 
       <p className="catalog-hint">
-        Витрина разделена по отделам. Панель отделов прилипает под шапкой и остаётся на виду при прокрутке - жмите нужный блок, длинный скролл не нужен. Внутри карточки выбирается конкретный кусок по весу, оливки - на развес.
+        Сайт работает вкладками: сверху разделы, внутри витрины - отделы. Никакой длинной ленты: выбираете вкладку - видите только её содержимое. В карточке - средний вес куска, точный подтверждаем при связи.
       </p>
 
-      <div className="dept-nav" ref={navRef} aria-label="Отделы витрины">
+      <div className="dept-tabs" role="tablist" aria-label="Отделы витрины">
         {DEPT_ORDER.map(({ cat, id }) => (
           <button
             key={id}
             type="button"
-            className="filter-btn"
+            role="tab"
             aria-pressed={activeDept === id}
             onClick={() => jumpToDept(id)}
           >
             {CATEGORY_TITLES[cat].title}
+            {matches.filter((p) => p.category === cat).length > 0
+              ? ` · ${matches.filter((p) => p.category === cat).length}`
+              : ''}
           </button>
         ))}
       </div>
 
-      {matches.length === 0 ? (
+      {deptItems.length === 0 ? (
         <div className="cart-empty-state" style={{ maxWidth: 640 }}>
-          <p>По выбранному сочетанию страны и выдержки ничего не нашлось.</p>
+          <p>В этом отделе пока пусто при текущих фильтрах.</p>
           <button type="button" className="btn-primary" onClick={() => { setCountry('all'); setAging('all'); }}>
             Показать все товары
           </button>
         </div>
       ) : (
-        DEPT_ORDER.map(({ cat, id }) => {
-          const items = matches.filter((p) => p.category === cat);
-          if (!items.length) return null;
-          return (
-            <div key={id} className="dept-section" id={id}>
-              <div className="dept-head">
-                <h2 className="dept-title">{CATEGORY_TITLES[cat].title}</h2>
-                <span className="dept-count tabular">{items.length} поз.</span>
-              </div>
-              <p className="dept-note">{CATEGORY_TITLES[cat].note}</p>
-              <div className="catalog-grid dept-grid">
-                {items.map((p) => (
-                  <ProductCard key={p.id} product={p} serverReservedPieceIds={serverReservedPieceIds} />
-                ))}
-              </div>
-            </div>
-          );
-        })
+        <div className="dept-section" id={dept.id}>
+          <div className="dept-head">
+            <h2 className="dept-title">{CATEGORY_TITLES[dept.cat].title}</h2>
+            <span className="dept-count tabular">{deptItems.length} поз.</span>
+          </div>
+          <p className="dept-note">{CATEGORY_TITLES[dept.cat].note}</p>
+          <div className="catalog-grid dept-grid">
+            {deptItems.map((p) => (
+              <ProductCard key={p.id} product={p} serverReservedPieceIds={serverReservedPieceIds} />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

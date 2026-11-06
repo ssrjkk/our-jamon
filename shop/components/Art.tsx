@@ -5,6 +5,54 @@ import { Product } from '@/lib/types';
 
 export function ProductArt({ product }: { product: Product }) {
   const caption = `Фото клиента 4:3 - ${product.title}`;
+  if (product.id === 'hamonera-pine' || product.id === 'hamonera-oak') {
+    const wood = product.id === 'hamonera-oak' ? '#5C4430' : '#8A6A4A';
+    return (
+      <svg viewBox="0 0 400 300" aria-hidden="true">
+        <rect width="400" height="300" fill="#EFE9DB" />
+        <ellipse cx="200" cy="248" rx="130" ry="14" fill="#E0D7C0" />
+        <rect x="60" y="228" width="280" height="18" rx="5" fill={wood} />
+        <path d="M110 228 L150 228 L168 130 L146 130 Z" fill={wood} />
+        <path d="M290 228 L250 228 L232 130 L254 130 Z" fill={wood} />
+        <rect x="140" y="116" width="120" height="16" rx="5" fill="#6B5138" />
+        <circle cx="146" cy="124" r="4" fill="#EFE9DB" />
+        <circle cx="254" cy="124" r="4" fill="#EFE9DB" />
+        <path d="M150 112 C210 80, 285 74, 312 98 C326 110, 322 126, 308 134 L286 146 C230 162, 184 152, 150 130 Z" fill="#5B2824" />
+        <path d="M168 106 C224 86, 284 82, 310 98" stroke="#7A3A32" strokeWidth="7" fill="none" strokeLinecap="round" />
+        <path d="M164 118 C226 100, 292 98, 318 114" stroke="#F6F5F0" strokeWidth="2.6" fill="none" strokeLinecap="round" opacity="0.85" />
+        <path d="M150 112 L134 98 L124 110 L140 124 Z" fill="#E3D4B4" />
+        <text x="20" y="276" fill="#5C5752" fontSize="12" fontFamily="Golos Text, sans-serif">{caption}</text>
+      </svg>
+    );
+  }
+  if (product.id === 'hamon-knife') {
+    return (
+      <svg viewBox="0 0 400 300" aria-hidden="true">
+        <rect width="400" height="300" fill="#EFE9DB" />
+        <ellipse cx="200" cy="248" rx="130" ry="14" fill="#E0D7C0" />
+        <path d="M80 210 L250 120 L268 138 L98 228 Z" fill="#C9C2B4" stroke="#8F887A" strokeWidth="2" />
+        <path d="M86 206 L244 124" stroke="#EFEAE0" strokeWidth="4" fill="none" strokeLinecap="round" />
+        <rect x="248" y="104" width="76" height="24" rx="8" transform="rotate(-30 248 104)" fill="#241B17" />
+        <rect x="238" y="118" width="18" height="10" rx="3" transform="rotate(-30 238 118)" fill="#5B2824" />
+        <text x="20" y="276" fill="#5C5752" fontSize="12" fontFamily="Golos Text, sans-serif">{caption}</text>
+      </svg>
+    );
+  }
+  if (product.id === 'gift-certificate') {
+    return (
+      <svg viewBox="0 0 400 300" aria-hidden="true">
+        <rect width="400" height="300" fill="#E9E0CD" />
+        <rect x="96" y="52" width="208" height="196" rx="6" fill="#FAF5EA" stroke="#5B2824" strokeWidth="3" />
+        <rect x="108" y="64" width="184" height="172" rx="4" fill="none" stroke="#5B2824" strokeWidth="1.4" strokeDasharray="6 5" />
+        <text x="200" y="128" textAnchor="middle" fill="#5B2824" fontFamily="Playfair Display, Georgia, serif" fontSize="30" fontWeight="700">Подарок</text>
+        <text x="200" y="158" textAnchor="middle" fill="#6E6155" fontFamily="Golos Text, sans-serif" fontSize="13">Наш Хамон</text>
+        <rect x="150" y="176" width="100" height="10" rx="3" fill="#5B2824" />
+        <circle cx="200" cy="222" r="10" fill="#5B2824" />
+        <path d="M186 216 L200 232 L214 216" stroke="#FAF5EA" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <text x="20" y="276" fill="#5C5752" fontSize="12" fontFamily="Golos Text, sans-serif">{caption}</text>
+      </svg>
+    );
+  }
   if (product.category === 'olives') {
     return (
       <svg viewBox="0 0 400 300" aria-hidden="true">

@@ -1,7 +1,7 @@
 // Типы магазина «Наш Хамон». Формат данных совпадает с выгрузкой 1С:УНФ 3.0.
 
 export type Country = 'ru' | 'es' | 'it' | 'gr' | 'fr' | 'ch';
-export type Category = 'piece' | 'sliced' | 'leg' | 'olives' | 'cheese';
+export type Category = 'piece' | 'sliced' | 'leg' | 'olives' | 'cheese' | 'extras';
 export type Kind = 'piece' | 'pack';
 
 export interface Piece {
