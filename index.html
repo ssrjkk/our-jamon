@@ -390,6 +390,9 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .dept-tabs button:hover { border-color: var(--graphite-muted); }
 .dept-tabs button[aria-pressed="true"] { background-color: var(--hoof-graphite); color: var(--fat-white); border-color: var(--hoof-graphite); }
 
+
+.brand-logo.hero { width: 78%; max-width: 430px; height: auto; margin: 0 auto; }
+
 </style>
 </head>
 <body>
@@ -440,41 +443,23 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 <main id="top">
 
   <!-- ПЕРВЫЙ ЭКРАН -->
-  <section class="hero-light"><div class="container hero-light-grid"><div class="hero-copy"><p class="hero-kicker">Лавка деликатесов · Сытный рынок</p><h1 class="hero-big">Хамон — главный герой.<br>Вкусы <em>вокруг</em> него</h1><p class="hero-sub">Нарезка, куски и целые ноги. Взвешиваем при приёмке — цена до рубля.</p><div class="hero-cta-row"><a href="#scenarios" class="btn-primary">Выбрать сценарий</a><a href="#catalog" class="btn-secondary" style="display:inline-flex;align-items:center;text-decoration:none;">Вся витрина</a></div><div class="hero-chips"><span class="hero-chip tabular">Выдержка 8–28+ мес</span><span class="hero-chip">Сытнинская, 4П · вт–вс 10:30–20:30</span><span class="hero-chip">Доставка по СПб день в день</span></div></div><div class="hero-art" aria-hidden="true"><svg viewBox="0 0 760 560" role="img" aria-label="Веер тонких ломтиков хамона">
-            <rect width="760" height="560" fill="#F4EDDE"/>
-            <ellipse cx="380" cy="470" rx="300" ry="34" fill="#EDE3CC"/>
-            <g transform="translate(380 430)">
-              <path d="M0 0 L-190 -70 Q-210 -80 -196 -94 L0 -30 Z" fill="#8E2A24"/>
-              <path d="M-186 -76 L-40 -42" stroke="#F6EFE2" stroke-width="4" fill="none" stroke-linecap="round"/>
-              <path d="M0 0 L-150 -120 Q-166 -134 -146 -142 L0 -34 Z" fill="#9E332B"/>
-              <path d="M-146 -126 L-20 -44" stroke="#F6EFE2" stroke-width="4" fill="none" stroke-linecap="round"/>
-              <path d="M0 0 L-90 -160 Q-80 -178 -58 -168 L0 -38 Z" fill="#B9524A"/>
-              <path d="M-84 -152 L-14 -46" stroke="#F6EFE2" stroke-width="4.5" fill="none" stroke-linecap="round"/>
-              <path d="M0 0 L-20 -188 Q-8 -204 12 -192 L0 -40 Z" fill="#C96A5F"/>
-              <path d="M-14 -178 L-4 -48" stroke="#F6EFE2" stroke-width="4.5" fill="none" stroke-linecap="round"/>
-              <path d="M0 0 L60 -176 Q84 -184 88 -164 L0 -42 Z" fill="#9E332B"/>
-              <path d="M56 -166 L0 -46" stroke="#F6EFE2" stroke-width="4" fill="none" stroke-linecap="round"/>
-              <path d="M0 0 L140 -140 Q160 -142 156 -122 L0 -44 Z" fill="#8E2A24"/>
-              <path d="M132 -134 L0 -46" stroke="#F6EFE2" stroke-width="4" fill="none" stroke-linecap="round"/>
-              <path d="M0 0 L200 -80 Q218 -72 206 -56 L0 -46 Z" fill="#B9524A"/>
-              <path d="M190 -76 L0 -48" stroke="#F6EFE2" stroke-width="4" fill="none" stroke-linecap="round"/>
-              <circle cx="-70" cy="-96" r="3" fill="#F6EFE2" opacity="0.9"/>
-              <circle cx="30" cy="-130" r="2.6" fill="#F6EFE2" opacity="0.9"/>
-              <circle cx="110" cy="-90" r="2.4" fill="#F6EFE2" opacity="0.85"/>
-              <circle cx="-120" cy="-52" r="2.2" fill="#F6EFE2" opacity="0.8"/>
-              <circle cx="240" cy="-30" r="13" fill="#5E6B33"/>
-              <ellipse cx="245" cy="-35" rx="3.2" ry="4.4" fill="#5B2824"/>
-              <path d="M212 -52 C240 -66, 276 -66, 300 -52" stroke="#5E6B33" stroke-width="4" fill="none" stroke-linecap="round"/>
-              <ellipse cx="238" cy="-62" rx="5" ry="11" transform="rotate(-24 238 -62)" fill="#5E6B33"/>
-              <ellipse cx="272" cy="-64" rx="5" ry="11" transform="rotate(20 272 -64)" fill="#4E5A29"/>
-              <path d="M0 0 L40 12 L34 26 L-6 14 Z" fill="#E3D4B4"/>
-            </g>
-            <text x="40" y="530" fill="#9B8B76" font-size="15" font-family="Golos Text, sans-serif">Фото клиента: веер нарезки хамона (макро)</text>
-          </svg></div></div></section>
+  <section class="hero-light">
+      <div class="container hero-light-grid">
+        <div class="hero-copy">
+          <h1 class="hero-big">Хамон — главный герой.<br>Вкусы собираем вокруг него</h1>
+          <p class="hero-sub">Нарезка, куски и целые ноги. Взвешиваем при приёмке — цена до рубля.</p>
+          <div class="hero-cta-row">
+            <a href="#scenarios" class="btn-primary">Выбрать сценарий</a>
+            <a href="#catalog" class="btn-secondary" style="display:inline-flex;align-items:center;text-decoration:none;">Вся витрина</a>
+          </div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <img src="brand/logo-stacked.svg" alt="Наш Хамон — лавка деликатесов">
+        </div>
+      </div>
+    </section>
 
-    <section class="stories-section container" aria-label="Истории лавки">
-    <div class="stories-strip" id="stories-strip"></div>
-  </section>
+    
 
       <!-- ВКЛАДКИ -->
       <div class="site-tabs" role="tablist" aria-label="Разделы сайта">
@@ -490,6 +475,10 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
         <h2 class="section-title">Витрина и выбор кусков по весу</h2>
         <p class="section-subtitle">Фасованные позиции оплачиваются сразу. Для кусков хамона, целых ног и оливок на развес мы проверяем выбор на складе и присылаем ссылку на точную сумму.</p>
       </div>
+
+      <section class="stories-section container" aria-label="Истории лавки">
+    <div class="stories-strip" id="stories-strip"></div>
+  </section>
 
       <div class="catalog-controls">
         <div class="filter-row" role="group" aria-label="Фильтр по стране происхождения">
@@ -1150,6 +1139,27 @@ function initProductSelections() {
 // 4. SVG-ЗАГЛУШКИ КАРТОЧЕК (ПРОПОРЦИИ 4:3)
 // ЗАМЕНИТЬ: фото продукции @nashhamon.spb, <img loading="lazy" width="400" height="300">
 // =========================================================================
+function typographicArt(product) {
+  if (product.id === 'hamonera-pine' || product.id === 'hamonera-oak' ||
+      product.id === 'hamon-knife' || product.id === 'gift-certificate') {
+    return placeholderArt(product);
+  }
+  var words = { piece: 'Хамон', sliced: 'Нарезка', leg: 'Нога', olives: 'Оливки', cheese: 'Сыры' };
+  var word = words[product.category] || product.title.split(' ')[0];
+  var line = COUNTRY_NAMES[product.country] || '';
+  if (product.agingMonths) line += ' · Выдержка ' + product.agingMonths + '\u00A0мес.';
+  if (product.category === 'olives' || product.category === 'cheese') {
+    line = COUNTRY_NAMES[product.country] || 'Деликатесы';
+  }
+  return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
+    '<rect width="400" height="300" fill="#F4EDDE"/>' +
+    '<rect x="14" y="14" width="372" height="272" fill="none" stroke="#E7DEC9" stroke-width="1.5"/>' +
+    '<line x1="120" y1="150" x2="280" y2="150" stroke="#5B2824" stroke-width="1.5"/>' +
+    '<text x="200" y="136" text-anchor="middle" fill="#241B17" font-family="Playfair Display, Georgia, serif" font-size="46" font-weight="700">' + word + '</text>' +
+    '<text x="200" y="184" text-anchor="middle" fill="#6E6155" font-family="Golos Text, sans-serif" font-size="14" letter-spacing="2">' + line.toUpperCase() + '</text>' +
+    '</svg>';
+}
+
 function placeholderArt(product) {
   if (product.id === 'hamonera-pine' || product.id === 'hamonera-oak') {
     var wood = product.id === 'hamonera-oak' ? '#5C4430' : '#8A6A4A';
@@ -1432,7 +1442,7 @@ function cardHtml(product) {
 
     return '<article class="product-card" data-product-id="' + product.id + '">' +
       '<div>' +
-      '<div class="card-media">' + placeholderArt(product) +
+      '<div class="card-media">' + typographicArt(product) +
       '<div class="olive-stage" id="olive-stage-' + product.id + '" aria-hidden="true"></div></div>' +
       '<div class="card-header-row"><h3 class="card-title">' + product.title + '</h3>' +
       '<span class="rate-per-100 tabular">' + formatRub(per100) + ' / 100\u00A0г</span></div>' +
@@ -1484,9 +1494,8 @@ function renderCatalog() {
 function renderDeptTabs(visible) {
   var el = document.getElementById('dept-tabs');
   el.innerHTML = DEPT_ORDER.map(function (d) {
-    var count = visible.filter(function (p) { return p.category === d.cat; }).length;
     return '<button type="button" role="tab" aria-pressed="' + (state.activeDept === d.id) + '"' +
-      ' data-dept="' + d.id + '">' + d.title + (count ? ' · ' + count : '') + '</button>';
+      ' data-dept="' + d.id + '">' + d.title + '</button>';
   }).join('');
   el.querySelectorAll('button').forEach(function (b) {
     b.addEventListener('click', function () {
