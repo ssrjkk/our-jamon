@@ -1510,14 +1510,15 @@ function renderCatalog() {
   }
 
   grid.innerHTML =
+    '<div class="dept-section" id="' + dept.id + '">' +
     '<div class="dept-head">' +
     '<h2 class="dept-title">' + dept.title + '</h2>' +
     '<span class="dept-count tabular">' + items.length + ' поз.</span>' +
     '</div>' +
     '<p class="dept-note">' + dept.note + '</p>' +
-    '<div class="catalog-grid">' +
+    '<div class="catalog-grid dept-grid">' +
     items.map(function (product) { return cardHtml(product); }).join('') +
-    '</div>';
+    '</div></div>';
 }
 
 function renderDeptTabs(visible) {
@@ -2046,43 +2047,12 @@ function initDemoScale() {
 // =========================================================================
 // 9. НАБОРЫ
 // =========================================================================
-function renderSets() {
-  var grid = document.getElementById('sets-grid');
-  grid.innerHTML = SETS.map(function (set) {
-    var rows = [];
-    var total = 0;
-    set.components.forEach(function (component) {
-      var product = findProduct(component.productId);
-      if (!product) return;
-      var pack = product.packs[component.optionIdx];
-      if (!pack) return;
-      total += pack.price;
-      rows.push('<li><span>' + product.title + '</span><span class="tabular" style="white-space:nowrap;">' + formatRub(pack.price) + '</span></li>');
-    });
-    return '<article class="set-card' + (set.featured ? ' featured' : '') + '">' +
-      '<div><div class="set-kicker">' + set.kicker + '</div>' +
-      '<h3 class="set-title">' + set.title + '</h3>' +
-      '<p style="font-size:0.9375rem;color:var(--graphite-muted);margin-top:6px;">' + set.desc + '</p></div>' +
-      '<ul class="set-list">' + rows.join('') + '</ul>' +
-      '<div class="set-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Набор целиком</span>' +
-      '<span class="set-total tabular">' + formatRub(total) + '</span></div>' +
-      '<button type="button" class="set-add-btn" data-set-add="' + set.id + '">Добавить весь набор в корзину</button>' +
-      '</article>';
-  }).join('');
-  grid.querySelectorAll('[data-set-add]').forEach(function (btn) {
-    btn.addEventListener('click', function () { addSetToCart(btn.getAttribute('data-set-add'), btn); });
-  });
-}
-
-// =========================================================================
-// 10. ИСТОРИИ
-// =========================================================================
 var STORY_ART = {
-  cut: '<svg viewBox="0 0 96 96" fill="none"><path d="M20 70 L76 70 L72 62 L24 62 Z" fill="#5C5752"/><rect x="46" y="26" width="4" height="38" fill="#5C5752"/><path d="M24 30 C48 20, 76 24, 72 46 C68 60, 40 62, 26 52 Z" fill="#7A1C1C"/><path d="M32 38 C48 30, 62 32, 68 42" stroke="#F6F5F0" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="34" rx="4" ry="6" fill="#E3D4B4"/></svg>',
-  evening: '<svg viewBox="0 0 96 96" fill="none"><ellipse cx="48" cy="64" rx="30" ry="8" fill="#DDD8CE"/><circle cx="34" cy="52" r="10" fill="#4E5E32"/><ellipse cx="38" cy="50" rx="2.4" ry="3.4" fill="#7A1C1C"/><circle cx="58" cy="50" r="8" fill="#3E4B27"/><rect x="68" y="38" width="4" height="20" fill="#5C5752"/><path d="M56 24 C64 20, 72 22, 70 30 C68 36, 58 36, 56 30 Z" fill="#7A1C1C"/></svg>',
-  weigh: '<svg viewBox="0 0 96 96" fill="none"><rect x="24" y="58" width="48" height="18" rx="4" fill="#181615"/><rect x="32" y="30" width="32" height="24" rx="3" fill="#F6F5F0" stroke="#181615" stroke-width="2"/><text x="36" y="47" font-family="Golos Text, sans-serif" font-size="12" fill="#7A1C1C">215</text><rect x="30" y="24" width="36" height="4" rx="2" fill="#181615"/></svg>',
-  aging: '<svg viewBox="0 0 96 96" fill="none"><path d="M20 72 C36 68, 44 56, 52 40 C58 28, 68 22, 78 20" stroke="#7A1C1C" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="34" cy="66" r="3" fill="#DDD8CE"/><circle cx="52" cy="44" r="3" fill="#F6F5F0"/><circle cx="70" cy="26" r="3" fill="#F6F5F0"/><circle cx="76" cy="30" r="1.6" fill="#F6F5F0"/><circle cx="66" cy="24" r="1.6" fill="#F6F5F0"/></svg>',
-  shop: '<svg viewBox="0 0 96 96" fill="none"><rect x="22" y="40" width="52" height="34" fill="#F6F5F0" stroke="#181615" stroke-width="2"/><path d="M18 40 L78 40 L72 26 L24 26 Z" fill="#7A1C1C"/><rect x="40" y="52" width="16" height="22" fill="#4E5E32"/><rect x="60" y="48" width="8" height="8" fill="#DDD8CE"/></svg>'
+  cut: '<svg viewBox="0 0 96 96" fill="none"><path d="M20 70 L76 70 L72 62 L24 62 Z" fill="#6E6155"/><rect x="46" y="26" width="4" height="38" fill="#6E6155"/><path d="M24 30 C48 20, 76 24, 72 46 C68 60, 40 62, 26 52 Z" fill="#5B2824"/><path d="M32 38 C48 30, 62 32, 68 42" stroke="#FAF5EA" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="34" rx="4" ry="6" fill="#E3D4B4"/></svg>',
+  evening: '<svg viewBox="0 0 96 96" fill="none"><ellipse cx="48" cy="64" rx="30" ry="8" fill="#E7DEC9"/><circle cx="34" cy="52" r="10" fill="#5E6B33"/><ellipse cx="38" cy="50" rx="2.4" ry="3.4" fill="#5B2824"/><circle cx="58" cy="50" r="8" fill="#4E5A29"/><rect x="68" y="38" width="4" height="20" fill="#6E6155"/><path d="M56 24 C64 20, 72 22, 70 30 C68 36, 58 36, 56 30 Z" fill="#5B2824"/></svg>',
+  weigh: '<svg viewBox="0 0 96 96" fill="none"><rect x="24" y="58" width="48" height="18" rx="4" fill="#241B17"/><rect x="32" y="30" width="32" height="24" rx="3" fill="#FAF5EA" stroke="#241B17" stroke-width="2"/><text x="36" y="47" font-family="Golos Text, sans-serif" font-size="12" fill="#5B2824">230</text><rect x="30" y="24" width="36" height="4" rx="2" fill="#241B17"/></svg>',
+  aging: '<svg viewBox="0 0 96 96" fill="none"><path d="M20 72 C36 68, 44 56, 52 40 C58 28, 68 22, 78 20" stroke="#5B2824" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="34" cy="66" r="3" fill="#E7DEC9"/><circle cx="52" cy="44" r="3" fill="#FAF5EA"/><circle cx="70" cy="26" r="3" fill="#FAF5EA"/><circle cx="76" cy="30" r="1.6" fill="#FAF5EA"/><circle cx="66" cy="24" r="1.6" fill="#FAF5EA"/></svg>',
+  shop: '<svg viewBox="0 0 96 96" fill="none"><rect x="22" y="40" width="52" height="34" fill="#FAF5EA" stroke="#241B17" stroke-width="2"/><path d="M18 40 L78 40 L72 26 L24 26 Z" fill="#5B2824"/><rect x="40" y="52" width="16" height="22" fill="#5E6B33"/><rect x="60" y="48" width="8" height="8" fill="#E7DEC9"/></svg>'
 };
 
 var STORIES = [
@@ -2090,24 +2060,18 @@ var STORIES = [
     text: 'Хамон «16», только что взвешен при приёмке. Цена по фактическому весу — до рубля.',
     action: 'piece' },
   { id: 'evening', label: 'Вкусный вечер', title: 'Набор к столу одним кликом',
-    text: 'Нарезка Gran Reserva, крупные Gordal и гриссини. Добавим весь набор в корзину сразу.',
+    text: 'Нарезка «22», крупные Gordal и гриссини. Добавим весь набор в корзину сразу.',
     action: 'set', setId: 'evening', setLabel: 'Добавить весь набор' },
   { id: 'weigh', label: 'Как вешаем', title: 'Почему цена до рубля',
     text: 'Каждый кусок взвешиваем при приёмке. Выбираете конкретный кусок — сумма видна сразу.',
-    action: 'scroll', target: 'weight-system', label2: 'Посчитать на весах' },
+    action: 'scroll', target: 'weight-system' },
   { id: 'aging', label: 'Выдержка', title: 'От Bodega до Gran Reserva',
     text: '8–12 месяцев — мягкий вкус. 24–28+ — тёмный срез с кристаллами тирозина.',
-    action: 'scroll', target: 'aging', label2: 'Открыть гид по выдержке' },
+    action: 'scroll', target: 'aging' },
   { id: 'shop', label: 'Лавка на Сытном', title: 'Как нас найти',
     text: 'Сытнинская улица, 4П, фуд-аллея рынка «Сытный». Вторник–воскресенье, 10:30–20:30.',
-    action: 'external', href: 'https://yandex.ru/maps/-/CXq~AInl', label2: 'Построить маршрут' }
+    action: 'external', href: 'https://yandex.ru/maps/-/CXq~AInl' }
 ];
-
-var currentStoryIndex = 0;
-var storyTimer = null;
-var storyElapsed = 0;
-var storyPaused = false;
-var STORY_DURATION_MS = 5000;
 
 function renderStoriesStrip() {
   var strip = document.getElementById('stories-strip');
@@ -2397,11 +2361,12 @@ function initCheckoutForm() {
 // =========================================================================
 // 12. ИНИЦИАЛИЗАЦИЯ И СОБЫТИЯ ДОКУМЕНТА
 // =========================================================================
+window.__iifeDone = true;
 document.addEventListener('DOMContentLoaded', function () {
+  window.__dcl = true;
   loadPersistedState();
   initProductSelections();
   renderStoriesStrip();
-  renderSets();
   renderCatalog();
   updateCartUI();
   // ВКЛАДКИ: переключение панелей без ленты
