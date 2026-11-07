@@ -25,6 +25,7 @@
   --font-serif: 'Playfair Display', Georgia, serif;
   --font-sans: 'Golos Text', -apple-system, BlinkMacSystemFont, sans-serif;
   --container: 1280px;
+  --header-h: 64px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html {
@@ -384,9 +385,15 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .site-tabs button { min-height: 48px; padding: 10px 18px; font-size: 0.9375rem; font-weight: 600; color: var(--graphite-muted); border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: color 0.15s ease, border-color 0.15s ease; }
 .site-tabs button:hover { color: var(--hoof-graphite); }
 .site-tabs button[aria-selected="true"] { color: var(--cured-ruby); border-bottom-color: var(--cured-ruby); }
+.catalog-controls { flex-direction: row; flex-wrap: wrap; gap: 6px 10px; border-bottom: none; padding-bottom: 4px; margin-bottom: 14px; }
+.catalog-controls .filter-row { gap: 2px; }
+.catalog-controls .filter-btn { border-color: transparent; background-color: transparent; padding: 8px 10px; }
+.catalog-controls .filter-btn:hover { border-color: var(--bone-line); }
+.catalog-controls .filter-btn[aria-pressed="true"] { background-color: var(--surface-tint); color: var(--cured-ruby); border-color: transparent; }
+#aging-filter-row[hidden] { display: none !important; }
 .dept-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 12px 0 14px; scrollbar-width: none; border-bottom: 1px solid var(--bone-line); margin-bottom: 20px; }
 .dept-tabs::-webkit-scrollbar { display: none; }
-.dept-tabs button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.875rem; font-weight: 500; color: var(--hoof-graphite); border-radius: 999px; white-space: nowrap; transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
+.dept-tabs button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.875rem; font-weight: 500; color: var(--hoof-graphite); border-radius: 3px; white-space: nowrap; transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
 .dept-tabs button:hover { border-color: var(--graphite-muted); }
 .dept-tabs button[aria-pressed="true"] { background-color: var(--hoof-graphite); color: var(--fat-white); border-color: var(--hoof-graphite); }
 
@@ -469,12 +476,9 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
         <button type="button" role="tab" data-tab="weight-system" aria-selected="false">Как считаем вес</button>
         <button type="button" role="tab" data-tab="delivery" aria-selected="false">Доставка</button>
       </div>
-      <section id="catalog" class="site-panel" class="section" style="border-top:none;">
+      <section id="catalog" class="site-panel section" style="border-top:none;">
     <div class="container">
-      <div class="section-head">
-        <h2 class="section-title">Витрина и выбор кусков по весу</h2>
-        <p class="section-subtitle">Фасованные позиции оплачиваются сразу. Для кусков хамона, целых ног и оливок на развес мы проверяем выбор на складе и присылаем ссылку на точную сумму.</p>
-      </div>
+      
 
       <section class="stories-section container" aria-label="Истории лавки">
     <div class="stories-strip" id="stories-strip"></div>
@@ -505,8 +509,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
             Франция и Швейцария
           </button>
         </div>
-
-        <div class="filter-row" role="group" aria-label="Фильтр по выдержке хамона">
+          <div class="filter-row" role="group" aria-label="Фильтр по выдержке хамона" id="aging-filter-row">
           <span class="filter-label">Выдержка:</span>
           <button type="button" class="filter-btn" data-filter-aging="all" aria-pressed="true">Любая</button>
           <button type="button" class="filter-btn" data-filter-aging="8-12" aria-pressed="false">8–12 мес</button>
@@ -515,7 +518,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
         </div>
       </div>
 
-      <p class="catalog-hint">Сайт работает вкладками: сверху разделы, внутри витрины - отделы. Никакой длинной ленты: выбираете вкладку - видите только её содержимое. В карточке - средний вес куска, точный подтверждаем при связи.</p>
+      
 
       <div class="dept-tabs" id="dept-tabs" role="tablist" aria-label="Отделы витрины"></div>
 
@@ -523,9 +526,9 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
     </div>
   </section>
 
-    <section id="scenarios" class="site-panel" hidden class="section" style="border-top:none;"><div class="container"><div class="section-head"><h2 class="section-title">Три сценария — выберите свой</h2><p class="section-subtitle">Хамон — главный герой. Вкусы собираем вокруг него: для себя, к столу и на подарок.</p></div><div class="scenarios-grid"><article class="scenario-card"><div class="scenario-label">Для себя</div><div class="scenario-name">Познакомиться с хамоном</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Три выдержки в одной коробке - найдёте свою.</p><ul class="scenario-list"><li>Дегустационный сет нарезок 3 × 100 г</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">1 150 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addProductToCart('hamon-tasting-sliced', this)">Собрать сценарий</button></article><article class="scenario-card"><div class="scenario-label">К столу</div><div class="scenario-name">Вкусный вечер</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Нарезка «22», крупные оливки и гриссини к бокалу.</p><ul class="scenario-list"><li>Нарезка хамона «22»</li><li>Оливки Gordal крупные</li><li>Гриссини хлебные палочки</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">1 430 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addSetToCart('evening', this)">Собрать сценарий</button></article><article class="scenario-card"><div class="scenario-label">На подарок</div><div class="scenario-name">Бокс «В подарок»</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Соберём и упакуем - останется подписать открытку.</p><ul class="scenario-list"><li>Нарезка хамона «22»</li><li>Оливки Manzanilla</li><li>Сыр овечий Манчего</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">2 300 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addSetToCart('gift', this)">Собрать сценарий</button></article></div></div></section>
+    <section id="scenarios" class="site-panel section" hidden style="border-top:none;"><div class="container"><div class="section-head"><h2 class="section-title">Три сценария — выберите свой</h2><p class="section-subtitle">Хамон — главный герой. Вкусы собираем вокруг него: для себя, к столу и на подарок.</p></div><div class="scenarios-grid"><article class="scenario-card"><div class="scenario-label">Для себя</div><div class="scenario-name">Познакомиться с хамоном</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Три выдержки в одной коробке - найдёте свою.</p><ul class="scenario-list"><li>Дегустационный сет нарезок 3 × 100 г</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">1 150 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addProductToCart('hamon-tasting-sliced', this)">Собрать сценарий</button></article><article class="scenario-card"><div class="scenario-label">К столу</div><div class="scenario-name">Вкусный вечер</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Нарезка «22», крупные оливки и гриссини к бокалу.</p><ul class="scenario-list"><li>Нарезка хамона «22»</li><li>Оливки Gordal крупные</li><li>Гриссини хлебные палочки</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">1 430 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addSetToCart('evening', this)">Собрать сценарий</button></article><article class="scenario-card"><div class="scenario-label">На подарок</div><div class="scenario-name">Бокс «В подарок»</div><p style="font-size:0.9375rem;color:var(--graphite-muted);">Соберём и упакуем - останется подписать открытку.</p><ul class="scenario-list"><li>Нарезка хамона «22»</li><li>Оливки Manzanilla</li><li>Сыр овечий Манчего</li></ul><div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Готовый набор</span><span class="scenario-total tabular">2 300 ₽</span></div><button type="button" class="btn-primary" style="width:100%;" onclick="addSetToCart('gift', this)">Собрать сценарий</button></article></div></div></section>
 
-    <section id="aging" class="site-panel" hidden class="section">
+    <section id="aging" class="site-panel section" hidden>
     <div class="container">
       <div class="section-head">
         <h2 class="section-title">Выдержка от 8 до 28+ месяцев</h2>
@@ -576,7 +579,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
     </div>
   </section>
 
-    <section id="weight-system" class="site-panel" hidden class="section-dark">
+    <section id="weight-system" class="site-panel section-dark" hidden>
     <div class="container">
       <div class="section-head">
         <h2 class="section-title">Как считаем вес куска</h2>
@@ -613,16 +616,16 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
         </div>
         <div class="scale-panel scale-info-panel">
           <h3>Почему оплата куска проходит в два шага</h3>
-          <p>1. Вы выбираете конкретный кусок по весу и отправляете заказ без регистрации.</p>
-          <p>2. Мы находим именно этот кусок на Сытном рынке, проверяем вакуумную упаковку и подтверждаем вес.</p>
-          <p>3. Приходит ссылка на оплату точной суммы в Telegram, WhatsApp или SMS — как удобнее.</p>
+          <p>1. Выбираете позицию со средним весом или нужный ориентир на весах — заказ уходит без регистрации.</p>
+          <p>2. Мы взвешиваем реальный кусок на Сытном рынке и подтверждаем точную сумму.</p>
+          <p>3. Приходит точная ссылка Т-Банка в Telegram, WhatsApp или SMS — как удобнее.</p>
           <div class="scale-info-foot">Для фиксированной нарезки, банок оливок и сыров оплата открывается сразу при оформлении.</div>
         </div>
       </div>
     </div>
   </section>
 
-    <section id="delivery" class="site-panel" hidden class="section" style="border-top:none;">
+    <section id="delivery" class="site-panel section" hidden style="border-top:none;">
     <div class="container">
       <div class="section-head">
         <h2 class="section-title">Доставка из Санкт-Петербурга и оплата</h2>
@@ -660,15 +663,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
   
 
   <!-- НАБОРЫ -->
-  <section id="sets" class="section" style="border-top:none;">
-    <div class="container">
-      <div class="section-head">
-        <h2 class="section-title">Соберём вкусный вечер, подарок или набор к столу</h2>
-        <p class="section-subtitle">Готовые сочетания из витрины лавки: собираем в вакуумной упаковке и отправляем в день заказа. Один клик — и весь набор в корзине.</p>
-      </div>
-      <div id="sets-grid" class="sets-grid"></div>
-    </div>
-  </section>
+  
 
   <!-- КАК СЧИТАЕМ ВЕС -->
   
@@ -871,13 +866,13 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 // 1. ДАННЫЕ ТОВАРОВ (СТРУКТУРА ПОД ВЫГРУЗКУ 1С:УНФ 3.0)
 // ИНТЕГРАЦИЯ 1С: заменить массив на fetch('/api/v1/products') — формат тот же.
 // Цены хамона и ног — по прайсу поставщика «Дом Хамона» (domhamona.ru, ГОСТ 34159-2017):
-// выдержка 8-22 мес - 2200-3600 ₽/кг, целые ноги 24/26 мес - 30 000/35 000 ₽/шт (окорок ~8,5 кг).
-// Розничные цены лавки уточнить у Виталия - помечено [розничная уточнить].
-// Цены Италии/Греции/Франции/Швейцарии - демо-заглушки [заглушка цены].
+// выдержка 8-22 мес — 2200-3600 ₽/кг, целые ноги 24/26 мес — 30 000/35 000 ₽/шт (окорок ~8,5 кг).
+// Розничные цены лавки уточнить у Виталия — помечено [розничная уточнить].
+// Цены Италии/Греции/Франции/Швейцарии — демо-заглушки [заглушка цены].
 // =========================================================================
 var PRODUCTS = [
   { id: 'hamon-12-piece', country: 'ru', category: 'piece', title: 'Хамон «12», кусок в вакууме', agingMonths: 12,
-    description: 'Мягкий вкус - лучшее знакомство с хамоном.',
+    description: 'Мягкий вкус — лучшее знакомство с хамоном.',
     kind: 'piece', pricePerKg: 2600,
     pieces: [{ id1c: '1c-h12-215', weightG: 215 }, { id1c: '1c-h12-290', weightG: 290 }, { id1c: '1c-h12-360', weightG: 360 }],
     packs: [], bulk: null },
@@ -897,7 +892,7 @@ var PRODUCTS = [
     pieces: [{ id1c: '1c-h22-220', weightG: 220 }, { id1c: '1c-h22-280', weightG: 280 }, { id1c: '1c-h22-350', weightG: 350 }],
     packs: [], bulk: null },
   { id: 'hamon-leg-24', country: 'ru', category: 'leg', title: 'Целая нога хамона «24» на кости', agingMonths: 24,
-    description: 'Целый окорок выдержки 24 месяца, вес около 8,5 кг. Фиксированная цена за ногу - как у поставщика. Хамонера покупается отдельно.',
+    description: 'Целый окорок выдержки 24 месяца, вес около 8,5 кг. Фиксированная цена за ногу — как у поставщика. Хамонера покупается отдельно.',
     kind: 'piece', pricePerKg: 3530,
     pieces: [
       { id1c: '1c-leg24-8400', weightG: 8400, price: 30000 },
@@ -905,7 +900,7 @@ var PRODUCTS = [
     ],
     packs: [], bulk: null },
   { id: 'hamon-leg-26', country: 'ru', category: 'leg', title: 'Целая нога хамона «26» на кости', agingMonths: 26,
-    description: 'Топовая выдержка 26 месяцев, вес около 8,5 кг. Фиксированная цена за ногу - как у поставщика.',
+    description: 'Топовая выдержка 26 месяцев, вес около 8,5 кг. Фиксированная цена за ногу — как у поставщика.',
     kind: 'piece', pricePerKg: 4118,
     pieces: [
       { id1c: '1c-leg26-8400', weightG: 8400, price: 35000 },
@@ -925,7 +920,7 @@ var PRODUCTS = [
       { label: '150 г в вакууме', weightG: 150, price: 570 }
     ], bulk: null },
   { id: 'hamon-sliced-22', country: 'ru', category: 'sliced', title: 'Нарезка хамона «22»', agingMonths: 22,
-    description: 'Тонкая нарезка выдержки 22 месяца в вакуумной упаковке - самый насыщенный срез линейки. [розничная уточнить]',
+    description: 'Тонкая нарезка выдержки 22 месяца в вакуумной упаковке — самый насыщенный срез линейки. [розничная уточнить]',
     kind: 'pack', pricePerKg: 4500,
     pieces: [], packs: [
       { label: '100 г в вакууме', weightG: 100, price: 450 },
@@ -998,7 +993,7 @@ var PRODUCTS = [
     kind: 'pack', pricePerKg: 0,
     pieces: [], packs: [{ label: 'Хамонера', weightG: 0, price: 3500 }], bulk: null },
   { id: 'hamonera-oak', country: 'ru', category: 'extras', title: 'Хамонера из дуба', agingMonths: null,
-    description: 'Массивная подставка из дуба - на годы. [заглушка цены]',
+    description: 'Массивная подставка из дуба — на годы. [заглушка цены]',
     kind: 'pack', pricePerKg: 0,
     pieces: [], packs: [{ label: 'Хамонера', weightG: 0, price: 5900 }], bulk: null },
   { id: 'hamon-knife', country: 'ru', category: 'extras', title: 'Нож для хамона, 24 см', agingMonths: null,
@@ -1023,11 +1018,11 @@ var SETS = [
       { productId: 'hamon-sliced-22', optionIdx: 0 },
 
 
-        { productId: 'olives-gordal', optionIdx: 0 },      { productId: 'olives-gordal', optionIdx: 0 },
+        { productId: 'olives-gordal', optionIdx: 0 },
       { productId: 'grissini', optionIdx: 0 }
     ] },
   { id: 'gift', kicker: 'Подарочный набор', title: 'Бокс «В подарок»',
-    desc: 'Нарезка длительной выдержки, оливки и выдержанный сыр - в аккуратной сборке.',
+    desc: 'Нарезка длительной выдержки, оливки и выдержанный сыр — в аккуратной сборке.',
     components: [
       { productId: 'hamon-sliced-22', optionIdx: 1 },
       { productId: 'olives-manzanilla', optionIdx: 0 },
@@ -1161,6 +1156,9 @@ function typographicArt(product) {
 }
 
 function placeholderArt(product) {
+  var stamp = product.agingMonths
+    ? '<g><rect x="306" y="14" width="80" height="30" rx="2" fill="#5B2824"/><text x="346" y="34" text-anchor="middle" fill="#FAF5EA" font-family="Golos Text, sans-serif" font-size="14" font-weight="600" letter-spacing="1">' + product.agingMonths + ' МЕС</text></g>'
+    : '';
   if (product.id === 'hamonera-pine' || product.id === 'hamonera-oak') {
     var wood = product.id === 'hamonera-oak' ? '#5C4430' : '#8A6A4A';
     return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
@@ -1176,8 +1174,8 @@ function placeholderArt(product) {
       '<path d="M168 106 C224 86, 284 82, 310 98" stroke="#7A3A32" stroke-width="7" fill="none" stroke-linecap="round"/>' +
       '<path d="M164 118 C226 100, 292 98, 318 114" stroke="#F6F5F0" stroke-width="2.6" fill="none" stroke-linecap="round" opacity="0.85"/>' +
       '<path d="M150 112 L134 98 L124 110 L140 124 Z" fill="#E3D4B4"/>' +
-      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 - ' + product.title + '</text>' +
-      '</svg>';
+      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото лавки · @nashhamon.spb</text>' +
+      '<g>' + stamp + '</g></svg>';
   }
   if (product.id === 'hamon-knife') {
     return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
@@ -1187,8 +1185,8 @@ function placeholderArt(product) {
       '<path d="M86 206 L244 124" stroke="#EFEAE0" stroke-width="4" fill="none" stroke-linecap="round"/>' +
       '<rect x="248" y="104" width="76" height="24" rx="8" transform="rotate(-30 248 104)" fill="#241B17"/>' +
       '<rect x="238" y="118" width="18" height="10" rx="3" transform="rotate(-30 238 118)" fill="#5B2824"/>' +
-      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 - ' + product.title + '</text>' +
-      '</svg>';
+      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото лавки · @nashhamon.spb</text>' +
+      '<g>' + stamp + '</g></svg>';
   }
   if (product.id === 'gift-certificate') {
     return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
@@ -1200,14 +1198,14 @@ function placeholderArt(product) {
       '<rect x="150" y="176" width="100" height="10" rx="3" fill="#5B2824"/>' +
       '<circle cx="200" cy="222" r="10" fill="#5B2824"/>' +
       '<path d="M186 216 L200 232 L214 216" stroke="#FAF5EA" stroke-width="3" fill="none" stroke-linecap="round"/>' +
-      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 - ' + product.title + '</text>' +
-      '</svg>';
+      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото лавки · @nashhamon.spb</text>' +
+      '<g>' + stamp + '</g></svg>';
   }
   if (product.category === 'olives') {
     return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
       '<rect width="400" height="300" fill="#E9E5D8"/>' +
-      '<path d="M150 96 L250 96 L242 232 L158 232 Z" fill="#D8D3C2" stroke="#181615" stroke-width="2"/>' +
-      '<rect x="144" y="82" width="112" height="18" rx="4" fill="#B8AE96" stroke="#181615" stroke-width="1.6"/>' +
+      '<path d="M150 96 L250 96 L242 232 L158 232 Z" fill="#D8D3C2" stroke="#241B17" stroke-width="2"/>' +
+      '<rect x="144" y="82" width="112" height="18" rx="4" fill="#B8AE96" stroke="#241B17" stroke-width="1.6"/>' +
       '<circle cx="188" cy="176" r="22" fill="#4E5E32"/>' +
       '<ellipse cx="195" cy="168" rx="5" ry="7" fill="#7A1C1C"/>' +
       '<circle cx="216" cy="196" r="19" fill="#3E4B27"/>' +
@@ -1216,13 +1214,13 @@ function placeholderArt(product) {
       '<ellipse cx="150" cy="112" rx="7" ry="15" transform="rotate(-28 150 112)" fill="#4E5E32"/>' +
       '<ellipse cx="212" cy="104" rx="7" ry="15" transform="rotate(20 212 104)" fill="#3E4B27"/>' +
       '<ellipse cx="176" cy="100" rx="6" ry="13" fill="#5D6E3C"/>' +
-      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 - ' + product.title + '</text>' +
-      '</svg>';
+      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото лавки · @nashhamon.spb</text>' +
+      '<g>' + stamp + '</g></svg>';
   }
   if (product.category === 'cheese') {
     return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
       '<rect width="400" height="300" fill="#EFECE4"/>' +
-      '<path d="M70 210 L290 92 L330 210 Z" fill="#E3D4B4" stroke="#181615" stroke-width="2.4"/>' +
+      '<path d="M70 210 L290 92 L330 210 Z" fill="#E3D4B4" stroke="#241B17" stroke-width="2.4"/>' +
       '<path d="M70 210 L290 92" stroke="#F6F5F0" stroke-width="5" fill="none" stroke-linecap="round"/>' +
       '<circle cx="252" cy="164" r="9" fill="#C9B48E"/>' +
       '<circle cx="196" cy="182" r="6" fill="#C9B48E"/>' +
@@ -1230,8 +1228,8 @@ function placeholderArt(product) {
       '<ellipse cx="150" cy="238" rx="66" ry="12" fill="#DDD6C6"/>' +
       '<circle cx="118" cy="232" r="14" fill="#7A1C1C"/>' +
       '<circle cx="146" cy="238" r="12" fill="#8E2A24"/>' +
-      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 - ' + product.title + '</text>' +
-      '</svg>';
+      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото лавки · @nashhamon.spb</text>' +
+      '<g>' + stamp + '</g></svg>';
   }
   if (product.category === 'leg') {
     return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
@@ -1247,24 +1245,24 @@ function placeholderArt(product) {
       '<circle cx="272" cy="120" r="2" fill="#F6F5F0" opacity="0.8"/>' +
       '<path d="M150 108 L132 94 L120 108 L138 126 Z" fill="#E3D4B4"/>' +
       '<rect x="112" y="92" width="14" height="20" rx="3" fill="#C9B48E"/>' +
-      '<text x="20" y="276" fill="#9E978F" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 - ' + product.title + '</text>' +
-      '</svg>';
+      '<text x="20" y="276" fill="#9E978F" font-size="12" font-family="Golos Text, sans-serif">Фото лавки · @nashhamon.spb</text>' +
+      '<g>' + stamp + '</g></svg>';
   }
   if (product.category === 'sliced') {
     return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
       '<rect width="400" height="300" fill="#EAE6DC"/>' +
-      '<rect x="86" y="84" width="228" height="132" rx="8" fill="#CFC9B8" stroke="#181615" stroke-width="2.4"/>' +
+      '<rect x="86" y="84" width="228" height="132" rx="8" fill="#CFC9B8" stroke="#241B17" stroke-width="2.4"/>' +
       '<path d="M96 96 L304 96" stroke="#F6F5F0" stroke-width="3" stroke-linecap="round" opacity="0.9"/>' +
       '<rect x="112" y="112" width="176" height="12" rx="6" fill="#B9524A"/>' +
       '<rect x="112" y="130" width="176" height="12" rx="6" fill="#A03A32"/>' +
       '<rect x="112" y="148" width="176" height="12" rx="6" fill="#B9524A"/>' +
       '<rect x="112" y="166" width="176" height="12" rx="6" fill="#A03A32"/>' +
       '<rect x="112" y="184" width="176" height="12" rx="6" fill="#B9524A"/>' +
-      '<rect x="238" y="196" width="76" height="34" rx="3" fill="#F6F5F0" stroke="#181615" stroke-width="1.6" transform="rotate(-4 276 213)"/>' +
+      '<rect x="238" y="196" width="76" height="34" rx="3" fill="#F6F5F0" stroke="#241B17" stroke-width="1.6" transform="rotate(-4 276 213)"/>' +
       '<line x1="248" y1="208" x2="300" y2="206" stroke="#5C5752" stroke-width="2"/>' +
       '<line x1="248" y1="216" x2="296" y2="214" stroke="#5C5752" stroke-width="2"/>' +
-      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 - ' + product.title + '</text>' +
-      '</svg>';
+      '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото лавки · @nashhamon.spb</text>' +
+      '<g>' + stamp + '</g></svg>';
   }
   return '<svg viewBox="0 0 400 300" aria-hidden="true">' +
     '<rect width="400" height="300" fill="#EAE5DC"/>' +
@@ -1276,17 +1274,17 @@ function placeholderArt(product) {
     '<circle cx="240" cy="142" r="2.4" fill="#F6F5F0" opacity="0.8"/>' +
     '<circle cx="200" cy="148" r="2" fill="#F6F5F0" opacity="0.8"/>' +
     '<path d="M84 214 L64 198 L52 214 L72 232 Z" fill="#E3D4B4"/>' +
-    '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото клиента 4:3 - ' + product.title + '</text>' +
-    '</svg>';
+    '<text x="20" y="276" fill="#5C5752" font-size="12" font-family="Golos Text, sans-serif">Фото лавки · @nashhamon.spb</text>' +
+    '<g>' + stamp + '</g></svg>';
 }
 
 // =========================================================================
 // 5. РЕНДЕР КАТАЛОГА (Витрина разделена по отделам)
 // =========================================================================
 var DEPT_ORDER = [
-  { cat: 'piece', id: 'dept-piece', title: 'Хамон куском', note: 'Каждый кусок взвешен при приёмке - внутри карточки выбирается конкретный кусок по весу, цена считается по факту до рубля.' },
-  { cat: 'sliced', id: 'dept-sliced', title: 'Хамон в нарезке', note: 'Вакуумные пачки 50-150 г - фиксированная цена, оплата сразу.' },
-  { cat: 'leg', id: 'dept-leg', title: 'Целые ноги и палеты', note: 'Окорока выдержки 24-26 месяцев с фиксированной ценой за ногу и лопатки (палета) - хамонера покупается отдельно.' },
+  { cat: 'piece', id: 'dept-piece', title: 'Хамон куском', note: 'Каждый кусок взвешен при приёмке — внутри карточки выбирается конкретный кусок по весу, цена считается по факту до рубля.' },
+  { cat: 'sliced', id: 'dept-sliced', title: 'Хамон в нарезке', note: 'Вакуумные пачки 50-150 г — фиксированная цена, оплата сразу.' },
+  { cat: 'leg', id: 'dept-leg', title: 'Целые ноги и палеты', note: 'Окорока выдержки 24-26 месяцев с фиксированной ценой за ногу и лопатки (палета) — хамонера покупается отдельно.' },
   { cat: 'olives', id: 'dept-olives', title: 'Оливки и антипасти', note: 'Банки фиксированной фасовки и оливки на развес с ползунком веса.' },
   { cat: 'cheese', id: 'dept-cheese', title: 'Сыры и колбасы', note: 'Манчего, чоризо и выдержанные сыры Италии, Греции, Франции и Швейцарии.' },
   { cat: 'extras', id: 'dept-extras', title: 'Хамонеры и подарки', note: 'Подставки, нож для нарезки и подарочные сертификаты.' }
@@ -1318,7 +1316,7 @@ function getActiveProductData(product) {
       return {
         mode: 'custom-cut',
         price: calcPiecePrice(avgW, product.pricePerKg),
-        priceCaption: 'Ориентир - точный вес согласуем',
+        priceCaption: 'Ориентир — точный вес согласуем',
         canAdd: true,
         label: 'Индивидуальный отрез под заказ',
         weightG: avgW,
@@ -1339,7 +1337,7 @@ function getActiveProductData(product) {
       price: legFixed !== null ? legFixed : calcPiecePrice(avg, product.pricePerKg),
       priceCaption: legFixed !== null
         ? 'Фиксированная цена за ногу'
-        : 'Средний вес ' + formatWeightLabel(avg) + ' - подтвердим при связи',
+        : 'Средний вес ' + formatWeightLabel(avg) + ' — подтвердим при связи',
       canAdd: true,
       label: (product.category === 'leg' ? 'Нога ' : 'Кусок ') + formatWeightLabel(avg),
       requiresWeightCheck: true
@@ -1382,7 +1380,7 @@ function cardHtml(product) {
 
     var optionsHtml;
     if (product.kind === 'piece') {
-      // Решение Виталия: куски не выкладываем поштучно - средний вес, подтверждение при связи
+      // Решение Виталия: куски не выкладываем поштучно — средний вес, подтверждение при связи
       var weights = product.pieces.map(function (pc) { return pc.weightG; });
       var avgW = weights.length
         ? Math.round(weights.reduce(function (a, b) { return a + b; }, 0) / weights.length)
@@ -1394,12 +1392,13 @@ function cardHtml(product) {
       optionsHtml =
         '<div class="selector-caption"><span>' + (isLeg ? 'Вес ноги (средний):' : 'Кусок (средний вес):') + '</span></div>' +
         '<div class="options-wrap" role="radiogroup" aria-label="Вес">' +
-        '<button type="button" class="option-chip tabular" role="radio" aria-checked="true">' +
+        '<button type="button" class="option-chip tabular" role="radio" aria-checked="' + (sel !== 'custom-cut') + '"' +
+        ' data-action="select-option" data-product-id="' + product.id + '" data-option-val="avg">' +
         '<span>' + (isLeg ? 'Целая нога' : 'Кусок') + '</span>' +
         '<span class="chip-sub">' + (legFixed !== null ? formatRub(legFixed) : '~' + avgW + '\u00A0г') + '</span>' +
         '</button>' +
         (isLeg ? '' :
-        '<button type="button" class="option-chip" role="radio" aria-checked="false"' +
+        '<button type="button" class="option-chip" role="radio" aria-checked="' + (sel === 'custom-cut') + '"' +
         ' data-action="select-option" data-product-id="' + product.id + '" data-option-val="custom-cut">' +
         '<span>Отрез под заказ</span><span class="chip-sub">Свой вес</span></button>') +
         '</div>' +
@@ -1442,10 +1441,12 @@ function cardHtml(product) {
 
     return '<article class="product-card" data-product-id="' + product.id + '">' +
       '<div>' +
-      '<div class="card-media">' + typographicArt(product) +
+      '<div class="card-media">' + placeholderArt(product) +
       '<div class="olive-stage" id="olive-stage-' + product.id + '" aria-hidden="true"></div></div>' +
       '<div class="card-header-row"><h3 class="card-title">' + product.title + '</h3>' +
-      '<span class="rate-per-100 tabular">' + formatRub(per100) + ' / 100\u00A0г</span></div>' +
+      '<span class="rate-per-100">' + (product.category === 'extras'
+        ? (product.id === 'gift-certificate' ? 'Подарочный фонд' : 'В наличии')
+        : formatRub(per100) + ' / 100\u00A0г') + '</span></div>' +
       '<div class="card-meta tabular">' + metaText + '</div>' +
       '<p class="card-desc">' + product.description + '</p>' +
       '</div>' +
@@ -1503,6 +1504,8 @@ function renderDeptTabs(visible) {
       renderCatalog();
     });
   });
+  var agingRow = document.getElementById('aging-filter-row');
+  if (agingRow) agingRow.hidden = ['dept-olives', 'dept-cheese', 'dept-extras'].indexOf(state.activeDept) !== -1;
 }
 
 function animatePriceChange(el, fromVal, toVal) {
@@ -2410,16 +2413,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initCheckoutForm();
 
   // Оркеcтрованное появление первого экрана (единственный «громкий» момент)
-  if (window.gsap && !prefersReducedMotion()) {
-    gsap.fromTo('.hero-line-inner',
-      { yPercent: 105 },
-      { yPercent: 0, duration: 0.68, stagger: 0.08, ease: 'power3.out' }
-    );
-    gsap.fromTo('#hero-video-box',
-      { opacity: 0 },
-      { opacity: 1, duration: 0.72, ease: 'power2.out' }
-    );
-  }
+  
 
   // Фильтры: страны
   document.querySelectorAll('[data-filter-country]').forEach(function (btn) {
