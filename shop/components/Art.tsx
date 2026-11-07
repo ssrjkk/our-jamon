@@ -5,8 +5,8 @@ import { Product } from '@/lib/types';
 
 export function ProductArt({ product }: { product: Product }) {
   const caption = `Фото клиента 4:3 - ${product.title}`;
-  if (product.id === 'hamonera-pine' || product.id === 'hamonera-oak') {
-    const wood = product.id === 'hamonera-oak' ? '#5C4430' : '#8A6A4A';
+  if (product.category === 'extras' && product.id !== 'hamon-knife' && product.id !== 'gift-certificate') {
+    const wood = product.id.indexOf('oak') !== -1 ? '#5C4430' : '#8A6A4A';
     return (
       <svg viewBox="0 0 400 300" aria-hidden="true">
         <rect width="400" height="300" fill="#EFE9DB" />
