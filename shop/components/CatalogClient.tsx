@@ -50,12 +50,6 @@ export default function CatalogClient({ products, serverReservedPieceIds }: { pr
 
   return (
     <div className="container" style={{ paddingTop: 24, paddingBottom: 64 }}>
-      <div className="section-head">
-        <h1 className="section-title">Витрина и выбор кусков по весу</h1>
-        <p className="section-subtitle">
-          Фасованные позиции оплачиваются сразу. Для кусков хамона, целых ног и оливок на развес мы проверяем выбор на складе и присылаем ссылку на точную сумму.
-        </p>
-      </div>
 
       <div className="catalog-controls">
         <div className="filter-row" role="group" aria-label="Фильтр по стране происхождения">
@@ -77,9 +71,6 @@ export default function CatalogClient({ products, serverReservedPieceIds }: { pr
         </div>
       </div>
 
-      <p className="catalog-hint">
-        Сайт работает вкладками: сверху разделы, внутри витрины - отделы. Никакой длинной ленты: выбираете вкладку - видите только её содержимое. В карточке - средний вес куска, точный подтверждаем при связи.
-      </p>
 
       <div className="dept-tabs" role="tablist" aria-label="Отделы витрины">
         {DEPT_ORDER.map(({ cat, id }) => (
