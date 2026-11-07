@@ -58,7 +58,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .menu-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; min-width: 44px; padding: 0 12px; margin-left: -12px; border: 1px solid transparent; font-size: 0.875rem; font-weight: 500; border-radius: 2px; transition: border-color 0.15s ease; }
 .menu-toggle:hover { border-color: var(--bone-line); }
 @media (min-width: 900px) { .menu-toggle { display: none; } }
-.menu-group { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; }
+.menu-group { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
 .menu-backdrop { position: fixed; inset: 0; z-index: 62; background-color: rgba(24, 22, 21, 0.55); opacity: 0; pointer-events: none; transition: opacity 0.28s ease; }
 .menu-backdrop.is-open { opacity: 1; pointer-events: auto; }
 .menu-drawer { position: fixed; top: 0; bottom: 0; left: 0; z-index: 63; width: min(320px, 86vw); background-color: var(--paper-salt); border-right: 1px solid var(--hoof-graphite); display: flex; flex-direction: column; padding: 14px 18px calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-106%); transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
@@ -73,7 +73,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 @media (min-width: 900px) { .main-nav { display: flex; } }
 .main-nav a { text-decoration: none; font-size: 0.9375rem; color: var(--graphite-muted); padding: 10px 0; transition: color 0.15s ease; min-height: 44px; display: inline-flex; align-items: center; }
 .main-nav a:hover { color: var(--hoof-graphite); }
-.cart-trigger { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; border: 1px solid var(--hoof-graphite); background-color: var(--fat-white); font-size: 0.9375rem; font-weight: 500; transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
+.cart-trigger { display: inline-flex; align-items: center; flex-shrink: 0; gap: 10px; min-height: 44px; padding: 0 16px; border: 1px solid var(--hoof-graphite); background-color: var(--fat-white); font-size: 0.9375rem; font-weight: 500; transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
 .cart-trigger:active { transform: scale(0.97); }
 .cart-count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 6px; background-color: var(--cured-ruby); color: var(--fat-white); font-size: 0.8125rem; font-weight: 600; border-radius: 2px; }
 
@@ -352,9 +352,9 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 }
 
 /* ФИРМЕННЫЙ РЕДИЗАЙН: лёгкость, хамон - главный герой */
-.brand-logo { height: 40px; width: auto; display: block; }
+.brand-logo { height: 40px; width: 100%; object-fit: contain; object-position: left; display: block; }
 .brand-logo.stacked { height: 72px; }
-.brand-link { display: inline-flex; align-items: center; min-height: 44px; }
+.brand-link { display: inline-flex; align-items: center; flex: 1; min-height: 44px; min-width: 0; }
 .hero-light { padding: 40px 0 56px; border-bottom: 1px solid var(--bone-line); background-color: var(--paper-salt); }
 @media (min-width: 900px) { .hero-light { padding: 72px 0 88px; } }
 .hero-light-grid { display: grid; grid-template-columns: 1fr; gap: 36px; align-items: center; }
