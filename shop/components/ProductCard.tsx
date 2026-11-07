@@ -122,7 +122,9 @@ export default function ProductCard({ product, serverReservedPieceIds }: Props) 
         </div>
         <div className="card-header-row">
           <h3 className="card-title">{product.title}</h3>
-          <span className="rate-per-100 tabular">{formatRub(per100)} / 100{'\u00A0'}г</span>
+          <span className="rate-per-100">{product.category === 'extras'
+            ? (product.id === 'gift-certificate' ? 'Подарочный фонд' : 'В наличии')
+            : `${formatRub(per100)} / 100\u00A0г`}</span>
         </div>
         <div className="card-meta tabular">{meta}</div>
         <p className="card-desc">{product.description}</p>

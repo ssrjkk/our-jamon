@@ -17,9 +17,9 @@ export const COUNTRY_NAMES: Record<Country, string> = {
 };
 
 export const CATEGORY_TITLES: Record<string, { title: string; note: string }> = {
-  piece: { title: 'Хамон куском', note: 'Каждый кусок взвешен при приёмке - внутри карточки выбирается конкретный кусок по весу, цена считается по факту до рубля.' },
-  sliced: { title: 'Хамон в нарезке', note: 'Вакуумные пачки 50-150 г - фиксированная цена, оплата сразу.' },
-  leg: { title: 'Целые ноги и палеты', note: 'Окорока выдержки 24-26 месяцев с фиксированной ценой за ногу и лопатки (палета) - хамонера покупается отдельно.' },
+  piece: { title: 'Хамон куском', note: 'Каждый кусок взвешен при приёмке — внутри карточки выбирается конкретный кусок по весу, цена считается по факту до рубля.' },
+  sliced: { title: 'Хамон в нарезке', note: 'Вакуумные пачки 50-150 г — фиксированная цена, оплата сразу.' },
+  leg: { title: 'Целые ноги и палеты', note: 'Окорока выдержки 24-26 месяцев с фиксированной ценой за ногу и лопатки (палета) — хамонера покупается отдельно.' },
   olives: { title: 'Оливки и антипасти', note: 'Банки фиксированной фасовки и оливки на развес с ползунком веса.' },
   cheese: { title: 'Сыры и колбасы', note: 'Манчего, чоризо и выдержанные сыры Италии, Греции, Франции и Швейцарии.' },
   extras: { title: 'Хамонеры и подарки', note: 'Подставки, нож для нарезки и подарочные сертификаты.' },
@@ -36,7 +36,7 @@ export const DEPT_ORDER: { cat: string; id: string }[] = [
 
 export const PRODUCTS: Product[] = [
   { id: 'hamon-12-piece', country: 'ru', category: 'piece', title: 'Хамон «12», кусок в вакууме', agingMonths: 12,
-    description: 'Мягкий вкус - лучшее знакомство с хамоном.',
+    description: 'Мягкий вкус — лучшее знакомство с хамоном.',
     kind: 'piece', pricePerKg: 2600,
     pieces: [{ id1c: '1c-h12-215', weightG: 215 }, { id1c: '1c-h12-290', weightG: 290 }, { id1c: '1c-h12-360', weightG: 360 }],
     packs: [], bulk: null },
@@ -56,7 +56,7 @@ export const PRODUCTS: Product[] = [
     pieces: [{ id1c: '1c-h22-220', weightG: 220 }, { id1c: '1c-h22-280', weightG: 280 }, { id1c: '1c-h22-350', weightG: 350 }],
     packs: [], bulk: null },
   { id: 'hamon-leg-24', country: 'ru', category: 'leg', title: 'Целая нога хамона «24» на кости', agingMonths: 24,
-    description: 'Около 8,5 кг. Хамонера - отдельно.',
+    description: 'Около 8,5 кг. Хамонера — отдельно.',
     kind: 'piece', pricePerKg: 3530,
     pieces: [
       { id1c: '1c-leg24-8400', weightG: 8400, price: 30000 },
@@ -72,7 +72,7 @@ export const PRODUCTS: Product[] = [
     ],
     packs: [], bulk: null },
   { id: 'paleta-18', country: 'ru', category: 'leg', title: 'Палета «18» на кости (лопатка)', agingMonths: 18,
-    description: 'Лопатка 4-6 кг - компактная альтернатива ноге.',
+    description: 'Лопатка 4-6 кг — компактная альтернатива ноге.',
     kind: 'piece', pricePerKg: 2800,
     pieces: [{ id1c: '1c-pal18-4600', weightG: 4600 }, { id1c: '1c-pal18-5200', weightG: 5200 }],
     packs: [], bulk: null },
@@ -155,7 +155,7 @@ export const PRODUCTS: Product[] = [
     kind: 'pack', pricePerKg: 0,
     pieces: [], packs: [{ label: 'Хамонера', weightG: 0, price: 3500 }], bulk: null },
   { id: 'hamonera-oak', country: 'ru', category: 'extras', title: 'Хамонера из дуба', agingMonths: null,
-    description: 'Массивная подставка из дуба - на годы. [заглушка цены]',
+    description: 'Массивная подставка из дуба — на годы. [заглушка цены]',
     kind: 'pack', pricePerKg: 0,
     pieces: [], packs: [{ label: 'Хамонера', weightG: 0, price: 5900 }], bulk: null },
   { id: 'hamon-knife', country: 'ru', category: 'extras', title: 'Нож для хамона, 24 см', agingMonths: null,
@@ -194,7 +194,7 @@ export const SETS = [
       { productId: 'grissini', optionIdx: 0 },
     ] },
   { id: 'gift', kicker: 'Подарочный набор', title: 'Бокс «В подарок»',
-    desc: 'Нарезка длительной выдержки, оливки и выдержанный сыр - в аккуратной сборке.',
+    desc: 'Нарезка длительной выдержки, оливки и выдержанный сыр — в аккуратной сборке.',
     components: [
       { productId: 'hamon-sliced-22', optionIdx: 1 },
       { productId: 'olives-manzanilla', optionIdx: 0 },
