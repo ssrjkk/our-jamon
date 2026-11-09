@@ -1,15 +1,7 @@
-import crypto from 'crypto';
-
-// =========================================================================
-// ИНТЕГРАЦИЯ Т-БАНК ЭКВАЙРИНГ (EACQ API)
-// https://www.tbank.ru/docs/ - Init + Notification.
-// Без TBANK_TERMINAL_KEY работает мок-режим: возвращаем заглушку ссылки.
-// Боевой режим: POST https://securepay.tinkoff.ru/v2/Init
-//   { TerminalKey, Amount(копейки), OrderId, Description, SuccessURL, FailURL,
-//     NotificationURL, DATA:{ Email, Phone } }
-//   → { PaymentId, PaymentURL }
-// Webhook /api/tbank/notify проверяет Token = sha256(пары значений + Password).
-// =========================================================================
+import crypto from 'node:crypto';
+import { equalSecrets } from './admin';
+import { isDemoMode } from './config';
+import { CartItemResolved } from './types';
 
 const TBANK_INIT_URL = 'https://securepay.tinkoff.ru/v2/Init';
 
@@ -17,64 +9,71 @@ export interface PaymentResult {
   ok: boolean;
   paymentUrl?: string;
   paymentId?: string;
-  mock?: boolean;
+  demo?: boolean;
   error?: string;
 }
 
-export async function createTbankPayment(opts: {
+export function tbankToken(body: Record<string, unknown>, password: string): string {
+  const values = Object.entries({ ...body, Password: password })
+    .filter(([key, value]) => key !== 'Token' && value !== null && value !== undefined && typeof value !== 'object')
+    .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+    .map(([, value]) => String(value));
+  return crypto.createHash('sha256').update(values.join('')).digest('hex');
+}
+
+export async function createTbankPayment(options: {
   orderId: string;
+  accessToken: string;
   amountRub: number;
+  items: CartItemResolved[];
   description: string;
   customerPhone: string;
   baseUrl: string;
 }): Promise<PaymentResult> {
+  if (!Number.isSafeInteger(options.amountRub) || options.amountRub <= 0 || !Number.isSafeInteger(options.amountRub * 100)) return { ok: false, error: 'invalid_amount' };
+  const statusUrl = `${options.baseUrl.replace(/\/$/, '')}/order/${encodeURIComponent(options.orderId)}?token=${options.accessToken}`;
+  if (isDemoMode()) return { ok: true, demo: true, paymentId: 'DEMO-' + crypto.randomUUID(), paymentUrl: statusUrl };
   const terminalKey = process.env.TBANK_TERMINAL_KEY;
   const password = process.env.TBANK_PASSWORD;
-  const amountKop = Math.round(opts.amountRub * 100);
-
-  if (!terminalKey || !password) {
-    // Мок-режим для разработки: «платёжная страница» внутри магазина
-    return {
-      ok: true,
-      mock: true,
-      paymentId: 'MOCK-' + Date.now(),
-      paymentUrl: `${opts.baseUrl}/order/${opts.orderId}?mockpay=1`,
-    };
-  }
-
+  const taxation = process.env.TBANK_TAXATION;
+  const tax = process.env.TBANK_VAT;
+  if (!terminalKey || !password || !taxation || !tax || !process.env.SHOP_URL || !/^https:\/\//.test(process.env.SHOP_URL)) return { ok: false, error: 'payment_not_configured' };
+  const payload: Record<string, unknown> = {
+    TerminalKey: terminalKey,
+    Amount: options.amountRub * 100,
+    OrderId: options.orderId,
+    Description: options.description,
+    SuccessURL: statusUrl,
+    FailURL: statusUrl,
+    NotificationURL: `${options.baseUrl.replace(/\/$/, '')}/api/tbank/notify`,
+    DATA: { Phone: options.customerPhone.replace(/\D/g, '') },
+    Receipt: {
+      Phone: options.customerPhone.replace(/\D/g, ''),
+      Taxation: taxation,
+      Items: [
+        ...options.items.map((item) => ({ Name: item.title.slice(0, 128), Price: item.price * 100, Quantity: item.qty, Amount: item.price * item.qty * 100, Tax: tax, PaymentMethod: 'full_prepayment', PaymentObject: 'commodity' })),
+        ...(options.amountRub > options.items.reduce((sum, item) => sum + item.price * item.qty, 0)
+          ? [{ Name: 'Доставка', Price: (options.amountRub - options.items.reduce((sum, item) => sum + item.price * item.qty, 0)) * 100, Quantity: 1, Amount: (options.amountRub - options.items.reduce((sum, item) => sum + item.price * item.qty, 0)) * 100, Tax: tax, PaymentMethod: 'full_prepayment', PaymentObject: 'service' }]
+          : []),
+      ],
+    },
+  };
+  payload.Token = tbankToken(payload, password);
   try {
-    const res = await fetch(TBANK_INIT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        TerminalKey: terminalKey,
-        Amount: amountKop,
-        OrderId: opts.orderId,
-        Description: opts.description,
-        SuccessURL: `${opts.baseUrl}/order/${opts.orderId}?paid=1`,
-        FailURL: `${opts.baseUrl}/order/${opts.orderId}?fail=1`,
-        NotificationURL: `${opts.baseUrl}/api/tbank/notify`,
-        DATA: { Phone: opts.customerPhone.replace(/\D/g, '') },
-      }),
-    });
-    const data = (await res.json()) as { Success?: boolean; PaymentURL?: string; PaymentId?: string; Message?: string; Details?: string };
-    if (!data.Success || !data.PaymentURL) {
-      return { ok: false, error: data.Details || data.Message || 'T-Bank Init failed' };
-    }
+    const response = await fetch(TBANK_INIT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(10000) });
+    const data: unknown = await response.json();
+    if (!response.ok || !data || typeof data !== 'object' || !('Success' in data) || data.Success !== true
+      || !('PaymentURL' in data) || typeof data.PaymentURL !== 'string' || !/^https:\/\//.test(data.PaymentURL)
+      || !('PaymentId' in data) || !['string', 'number'].includes(typeof data.PaymentId)) return { ok: false, error: 'payment_unavailable' };
     return { ok: true, paymentUrl: data.PaymentURL, paymentId: String(data.PaymentId) };
-  } catch (e) {
-    return { ok: false, error: String(e) };
+  } catch {
+    return { ok: false, error: 'payment_unavailable' };
   }
 }
 
-/** Проверка подписи уведомления Т-Банка: Token = sha256 от значений, отсортированных по ключу, + Password */
-export function verifyTbankNotification(body: Record<string, string>): boolean {
+export function verifyTbankNotification(body: Record<string, unknown>): boolean {
   const password = process.env.TBANK_PASSWORD;
-  if (!password) return true; // мок-режим: принимаем всё
-  const entries = Object.entries(body)
-    .filter(([k, v]) => k !== 'Token' && k !== 'Receipt' && v !== null && typeof v !== 'object')
-    .sort(([a], [b]) => a.localeCompare(b));
-  const concat = entries.map(([, v]) => v).join('') + password;
-  const expected = crypto.createHash('sha256').update(concat).digest('hex');
-  return expected === body.Token;
+  if (isDemoMode() || !password || !process.env.TBANK_TERMINAL_KEY || body.TerminalKey !== process.env.TBANK_TERMINAL_KEY
+    || typeof body.Token !== 'string' || !/^[a-fA-F0-9]{64}$/.test(body.Token)) return false;
+  return equalSecrets(tbankToken(body, password), body.Token.toLowerCase());
 }

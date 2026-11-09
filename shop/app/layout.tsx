@@ -1,12 +1,14 @@
-import type { Metadata } from 'next';
-import { Playfair_Display, Golos_Text } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Playfair_Display, Geologica } from 'next/font/google';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import { isDemoMode } from '@/lib/config';
 import { CartProvider } from '@/components/CartContext';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import './globals.css';
 
-// Фирменная типографика: плакатная антиква с кириллицей (как на постере
-// программы лояльности) + прагматичный гротеск для интерфейса.
+// The logo is outlined; web headings use Playfair until a licensed Pizza Hut font is supplied.
 const playfair = Playfair_Display({
   subsets: ['latin', 'cyrillic'],
   weight: ['700', '800'],
@@ -15,10 +17,10 @@ const playfair = Playfair_Display({
   display: 'swap',
 });
 
-const golos = Golos_Text({
+const geologica = Geologica({
   subsets: ['latin', 'cyrillic'],
   weight: ['400', '500', '600'],
-  variable: '--font-golos',
+  variable: '--font-geologica',
   display: 'swap',
 });
 
@@ -38,15 +40,46 @@ export const metadata: Metadata = {
     siteName: 'Наш Хамон',
     title: 'Наш Хамон — лавка деликатесов',
     description: 'Хамон - главный герой. Вкусы собираем вокруг него: для себя, к столу и на подарок.',
+    images: [{ url: '/brand/shop-interior.webp', width: 720, height: 1280, alt: 'Интерьер лавки «Наш Хамон» на Сытном рынке' }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Наш Хамон — лавка деликатесов',
+    description: 'Хамон - главный герой. Вкусы собираем вокруг него: для себя, к столу и на подарок.',
+    images: ['/brand/shop-interior.webp'],
+  },
+  alternates: { canonical: '/' },
 };
+
+export const viewport: Viewport = {
+  themeColor: '#5B2824',
+};
+
+async function DemoNotice() {
+  await connection();
+  if (!isDemoMode()) return null;
+  return <aside className="site-demo-notice" aria-label="Демонстрационный режим">
+    <div className="container"><strong>Демо-магазин.</strong> Заказы тестовые, оплата имитируется — деньги не списываются. Не вводите реальные персональные данные.</div>
+  </aside>;
+}
+
+function DistributorBar() {
+  return <aside className="distributor-bar" aria-label="Поставщик хамона">
+    <div className="container">
+      <strong>«Наш Хамон» — эксклюзивный дистрибьютор</strong>{' '}
+      <span>бренда «Дом Хамона» (Коломна) по Санкт-Петербургу и Ленинградской области</span>
+    </div>
+  </aside>;
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" className={`${playfair.variable} ${golos.variable}`}>
+    <html lang="ru" className={`${playfair.variable} ${geologica.variable}`}>
       <body>
         <CartProvider>
+          <DistributorBar />
           <SiteHeader />
+          <Suspense fallback={null}><DemoNotice /></Suspense>
           {children}
           <SiteFooter />
         </CartProvider>

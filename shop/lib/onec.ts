@@ -1,60 +1,33 @@
+import { isDemoMode } from './config';
+import { mutateOrder } from './orders';
 import { Order } from './types';
 
-// =========================================================================
-// ИНТЕГРАЦИЯ 1С:УНФ 3.0 — отправка заказа и статуса оплаты.
-// Боевой режим: ONEC_API_URL = https://ваша-база/hs/shop/v1 (HTTP-сервис УНФ),
-// ONEC_TOKEN = базовая авторизация или Bearer.
-// Спецификация обмена для 1С-ника: README раздел «Обмен с 1С».
-// Без переменных окружения работает мок-режим (console.log).
-// =========================================================================
-
-export async function pushOrderToOneC(order: Order): Promise<{ ok: boolean; mock?: boolean; error?: string }> {
+export async function pushOrderToOneC(order: Order): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
+  if (isDemoMode()) return { ok: true, demo: true };
   const url = process.env.ONEC_API_URL;
-  if (!url) {
-    console.log('[1C MOCK] Заказ передан в УНФ:', JSON.stringify({
-      id: order.id,
-      customer: order.customer,
-      items: order.items.map((i) => ({ product: i.productId, label: i.label, price: i.price, pieceId1c: i.pieceId1c })),
-      total: order.total,
-      delivery: order.delivery,
-    }));
-    return { ok: true, mock: true };
-  }
+  if (!url) return { ok: false, error: 'one_c_not_configured' };
   try {
-    const res = await fetch(`${url.replace(/\/$/, '')}/orders`, {
+    const response = await fetch(`${url.replace(/\/$/, '')}/orders`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(process.env.ONEC_TOKEN ? { Authorization: `Bearer ${process.env.ONEC_TOKEN}` } : {}),
-      },
-      body: JSON.stringify({
-        id: order.id,
-        createdAt: order.createdAt,
-        customer: order.customer,
-        delivery: order.delivery,
-        items: order.items.map((i) => ({
-          productId: i.productId,
-          label: i.label,
-          weightG: i.weightG,
-          price: i.price,
-          qty: i.qty,
-          pieceId1c: i.pieceId1c,
-        })),
-        total: order.total,
-      }),
+      headers: { 'Content-Type': 'application/json', ...(process.env.ONEC_TOKEN ? { Authorization: `Bearer ${process.env.ONEC_TOKEN}` } : {}) },
+      body: JSON.stringify({ id: order.id, createdAt: order.createdAt, customer: order.customer, delivery: order.delivery, items: order.items, itemsSum: order.itemsSum, total: order.total, status: order.status, paymentId: order.paymentId }),
+      signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) throw new Error(`1C responded ${res.status}`);
-    return { ok: true };
-  } catch (e) {
-    console.error('1C push failed:', e);
-    return { ok: false, error: String(e) };
+    return response.ok ? { ok: true } : { ok: false, error: `one_c_http_${response.status}` };
+  } catch {
+    return { ok: false, error: 'one_c_unavailable' };
   }
 }
 
-// Отправка ссылки на оплату клиенту в мессенджер (мок; боевой: WhatsApp Business API / SMS-шлюз)
-export async function sendPaymentLink(order: Order): Promise<{ ok: boolean; mock?: boolean }> {
-  const text = `Заказ ${order.id}: ссылка на оплату ${order.total}\u00A0₽ - ${order.paymentUrl}`;
-  console.log(`[MESSENGER MOCK → ${order.messenger}] ${text}`);
-  // TODO ИНТЕГРАЦИЯ: WhatsApp Cloud API / SMS-шлюз (переменные WA_TOKEN, SMS_API_KEY)
-  return { ok: true, mock: true };
+export async function syncOrderToOneC(order: Order): Promise<boolean> {
+  const result = await pushOrderToOneC(order);
+  if (!result.demo) {
+    await mutateOrder(order.id, (current) => {
+      if (current.status === order.status && current.total === order.total) {
+        current.onecSyncedAt = result.ok ? new Date().toISOString() : undefined;
+        current.onecSyncError = result.error;
+      }
+    });
+  }
+  return result.ok;
 }

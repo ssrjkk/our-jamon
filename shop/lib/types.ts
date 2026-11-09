@@ -1,13 +1,10 @@
-// Типы магазина «Наш Хамон». Формат данных совпадает с выгрузкой 1С:УНФ 3.0.
-
-export type Country = 'ru' | 'es' | 'it' | 'gr' | 'fr' | 'ch';
-export type Category = 'piece' | 'sliced' | 'leg' | 'olives' | 'cheese' | 'extras';
+export type Category = 'piece' | 'sliced' | 'leg' | 'cheese' | 'olives' | 'snacks' | 'oils' | 'spices' | 'sweets' | 'chocolate' | 'extras' | 'certificate';
 export type Kind = 'piece' | 'pack';
+export type PurchaseKind = 'piece' | 'average' | 'pack' | 'bulk' | 'custom';
 
 export interface Piece {
   id1c: string;
   weightG: number;
-  /** Фиксированная цена за штуку (целые ноги) — если не задана, считается по pricePerKg */
   price?: number;
 }
 
@@ -26,7 +23,7 @@ export interface Bulk {
 
 export interface Product {
   id: string;
-  country: Country;
+  code: string;
   category: Category;
   title: string;
   agingMonths: number | null;
@@ -36,12 +33,14 @@ export interface Product {
   pieces: Piece[];
   packs: Pack[];
   bulk: Bulk | null;
+  imageUrl?: string;
+  imageW?: number;
+  imageH?: number;
 }
 
 export interface CartItemInput {
   productId: string;
-  /** 'piece' — конкретный кусок (pieceId1c обязателен), 'pack' — фасовка (packIdx), 'bulk' — развес (weightG), 'custom' — отрез под заказ */
-  kind: 'piece' | 'pack' | 'bulk' | 'custom';
+  kind: PurchaseKind;
   pieceId1c?: string;
   packIdx?: number;
   weightG?: number;
@@ -55,35 +54,60 @@ export interface CartItemResolved {
   label: string;
   price: number;
   weightG: number;
+  pricePerKg: number | null;
   requiresWeightCheck: boolean;
+  weightConfirmed: boolean;
   pieceId1c: string | null;
   qty: number;
 }
 
-export type OrderStatus =
-  | 'awaiting_weight'      // есть весовые позиции: менеджер подтверждает вес
-  | 'awaiting_payment'     // ссылка Т-Банка сформирована
-  | 'paid'
-  | 'cancelled';
+export type OrderStatus = 'awaiting_confirmation' | 'awaiting_payment' | 'paid' | 'cancelled';
+export type Messenger = 'Telegram' | 'WhatsApp' | 'SMS';
+
+export interface OrderDelivery {
+  id: string;
+  name: string;
+  cost: number | null;
+  baseCost: number | null;
+  freeFrom: number | null;
+  address?: string;
+}
 
 export interface Order {
   id: string;
+  accessToken: string;
   createdAt: string;
+  consentedAt: string | null;
+  demo: boolean;
   customer: { name: string; phone: string };
-  delivery: { id: string; name: string; cost: number; address?: string };
-  messenger: 'Telegram' | 'WhatsApp' | 'SMS';
+  delivery: OrderDelivery;
+  messenger: Messenger;
   items: CartItemResolved[];
   itemsSum: number;
-  total: number;
+  total: number | null;
   status: OrderStatus;
   paymentUrl?: string;
   paymentId?: string;
+  paymentError?: boolean;
+  paymentInitAt?: string;
+  onecSyncedAt?: string;
+  onecSyncError?: string;
   comment?: string;
 }
 
 export interface DeliveryOption {
   id: string;
   name: string;
-  cost: number;
+  cost: number | null;
+  freeEligible: boolean;
   note: string;
+}
+
+export interface CartQuote {
+  items: CartItemResolved[];
+  itemsSum: number;
+  delivery: OrderDelivery;
+  total: number | null;
+  needsConfirmation: boolean;
+  demo: boolean;
 }

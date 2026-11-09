@@ -1,94 +1,107 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrder, updateOrder } from '@/lib/orders';
-import { createTbankPayment } from '@/lib/tbank';
-import { sendPaymentLink } from '@/lib/onec';
+import { getOrder, mutateOrder, formatWeight, OrderConflict } from '@/lib/orders';
+import { getAuthorizedOrder } from '@/lib/order-access';
+import { CheckoutError, initializeOrderPayment } from '@/lib/checkout';
+import { deliveryCostFor } from '@/lib/delivery';
+import { isDemoMode, requestOriginAllowed } from '@/lib/config';
+import { syncOrderToOneC } from '@/lib/onec';
 import { isAdmin } from '@/lib/admin';
 
-// GET /api/orders/[id] — статус заказа для клиента
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type Context = { params: Promise<{ id: string }> };
+
+export async function GET(req: NextRequest, { params }: Context) {
   const { id } = await params;
-  const order = await getOrder(id);
-  if (!order) return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 });
-  // Клиенту не отдаём внутренние поля оплаты
-  return NextResponse.json({
-    id: order.id,
-    status: order.status,
-    items: order.items,
-    itemsSum: order.itemsSum,
-    delivery: order.delivery,
-    total: order.total,
-    paymentUrl: order.paymentUrl || null,
-    createdAt: order.createdAt,
-  });
+  const order = await getAuthorizedOrder(id, req.nextUrl.searchParams.get('token') || req.headers.get('x-order-token'));
+  if (!order) return NextResponse.json({ error: 'Заказ не найден.' }, { status: 404 });
+  return NextResponse.json({ id: order.id, status: order.status, items: order.items.map(({ title, label, price, weightG, qty, requiresWeightCheck, weightConfirmed }) => ({ title, label, price, weightG, qty, requiresWeightCheck, weightConfirmed })), itemsSum: order.itemsSum, delivery: order.delivery, total: order.total, paymentUrl: order.paymentUrl || null, paymentError: Boolean(order.paymentError), createdAt: order.createdAt, demo: order.demo }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
-// PATCH /api/orders/[id] — действия админа: подтверждение веса, отмена, повторная отправка ссылки
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ error: 'Требуется авторизация администратора' }, { status: 401 });
-  }
+export async function PATCH(req: NextRequest, { params }: Context) {
+  const origin = req.headers.get('origin');
+  if (!requestOriginAllowed(origin, req.nextUrl.origin)) return NextResponse.json({ error: 'Недопустимый источник запроса.' }, { status: 403 });
+  if (!await isAdmin()) return NextResponse.json({ error: 'Требуется авторизация администратора.' }, { status: 401 });
   const { id } = await params;
-  const order = await getOrder(id);
-  if (!order) return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 });
-
-  const body = await req.json().catch(() => ({}));
-  const action = body.action as string;
-  const baseUrl = process.env.SHOP_URL || req.nextUrl.origin;
-
-  if (action === 'confirm-weight') {
-    // Менеджер взвесил кусок: { itemId, actualWeightG }
-    const itemId = body.itemId as string;
-    const actualWeightG = Math.round(Number(body.actualWeightG));
-    if (!itemId || !actualWeightG || actualWeightG <= 0) {
-      return NextResponse.json({ error: 'Нужны itemId и actualWeightG' }, { status: 400 });
+  const body: unknown = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object' || !('action' in body)) return NextResponse.json({ error: 'Некорректное действие.' }, { status: 400 });
+  const existing = await getOrder(id);
+  if (!existing) return NextResponse.json({ error: 'Заказ не найден.' }, { status: 404 });
+  try {
+    if (body.action === 'confirm-order') {
+      const weights = 'weights' in body ? body.weights : undefined;
+      if (!weights || typeof weights !== 'object' || Array.isArray(weights)) throw new CheckoutError('Укажите веса всех весовых позиций.');
+      const actual = weights as Record<string, unknown>;
+      const shipping = 'deliveryCost' in body ? body.deliveryCost : undefined;
+      const confirmed = await mutateOrder(id, (order) => {
+        if (order.status !== 'awaiting_confirmation') throw new OrderConflict('Заказ уже согласован или закрыт.');
+        const weighted = order.items.filter((item) => item.requiresWeightCheck);
+        if (Object.keys(actual).some((uid) => !weighted.some((item) => item.uid === uid))) throw new CheckoutError('Неизвестная весовая позиция.');
+        for (const item of weighted) {
+          const weight = actual[item.uid];
+          if (typeof weight !== 'number' || !Number.isSafeInteger(weight) || weight <= 0 || weight > 30000) throw new CheckoutError('Для каждой весовой позиции укажите целый вес от 1 до 30 000 г.');
+          item.weightG = weight;
+          item.label = item.label.replace(/~?[\d.,]+[\u00a0 ](?:кг|г)/, formatWeight(weight));
+          if (item.pricePerKg !== null) item.price = Math.round(weight * item.pricePerKg / 1000);
+          if (!Number.isSafeInteger(item.price) || item.price <= 0) throw new CheckoutError('Не удалось рассчитать цену позиции.');
+          item.weightConfirmed = true;
+        }
+        if (shipping !== undefined) {
+          if (typeof shipping !== 'number' || !Number.isSafeInteger(shipping) || shipping < 0 || shipping > 100000) throw new CheckoutError('Укажите корректную стоимость доставки.');
+          order.delivery.baseCost = shipping;
+        }
+        order.itemsSum = order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
+        order.delivery.cost = deliveryCostFor(order.delivery, order.itemsSum);
+        if (order.delivery.cost === null) throw new CheckoutError('Сначала подтвердите стоимость доставки.');
+        order.total = order.itemsSum + order.delivery.cost;
+        order.status = 'awaiting_payment';
+      });
+      const updated = await initializeOrderPayment(id, process.env.SHOP_URL || req.nextUrl.origin) || confirmed;
+      if (updated) await syncOrderToOneC(updated);
+      return NextResponse.json({ order: updated });
     }
-    const item = order.items.find((i) => i.uid === itemId);
-    if (!item) return NextResponse.json({ error: 'Позиция не найдена' }, { status: 404 });
-    item.weightG = actualWeightG;
-    item.label = item.label.replace(/[\d.,]+\u00A0(г|кг)/, formatWeight(actualWeightG));
-    // Пересчёт цены по прайсу товара
-    const { findProduct } = await import('@/lib/products');
-    const product = findProduct(item.productId);
-    if (product) {
-      item.price = Math.round((actualWeightG / 1000) * product.pricePerKg);
+    if (body.action === 'retry-payment') {
+      const updated = await initializeOrderPayment(id, process.env.SHOP_URL || req.nextUrl.origin);
+      return NextResponse.json({ order: updated });
     }
-    order.itemsSum = order.items.reduce((acc, i) => acc + i.price * (i.qty || 1), 0);
-    order.total = order.itemsSum + order.delivery.cost;
-    const payment = await createTbankPayment({
-      orderId: order.id,
-      amountRub: order.total,
-      description: `Заказ ${order.id} (вес подтверждён) - Наш Хамон`,
-      customerPhone: order.customer.phone,
-      baseUrl,
+    if (body.action === 'sync-onec') return NextResponse.json({ ok: await syncOrderToOneC(existing) });
+    if (body.action === 'cancel') {
+      const updated = await mutateOrder(id, (order) => {
+        if (order.status === 'paid') throw new OrderConflict('Оплаченный заказ нельзя отменить здесь. Возврат выполняется через банк.');
+        if (!order.demo && order.paymentId) throw new OrderConflict('Сначала отмените платёж в кабинете банка. До подтверждения банка резерв не снимается.');
+        order.status = 'cancelled';
+      });
+      if (updated) await syncOrderToOneC(updated);
+      return NextResponse.json({ order: updated });
+    }
+    return NextResponse.json({ error: 'Неизвестное действие.' }, { status: 400 });
+  } catch (error) {
+    if (error instanceof CheckoutError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof OrderConflict) return NextResponse.json({ error: error.message }, { status: 409 });
+    return NextResponse.json({ error: 'Не удалось обновить заказ.' }, { status: 503 });
+  }
+}
+
+export async function POST(req: NextRequest, { params }: Context) {
+  const origin = req.headers.get('origin');
+  if (!requestOriginAllowed(origin, req.nextUrl.origin)) return NextResponse.json({ error: 'Недопустимый источник запроса.' }, { status: 403 });
+  const { id } = await params;
+  const body: unknown = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object' || !('action' in body)) return NextResponse.json({ error: 'Некорректное действие.' }, { status: 400 });
+  const token = 'token' in body && typeof body.token === 'string' ? body.token : req.nextUrl.searchParams.get('token');
+  const order = await getAuthorizedOrder(id, token);
+  if (!order) return NextResponse.json({ error: 'Заказ не найден.' }, { status: 404 });
+  try {
+    if (body.action === 'retry-payment') {
+      const updated = await initializeOrderPayment(id, process.env.SHOP_URL || req.nextUrl.origin);
+      return NextResponse.json({ ok: Boolean(updated?.paymentUrl && !updated.paymentError) });
+    }
+    if (body.action !== 'demo-pay' || !isDemoMode() || !order.demo || !order.paymentId?.startsWith('DEMO-')) return NextResponse.json({ error: 'Демо-оплата недоступна.' }, { status: 403 });
+    await mutateOrder(id, (current) => {
+      if (current.status === 'paid') return;
+      if (current.status !== 'awaiting_payment') throw new OrderConflict('Заказ ещё не готов к оплате.');
+      current.status = 'paid';
     });
-    if (!payment.ok) {
-      return NextResponse.json({ error: 'Платёжный шлюз недоступен: ' + payment.error }, { status: 502 });
-    }
-    order.status = 'awaiting_payment';
-    order.paymentUrl = payment.paymentUrl;
-    order.paymentId = payment.paymentId;
-    const updated = await updateOrder(id, order);
-    await sendPaymentLink(updated!);
-    return NextResponse.json({ order: updated });
-  }
-
-  if (action === 'resend-link') {
-    if (!order.paymentUrl) return NextResponse.json({ error: 'Ссылка ещё не сформирована' }, { status: 400 });
-    await sendPaymentLink(order);
     return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof OrderConflict ? error.message : 'Оплата временно недоступна.' }, { status: error instanceof OrderConflict ? 409 : 503 });
   }
-
-  if (action === 'cancel') {
-    const updated = await updateOrder(id, { status: 'cancelled' });
-    return NextResponse.json({ order: updated });
-  }
-
-  return NextResponse.json({ error: 'Неизвестное действие' }, { status: 400 });
-}
-
-function formatWeight(weightG: number): string {
-  if (weightG >= 1000) {
-    return (weightG / 1000).toFixed(1).replace('.', ',') + '\u00A0кг';
-  }
-  return String(weightG) + '\u00A0г';
 }

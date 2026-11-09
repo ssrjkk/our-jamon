@@ -1,78 +1,156 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import { Order, OrderStatus } from './types';
-import { findProduct, piecePriceOf } from './products';
-import { CartItemInput, CartItemResolved } from './types';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
+import { CartItemInput, CartItemResolved, Order, OrderStatus, Product } from './types';
+import { PRODUCTS, averageWeightOf, piecePriceOf } from './products';
 
-// =========================================================================
-// Хранилище заказов: JSON-файл (просто и надёжно на VPS).
-// Для облака без файловой системы заменить на Postgres/Supabase — интерфейс тот же.
-// Резерв кусков: кусок считается занятым, если числится в заказе со статусом
-// awaiting_weight / awaiting_payment / paid.
-// =========================================================================
+export class OrderConflict extends Error {}
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
+let database: DatabaseSync | undefined;
 
-async function ensureDir() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+function persist(db: DatabaseSync, order: Order): void {
+  db.prepare('INSERT INTO orders (id, created_at, payload) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET payload = excluded.payload')
+    .run(order.id, order.createdAt, JSON.stringify(order));
+  db.prepare('DELETE FROM reservations WHERE order_id = ?').run(order.id);
+  if (order.status !== 'cancelled') {
+    const reserve = db.prepare('INSERT INTO reservations (piece_id, order_id) VALUES (?, ?)');
+    for (const item of order.items) {
+      if (item.pieceId1c) reserve.run(item.pieceId1c, order.id);
+    }
+  }
+}
+
+function transaction<T>(db: DatabaseSync, action: () => T): T {
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const result = action();
+    db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    db.exec('ROLLBACK');
+    if (error instanceof Error && error.message.includes('reservations.piece_id')) {
+      throw new OrderConflict('Этот кусок уже зарезервирован. Выберите другой.');
+    }
+    throw error;
+  }
+}
+
+function migrateLegacy(db: DatabaseSync, filename: string): void {
+  if (!fs.existsSync(/* turbopackIgnore: true */ filename)) return;
+  const legacy: unknown = JSON.parse(fs.readFileSync(/* turbopackIgnore: true */ filename, 'utf8'));
+  if (!Array.isArray(legacy)) throw new Error('Legacy order storage is not an array');
+  for (const value of legacy) {
+    if (!value || typeof value !== 'object' || typeof value.id !== 'string' || typeof value.createdAt !== 'string'
+      || !value.customer || typeof value.customer.name !== 'string' || typeof value.customer.phone !== 'string'
+      || !value.delivery || !Array.isArray(value.items) || !value.items.length) {
+      throw new Error('Legacy order storage contains an invalid order');
+    }
+    const status = value.status === 'awaiting_weight' ? 'awaiting_confirmation' : value.status;
+    if (!['awaiting_confirmation', 'awaiting_payment', 'paid', 'cancelled'].includes(status)) {
+      throw new Error('Legacy order storage contains an invalid status');
+    }
+    const order: Order = {
+      ...value,
+      status,
+      accessToken: typeof value.accessToken === 'string' && /^[a-f0-9]{32}$/.test(value.accessToken) ? value.accessToken : newAccessToken(),
+      consentedAt: value.consentedAt ?? null,
+      demo: value.demo ?? /^(MOCK|DEMO|TEST)-/.test(value.paymentId || ''),
+      delivery: { ...value.delivery, baseCost: value.delivery.baseCost ?? value.delivery.cost, freeFrom: value.delivery.freeFrom ?? null },
+      items: value.items.map((item: CartItemResolved) => {
+        const product = PRODUCTS.find((candidate) => candidate.id === item.productId);
+        const fixed = product?.pieces[0]?.price !== undefined;
+        const rate = !item.requiresWeightCheck || fixed ? null
+          : item.label.startsWith('На развес') ? product?.bulk?.pricePerKg : product?.pricePerKg;
+        if (item.requiresWeightCheck && !fixed && typeof item.pricePerKg !== 'number' && typeof rate !== 'number') {
+          throw new Error('Legacy weight price cannot be restored');
+        }
+        return { ...item, pricePerKg: item.pricePerKg === undefined ? rate ?? null : item.pricePerKg, weightConfirmed: item.weightConfirmed ?? (!item.requiresWeightCheck || status === 'awaiting_payment' || status === 'paid') };
+      }),
+    };
+    persist(db, order);
+  }
+}
+
+function getDatabase(): DatabaseSync {
+  if (database) return database;
+  // Persistent order data must never be traced into the server bundle.
+  const filename = path.resolve(/* turbopackIgnore: true */ process.env.ORDERS_DB_PATH || path.join(process.cwd(), 'data/orders.sqlite'));
+  fs.mkdirSync(path.dirname(filename), { recursive: true });
+  const db = new DatabaseSync(filename);
+  try {
+    db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+    db.exec('CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, payload TEXT NOT NULL CHECK(json_valid(payload))); CREATE TABLE IF NOT EXISTS reservations (piece_id TEXT PRIMARY KEY, order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE); CREATE INDEX IF NOT EXISTS orders_created_at ON orders(created_at DESC);');
+    const version = db.prepare('PRAGMA user_version').get() as { user_version: number };
+    if (version.user_version === 0) {
+      // The JSON source stays untouched; the schema version prevents a second import.
+      transaction(db, () => {
+        const current = db.prepare('PRAGMA user_version').get() as { user_version: number };
+        if (current.user_version === 0) {
+          migrateLegacy(db, process.env.ORDERS_LEGACY_PATH || path.join(path.dirname(filename), 'orders.json'));
+          db.exec('PRAGMA user_version = 1');
+        }
+      });
+    }
+    database = db;
+    return db;
+  } catch (error) {
+    db.close();
+    throw error;
+  }
 }
 
 export async function readOrders(): Promise<Order[]> {
-  await ensureDir();
-  try {
-    const raw = await fs.readFile(ORDERS_FILE, 'utf-8');
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-export async function writeOrders(orders: Order[]): Promise<void> {
-  await ensureDir();
-  await fs.writeFile(ORDERS_FILE, JSON.stringify(orders, null, 2), 'utf-8');
-}
-
-export async function saveOrder(order: Order): Promise<void> {
-  const orders = await readOrders();
-  orders.unshift(order);
-  await writeOrders(orders);
+  return getDatabase().prepare('SELECT payload FROM orders ORDER BY created_at DESC, id DESC').all()
+    .map((row) => JSON.parse(String(row.payload)) as Order);
 }
 
 export async function getOrder(id: string): Promise<Order | undefined> {
-  const orders = await readOrders();
-  return orders.find((o) => o.id === id);
+  const row = getDatabase().prepare('SELECT payload FROM orders WHERE id = ?').get(id);
+  return row ? JSON.parse(String(row.payload)) as Order : undefined;
+}
+
+export async function saveOrder(order: Order): Promise<Order> {
+  const db = getDatabase();
+  return transaction(db, () => {
+    while (db.prepare('SELECT id FROM orders WHERE id = ?').get(order.id)) order.id = generateOrderId();
+    persist(db, order);
+    return order;
+  });
+}
+
+export async function mutateOrder(id: string, action: (order: Order) => void): Promise<Order | undefined> {
+  const db = getDatabase();
+  return transaction(db, () => {
+    const row = db.prepare('SELECT payload FROM orders WHERE id = ?').get(id);
+    if (!row) return undefined;
+    const order = JSON.parse(String(row.payload)) as Order;
+    action(order);
+    persist(db, order);
+    return order;
+  });
 }
 
 export async function updateOrder(id: string, patch: Partial<Order>): Promise<Order | undefined> {
-  const orders = await readOrders();
-  const idx = orders.findIndex((o) => o.id === id);
-  if (idx === -1) return undefined;
-  orders[idx] = { ...orders[idx], ...patch };
-  await writeOrders(orders);
-  return orders[idx];
+  return mutateOrder(id, (order) => Object.assign(order, patch));
 }
 
 export async function reservedPieceIds(): Promise<Set<string>> {
-  const orders = await readOrders();
-  const reserved = new Set<string>();
-  for (const o of orders) {
-    if (o.status === 'cancelled') continue;
-    for (const item of o.items) {
-      if (item.pieceId1c) reserved.add(item.pieceId1c);
-    }
-  }
-  return reserved;
+  return new Set(getDatabase().prepare('SELECT piece_id FROM reservations').all().map((row) => String(row.piece_id)));
 }
 
 export function generateOrderId(): string {
-  return 'NH-' + String(Math.floor(1000 + Math.random() * 9000));
+  return 'NH-' + crypto.randomBytes(6).toString('hex').toUpperCase();
+}
+
+export function newAccessToken(): string {
+  return crypto.randomBytes(16).toString('hex');
 }
 
 // =========================================================================
-// Серверный пересчёт корзины: цены берутся ТОЛЬКО из каталога, клиентские
-// суммы не доверяем. Кусок резервируется и не может быть добавлен дважды.
+// Серверный пересчёт корзины: цены берутся ТОЛЬКО из переданного каталога
+// (того же, что показала витрина — getProducts()), клиентским суммам не
+// доверяем. Кусок резервируется и не может быть добавлен дважды.
 // =========================================================================
 export interface ResolveResult {
   ok: boolean;
@@ -82,83 +160,74 @@ export interface ResolveResult {
   hasWeightCheck?: boolean;
 }
 
-export function resolveCart(inputs: CartItemInput[], reserved: Set<string>): ResolveResult {
+export function resolveCart(inputs: unknown, reserved: Set<string>, catalog: Product[]): ResolveResult {
+  const invalid = (error: string): ResolveResult => ({ ok: false, error });
+  if (!Array.isArray(inputs) || !inputs.length || inputs.length > 100) return invalid('Добавьте товары в корзину.');
   const items: CartItemResolved[] = [];
-  let uidCounter = 0;
-  const nextUid = () => 'it-' + (++uidCounter) + '-' + Math.random().toString(36).slice(2, 6);
-  for (const input of inputs) {
-    const product = findProduct(input.productId);
-    if (!product) return { ok: false, error: `Товар ${input.productId} не найден` };
-    const qty = Math.max(1, Math.min(20, input.qty ?? 1));
-
-    if (input.kind === 'piece') {
-      const piece = product.pieces.find((p) => p.id1c === input.pieceId1c);
-      if (!piece) return { ok: false, error: `Кусок ${input.pieceId1c} больше не в наличии` };
-      if (reserved.has(piece.id1c)) {
-        return { ok: false, error: `Кусок ${piece.id1c} уже забронирован - выберите другой` };
+  const selectedPieces = new Set<string>();
+  for (const value of inputs) {
+    if (!value || typeof value !== 'object' || typeof value.productId !== 'string') return invalid('Некорректная позиция корзины.');
+    const input = value as CartItemInput;
+    const product = catalog.find((candidate) => candidate.id === input.productId);
+    if (!product) return invalid('Один из товаров больше недоступен. Удалите его из корзины.');
+    const qty = input.qty ?? 1;
+    if (!Number.isSafeInteger(qty) || qty < 1 || qty > 20) return invalid('Количество упаковок должно быть целым числом от 1 до 20.');
+    let weightG: number;
+    let price: number;
+    let rate: number | null;
+    let label: string;
+    let pieceId1c: string | null = null;
+    if (input.kind === 'pack') {
+      const index = input.packIdx ?? 0;
+      if (product.kind !== 'pack' || !Number.isSafeInteger(index) || index < 0 || !product.packs[index]) return invalid('Выберите доступную фасовку.');
+      const pack = product.packs[index];
+      weightG = pack.weightG;
+      price = pack.price;
+      rate = null;
+      label = pack.label;
+    } else {
+      if (qty !== 1) return invalid('Каждую весовую порцию добавьте отдельной позицией.');
+      if (input.kind === 'bulk') {
+        const bulk = product.bulk;
+        const weight = input.weightG;
+        if (!bulk || !Number.isSafeInteger(weight) || weight! < bulk.minG || weight! > bulk.maxG || (weight! - bulk.minG) % bulk.stepG !== 0) return invalid('Выберите вес порции в пределах ползунка.');
+        weightG = weight!;
+        rate = bulk.pricePerKg;
+        price = Math.round(weightG * rate / 1000);
+        label = `На развес ${formatWeight(weightG)}`;
+      } else if (product.kind === 'piece' && input.kind === 'piece') {
+        const piece = product.pieces.find((candidate) => candidate.id1c === input.pieceId1c);
+        if (!piece || reserved.has(piece.id1c) || selectedPieces.has(piece.id1c)) return invalid('Этот кусок уже зарезервирован. Выберите другой.');
+        selectedPieces.add(piece.id1c);
+        pieceId1c = piece.id1c;
+        weightG = piece.weightG;
+        rate = piece.price === undefined ? product.pricePerKg : null;
+        price = piecePriceOf(product, weightG, piece.price);
+        label = `${product.category === 'leg' ? 'Целая нога' : 'Кусок'} ${formatWeight(weightG)}`;
+      } else if (product.kind === 'piece' && input.kind === 'average') {
+        weightG = averageWeightOf(product);
+        if (!weightG) return invalid('Средний вес этого товара пока не известен. Свяжитесь с лавкой.');
+        const fixed = product.category === 'leg' ? product.pieces[0]?.price : undefined;
+        rate = fixed === undefined ? product.pricePerKg : null;
+        price = piecePriceOf(product, weightG, fixed);
+        label = `${product.category === 'leg' ? 'Целая нога' : 'Кусок'} ~${formatWeight(weightG)}`;
+      } else if (product.kind === 'piece' && product.category === 'piece' && input.kind === 'custom') {
+        if (!Number.isSafeInteger(input.weightG) || input.weightG! < 50 || input.weightG! > 2000) return invalid('Для отреза укажите вес от 50 до 2 000 г.');
+        weightG = input.weightG!;
+        rate = product.pricePerKg;
+        price = Math.round(weightG * rate / 1000);
+        label = `Отрез под заказ ~${formatWeight(weightG)}`;
+      } else {
+        return invalid('Этот вариант покупки недоступен для выбранного товара.');
       }
-      items.push({
-        uid: nextUid(),
-        productId: product.id,
-        title: product.title,
-        label: `Кусок ${formatWeight(piece.weightG)}`,
-        price: piecePriceOf(product, piece.weightG, piece.price),
-        weightG: piece.weightG,
-        requiresWeightCheck: true,
-        pieceId1c: piece.id1c,
-        qty: 1,
-      });
-    } else if (input.kind === 'pack') {
-      const pack = product.packs[input.packIdx ?? 0];
-      if (!pack) return { ok: false, error: `Фасовка не найдена для ${product.id}` };
-      items.push({
-        uid: nextUid(),
-        productId: product.id,
-        title: product.title,
-        label: pack.label,
-        price: pack.price,
-        weightG: pack.weightG,
-        requiresWeightCheck: false,
-        pieceId1c: null,
-        qty,
-      });
-    } else if (input.kind === 'bulk') {
-      const bulk = product.bulk;
-      if (!bulk) return { ok: false, error: `Развес недоступен для ${product.id}` };
-      const w = Math.min(bulk.maxG, Math.max(bulk.minG, input.weightG ?? 350));
-      items.push({
-        uid: nextUid(),
-        productId: product.id,
-        title: product.title,
-        label: `На развес ${formatWeight(w)}`,
-        price: Math.round((w / 1000) * bulk.pricePerKg),
-        weightG: w,
-        requiresWeightCheck: true,
-        pieceId1c: null,
-        qty: 1,
-      });
-    } else if (input.kind === 'custom') {
-      // Решение Виталия: куски не выкладываем поштучно - считаем по среднему весу,
-      // точный вес менеджер подтвердит при связи с клиентом
-      const weights = product.pieces.map((pc) => pc.weightG);
-      const avgW = weights.length ? Math.round(weights.reduce((a, b) => a + b, 0) / weights.length) : 250;
-      items.push({
-        uid: nextUid(),
-        productId: product.id,
-        title: product.title,
-        label: 'Индивидуальный отрез под заказ',
-        price: Math.round((avgW / 1000) * product.pricePerKg),
-        weightG: avgW,
-        requiresWeightCheck: true,
-        pieceId1c: null,
-        qty: 1,
-      });
     }
+    if (!Number.isSafeInteger(price) || price <= 0) return invalid('Цена товара пока не подтверждена. Свяжитесь с лавкой.');
+    const requiresWeightCheck = input.kind !== 'pack';
+    items.push({ uid: crypto.randomUUID(), productId: product.id, title: product.title, label, price, weightG, pricePerKg: rate, requiresWeightCheck, weightConfirmed: !requiresWeightCheck, pieceId1c, qty });
   }
-  if (!items.length) return { ok: false, error: 'Корзина пуста' };
-  const itemsSum = items.reduce((acc, i) => acc + i.price * (i.qty || 1), 0);
-  const hasWeightCheck = items.some((i) => i.requiresWeightCheck);
-  return { ok: true, items, itemsSum, hasWeightCheck };
+  const itemsSum = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  if (!Number.isSafeInteger(itemsSum)) return invalid('Не удалось рассчитать заказ.');
+  return { ok: true, items, itemsSum, hasWeightCheck: items.some((item) => item.requiresWeightCheck) };
 }
 
 export function formatWeight(weightG: number): string {
@@ -169,10 +238,5 @@ export function formatWeight(weightG: number): string {
 }
 
 export function orderStatusRu(status: OrderStatus): string {
-  switch (status) {
-    case 'awaiting_weight': return 'На проверке веса';
-    case 'awaiting_payment': return 'Ждёт оплаты';
-    case 'paid': return 'Оплачен';
-    case 'cancelled': return 'Отменён';
-  }
+  return { awaiting_confirmation: 'Согласуем заказ', awaiting_payment: 'Ожидает оплаты', paid: 'Оплачен', cancelled: 'Отменён' }[status];
 }

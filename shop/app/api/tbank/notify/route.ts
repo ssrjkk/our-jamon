@@ -1,43 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyTbankNotification } from '@/lib/tbank';
-import { getOrder, updateOrder } from '@/lib/orders';
-import { pushOrderToOneC } from '@/lib/onec';
+import { getOrder, mutateOrder } from '@/lib/orders';
+import { syncOrderToOneC } from '@/lib/onec';
 
-// POST /api/tbank/notify — webhook Т-Банка об оплате.
-// Боевой режим: проверяем Token (sha256) и статус CONFIRMED, помечаем заказ «Оплачен»
-// и дёргаем 1С. Мок-режим (без TBANK_PASSWORD) принимает всё.
 export async function POST(req: NextRequest) {
-  let body: Record<string, string> = {};
-  const contentType = req.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) {
-    body = await req.json().catch(() => ({}));
-  } else {
+  let value: unknown;
+  if (req.headers.get('content-type')?.includes('application/json')) value = await req.json().catch(() => null);
+  else {
     const form = await req.formData().catch(() => null);
-    if (form) {
-      for (const [k, v] of form.entries()) body[k] = String(v);
-    }
+    value = form ? Object.fromEntries([...form.entries()].map(([key, entry]) => [key, String(entry)])) : null;
   }
-
-  if (!body.OrderId) {
-    return NextResponse.json({ error: 'Нет OrderId' }, { status: 400 });
-  }
-
-  if (!verifyTbankNotification(body)) {
-    return NextResponse.json({ error: 'Подпись не совпала' }, { status: 403 });
-  }
-
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return NextResponse.json({ error: 'Invalid notification' }, { status: 400 });
+  const body = value as Record<string, unknown>;
+  if (!verifyTbankNotification(body)) return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
+  if (typeof body.OrderId !== 'string' || typeof body.Status !== 'string' || !['number', 'string'].includes(typeof body.PaymentId) || !['number', 'string'].includes(typeof body.Amount)) return NextResponse.json({ error: 'Invalid payment data' }, { status: 400 });
   const order = await getOrder(body.OrderId);
-  if (!order) return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 });
-
-  // Success=true и статус CONFIRMED — деньги получены
-  if (body.Success === 'true' && (body.Status === 'CONFIRMED' || body.Status === 'AUTHORIZED')) {
-    if (order.status !== 'paid') {
-      const updated = await updateOrder(order.id, { status: 'paid', paymentId: body.PaymentId || order.paymentId });
-      await pushOrderToOneC(updated!);
+  const amount = Number(body.Amount);
+  if (!order || order.demo || !order.paymentId || order.paymentId !== String(body.PaymentId) || order.total === null
+    || !Number.isSafeInteger(amount) || amount !== order.total * 100) return NextResponse.json({ error: 'Payment does not match order' }, { status: 409 });
+  const success = body.Success === true || body.Success === 'true';
+  let changed = false;
+  const updated = await mutateOrder(order.id, (current) => {
+    if (current.paymentId !== String(body.PaymentId) || current.total !== order.total || current.status !== 'awaiting_payment') return;
+    if (success && body.Status === 'CONFIRMED') {
+      current.status = 'paid';
+      current.paymentError = false;
+      changed = true;
+    } else if (success && body.Status === 'CANCELED') {
+      current.status = 'cancelled';
+      changed = true;
+    } else if (body.Status === 'REJECTED' || body.Status === 'DEADLINE_EXPIRED') {
+      current.paymentError = true;
     }
-  } else if (body.Success === 'false' || body.Status === 'REJECTED') {
-    await updateOrder(order.id, { status: 'cancelled', comment: 'Оплата отклонена банком' });
-  }
-
-  return NextResponse.json({ ok: true });
+  });
+  if (changed && updated) await syncOrderToOneC(updated);
+  return new NextResponse('OK', { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 }

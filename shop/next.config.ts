@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: 'standalone',
+  outputFileTracingExcludes: { '/*': ['./data/**/*', './test-results/**/*', '.env*'] },
   cacheComponents: true,
   partialPrefetching: true,
 };

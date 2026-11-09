@@ -1,11 +1,7 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-
-// =========================================================================
-// Корзина клиента: localStorage + try/catch (приватный режим).
-// Цены при оформлении пересчитывает сервер (см. lib/orders.ts resolveCart).
-// =========================================================================
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type { PurchaseKind } from '@/lib/types';
 
 export interface CartLine {
   uid: string;
@@ -16,7 +12,7 @@ export interface CartLine {
   weightG: number;
   requiresWeightCheck: boolean;
   pieceId1c: string | null;
-  kind: 'piece' | 'pack' | 'bulk' | 'custom';
+  kind: PurchaseKind;
   packIdx?: number;
   qty: number;
 }
@@ -25,98 +21,131 @@ interface CartContextValue {
   lines: CartLine[];
   count: number;
   sum: number;
+  ready: boolean;
+  notice: string;
   hasWeightCheck: boolean;
   reservedPieceIds: string[];
-  addLine: (line: Omit<CartLine, 'uid'>) => void;
+  addLine: (line: Omit<CartLine, 'uid'>) => boolean;
+  addLines: (lines: Omit<CartLine, 'uid'>[]) => boolean;
+  setQuantity: (uid: string, qty: number) => void;
   removeLine: (uid: string) => void;
+  canUndoRemove: boolean;
+  undoRemove: () => void;
+  consumeLines: (ordered: CartLine[]) => void;
   clear: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
-
 const STORAGE_KEY = 'nh_cart_v2';
 
-function loadLines(): CartLine[] {
+function loadLines(): { lines: CartLine[]; notice: string } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!raw) return { lines: [], notice: '' };
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return { lines: [], notice: 'Не удалось восстановить корзину. Добавьте товары заново.' };
+    const valid = parsed.filter((line): line is CartLine => line && typeof line === 'object'
+      && typeof line.uid === 'string' && typeof line.productId === 'string' && typeof line.title === 'string' && typeof line.label === 'string'
+      && Number.isSafeInteger(line.price) && line.price > 0 && Number.isSafeInteger(line.weightG) && line.weightG >= 0
+      && typeof line.requiresWeightCheck === 'boolean' && (line.pieceId1c === null || typeof line.pieceId1c === 'string')
+      && ['piece', 'average', 'pack', 'bulk', 'custom'].includes(line.kind) && Number.isSafeInteger(line.qty) && line.qty > 0
+      && (line.packIdx === undefined || Number.isSafeInteger(line.packIdx) && line.packIdx >= 0));
+    const limited = valid.some((line) => line.qty > 20);
+    const lines = valid.map((line) => ({ ...line, qty: Math.min(line.qty, 20) }));
+    return { lines, notice: limited ? 'Можно заказать не более 20 одинаковых упаковок. Количество скорректировано.' : valid.length !== parsed.length ? 'Часть корзины не удалось восстановить. Проверьте её состав.' : '' };
   } catch {
-    return [];
+    return { lines: [], notice: 'Корзина работает в этой вкладке, но браузер не разрешает сохранять её.' };
   }
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setLines(loadLines());
-    setHydrated(true);
+  const [ready, setReady] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [removed, setRemoved] = useState<{ line: CartLine; index: number } | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const current = useRef<CartLine[]>([]);
+  const commit = useCallback((next: CartLine[]) => {
+    current.current = next;
+    setLines(next);
+    setRemoved(null);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
   }, []);
 
+  useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
+
   useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
-    } catch {
-      /* ошибки квоты игнорируем */
+    const saved = loadLines();
+    commit(saved.lines);
+    setNotice(saved.notice);
+    setReady(true);
+  }, [commit]);
+
+  useEffect(() => {
+    if (!ready) return;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(lines)); }
+    catch { setNotice('Браузер не разрешает сохранять корзину. Не закрывайте вкладку до оформления.'); }
+  }, [lines, ready]);
+
+  const addLines = useCallback((incoming: Omit<CartLine, 'uid'>[]): boolean => {
+    const next = [...current.current];
+    for (const line of incoming) {
+      if (line.pieceId1c && next.some((item) => item.pieceId1c === line.pieceId1c)) { setNotice('Этот кусок уже есть в корзине.'); return false; }
+      const index = line.kind === 'pack' ? next.findIndex((item) => item.kind === 'pack' && item.productId === line.productId && (item.packIdx ?? 0) === (line.packIdx ?? 0)) : -1;
+      if (line.qty < 1 || line.qty > 20 || index !== -1 && next[index].qty + line.qty > 20) { setNotice('Можно добавить не более 20 одинаковых упаковок.'); return false; }
+      if (index !== -1) next[index] = { ...next[index], qty: next[index].qty + line.qty };
+      else next.push({ ...line, uid: crypto.randomUUID() });
     }
-  }, [lines, hydrated]);
-
-  const addLine = useCallback((line: Omit<CartLine, 'uid'>) => {
-    setLines((prev) => {
-      // Кусок уникален: второй раз в корзину не положить
-      if (line.pieceId1c && prev.some((l) => l.pieceId1c === line.pieceId1c)) return prev;
-      const next = [...prev];
-      // Фасовки складываются по количеству
-      const same = next.findIndex((l) => l.productId === line.productId && l.kind === line.kind && l.label === line.label && !l.pieceId1c);
-      if (same !== -1 && line.kind === 'pack') {
-        next[same] = { ...next[same], qty: next[same].qty + (line.qty || 1) };
-        return next;
-      }
-      next.push({ ...line, uid: 'item-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6) });
-      return next;
-    });
-  }, []);
-
+    if (next.length > 100) { setNotice('В одном заказе может быть не более 100 позиций.'); return false; }
+    setNotice('');
+    commit(next);
+    return true;
+  }, [commit]);
+  const addLine = useCallback((line: Omit<CartLine, 'uid'>) => addLines([line]), [addLines]);
   const removeLine = useCallback((uid: string) => {
-    setLines((prev) => prev.filter((l) => l.uid !== uid));
-  }, []);
-
-  const clear = useCallback(() => setLines([]), []);
-
-  const value = useMemo<CartContextValue>(() => {
-    const reservedPieceIds = lines.filter((l) => l.pieceId1c).map((l) => l.pieceId1c as string);
-    return {
-      lines,
-      count: lines.length,
-      sum: lines.reduce((acc, l) => acc + l.price * (l.qty || 1), 0),
-      hasWeightCheck: lines.some((l) => l.requiresWeightCheck),
-      reservedPieceIds,
-      addLine,
-      removeLine,
-      clear,
-    };
-  }, [lines, addLine, removeLine, clear]);
-
+    const index = current.current.findIndex((line) => line.uid === uid);
+    if (index === -1) return;
+    const line = current.current[index];
+    commit(current.current.filter((item) => item.uid !== uid));
+    setRemoved({ line, index });
+    undoTimer.current = setTimeout(() => setRemoved(null), 8000);
+  }, [commit]);
+  const undoRemove = useCallback(() => {
+    if (!removed) return;
+    const next = [...current.current];
+    next.splice(Math.min(removed.index, next.length), 0, removed.line);
+    commit(next);
+  }, [removed, commit]);
+  const setQuantity = useCallback((uid: string, qty: number) => {
+    if (!Number.isSafeInteger(qty) || qty < 1 || qty > 20) return;
+    commit(current.current.map((line) => line.uid === uid && line.kind === 'pack' ? { ...line, qty } : line));
+  }, [commit]);
+  const consumeLines = useCallback((ordered: CartLine[]) => {
+    const quantities = new Map(ordered.map((line) => [line.uid, line.qty]));
+    commit(current.current.flatMap((line) => {
+      const qty = line.qty - (quantities.get(line.uid) || 0);
+      return qty > 0 ? [{ ...line, qty }] : [];
+    }));
+  }, [commit]);
+  const clear = useCallback(() => commit([]), [commit]);
+  const value = useMemo<CartContextValue>(() => ({
+    lines, ready, notice, count: lines.reduce((sum, line) => sum + line.qty, 0), sum: lines.reduce((sum, line) => sum + line.price * line.qty, 0),
+    hasWeightCheck: lines.some((line) => line.requiresWeightCheck), reservedPieceIds: lines.flatMap((line) => line.pieceId1c ? [line.pieceId1c] : []),
+    addLine, addLines, setQuantity, removeLine, canUndoRemove: removed !== null, undoRemove, consumeLines, clear,
+  }), [lines, ready, notice, removed, addLine, addLines, setQuantity, removeLine, undoRemove, consumeLines, clear]);
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart(): CartContextValue {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCart must be used within CartProvider');
-  return ctx;
+  const context = useContext(CartContext);
+  if (!context) throw new Error('useCart must be used within CartProvider');
+  return context;
 }
 
-export function formatRub(num: number): string {
-  return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0') + '\u00A0₽';
+export function formatRub(value: number): string {
+  return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(value);
 }
 
 export function formatWeightLabel(weightG: number): string {
-  if (weightG >= 1000) {
-    return (weightG / 1000).toFixed(1).replace('.', ',') + '\u00A0кг';
-  }
-  return String(weightG) + '\u00A0г';
+  return weightG >= 1000 ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 3 }).format(weightG / 1000)}\u00a0кг` : `${weightG}\u00a0г`;
 }

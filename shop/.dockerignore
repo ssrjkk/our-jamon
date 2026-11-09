@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.env
+.env.*
+data
+*.log
+*.tsbuildinfo
+Наш_Хамон.zip

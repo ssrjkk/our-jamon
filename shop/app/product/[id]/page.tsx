@@ -4,49 +4,31 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import ProductCard from '@/components/ProductCard';
 import AnimationsLayer from '@/components/Animations';
-import { getProducts, COUNTRY_NAMES } from '@/lib/products';
+import { getProducts, CATEGORY_TITLES } from '@/lib/products';
 import { reservedPieceIds } from '@/lib/orders';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const products = await getProducts();
-  const product = products.find((p) => p.id === id);
-  if (!product) return { title: 'Товар не найден' };
-  return {
-    title: product.title,
-    description: product.description,
-  };
+  const product = (await getProducts()).find((entry) => entry.id === id);
+  return product ? { title: product.title, description: product.description } : { title: 'Товар не найден' };
 }
-
 export const instant = false;
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const { id } = await params;
-  const products = await getProducts();
-  const product = products.find((p) => p.id === id);
+  const product = (await getProducts()).find((entry) => entry.id === id);
   if (!product) notFound();
   const reserved = Array.from(await reservedPieceIds());
+  const fixed = product.kind === 'piece' && product.category === 'leg' && typeof product.pieces[0]?.price === 'number';
 
-  const per100 = Math.round(product.pricePerKg / 10);
-  const meta = (COUNTRY_NAMES[product.country] || '') + (product.agingMonths ? ` · Выдержка ${product.agingMonths}\u00A0мес.` : '');
-
-  return (
-    <main className="container" style={{ paddingTop: 24, paddingBottom: 64 }}>
-      <p style={{ marginBottom: 16, fontSize: '0.875rem' }}>
-        <Link href="/catalog" style={{ color: 'var(--graphite-muted)' }}>← Вся витрина</Link>
-      </p>
-      <div style={{ maxWidth: 560 }}>
-        <ProductCard product={product} serverReservedPieceIds={reserved} />
-      </div>
-      <section className="section" style={{ maxWidth: 720, marginTop: 32, padding: '32px 0', borderTop: '1px solid var(--bone-line)', borderBottom: 'none' }}>
-        <div className="card-meta tabular" style={{ marginBottom: 8 }}>{meta}</div>
-        <p className="card-desc" style={{ fontSize: '1rem' }}>{product.description}</p>
-        <p className="card-desc tabular" style={{ marginTop: 12 }}>
-          Цена ориентира: {per100}{'\u00A0'}₽ / 100{'\u00A0'}г. Вес каждого куска известен при приёмке - итоговая сумма считается по фактическому весу до рубля.
-        </p>
-      </section>
-      <AnimationsLayer />
-    </main>
-  );
+  return <main id="main-content" className="container product-page">
+    <nav className="breadcrumbs" aria-label="Навигационная цепочка"><Link href="/catalog">Каталог</Link><span aria-hidden="true">/</span><Link href={`/catalog?category=${product.category}`}>{CATEGORY_TITLES[product.category].title}</Link></nav>
+    <ProductCard product={product} serverReservedPieceIds={reserved} detail />
+    <section className="product-information" aria-labelledby="product-info-title">
+      <div><h2 id="product-info-title" className="section-title">Перед заказом</h2><dl className="product-facts">{product.code && <div><dt>Артикул поставщика</dt><dd className="tabular">{product.code}</dd></div>}{product.agingMonths && <div><dt>Выдержка</dt><dd>{product.agingMonths} месяцев</dd></div>}<div><dt>Формат</dt><dd>{CATEGORY_TITLES[product.category].title}</dd></div></dl></div>
+      <div className="product-order-note"><h3>{fixed ? 'Цена за штуку фиксирована' : product.category === 'extras' ? 'Стоимость за штуку' : product.kind === 'piece' ? 'Точный вес — перед оплатой' : 'Цена выбранной фасовки'}</h3><p>{fixed ? 'После взвешивания стоимость целой ноги не изменится. Указанный вес — ориентир для выбора; подставка приобретается отдельно.' : product.category === 'extras' ? 'Стоимость зависит от выбранного изделия или номинала сертификата и не рассчитывается по весу.' : product.kind === 'piece' ? 'Для среднего куска показываем предварительную сумму. Для отреза под заказ укажите желаемый вес. При сборке подтвердим фактический вес и итоговую стоимость.' : 'Стоимость готовой упаковки фиксирована. Если выбрана порция на развес, окончательную сумму подтвердим после взвешивания.'}</p><p>Точный тариф курьера или доставки в пункт выдачи согласуем до оплаты.</p><Link className="bento-btn" href="/#delivery">Лавка и доставка →</Link></div>
+    </section>
+    <AnimationsLayer />
+  </main>;
 }

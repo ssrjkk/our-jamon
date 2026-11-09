@@ -1,131 +1,52 @@
 'use client';
 
+import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { useCart, formatRub } from './CartContext';
-import { Product } from '@/lib/types';
-import { runPig, flyTokenToCart } from './Animations';
+import type { Product } from '@/lib/types';
+import { KITS, type CatalogKit } from '@/lib/products';
+import { flyTokenToCart } from './Animations';
+import { ChoicePhotos } from './BuyerChoices';
 
-// Сценарии лавки: «для себя, к столу и на подарок».
-// Хамон - главный герой, вокруг него собираем вкусы (идея Виталия).
-// Каждая карточка собирается в корзину одним кликом.
-
-interface Scenario {
-  id: string;
-  label: string;
-  name: string;
-  line: string;
-  items: { productId: string; packIdx?: number }[];
-  total: number;
+export function resolveKit(products: Product[], items: CatalogKit['items']) {
+  const resolved = items.map((item) => {
+    const product = products.find((entry) => entry.id === item.productId);
+    const pack = product?.packs[item.packIdx];
+    return product && product.kind === 'pack' && pack && pack.price > 0 ? { product, pack, packIdx: item.packIdx } : null;
+  });
+  if (!resolved.length || resolved.some((item) => item === null)) return null;
+  return resolved.filter((item): item is NonNullable<typeof item> => item !== null);
 }
 
 export default function Scenarios({ products }: { products: Product[] }) {
-  const { addLine } = useCart();
-  const [doneId, setDoneId] = useState<string | null>(null);
-  const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const { addLines } = useCart();
+  const [feedback, setFeedback] = useState<Record<string, string>>({});
+  const buttons = useRef<Record<string, HTMLButtonElement | null>>({});
+  const kits = KITS.map((kit) => ({ ...kit, resolved: resolveKit(products, kit.items) })).filter((kit) => kit.resolved !== null);
 
-  // Цены считаем из живого каталога
-  const priceOf = (productId: string, packIdx?: number) => {
-    const p = products.find((x) => x.id === productId);
-    const pack = p?.packs[packIdx ?? 0];
-    return pack ? pack.price : 0;
-  };
-  const nameOf = (productId: string) => products.find((x) => x.id === productId)?.title || '';
-
-  const scenarios: Scenario[] = [
-    {
-      id: 'self',
-      label: 'Для себя',
-      name: 'Познакомиться с хамоном',
-      line: 'Три выдержки в одной коробке - найдёте свою.',
-      items: [{ productId: 'hamon-tasting-sliced' }],
-      total: priceOf('hamon-tasting-sliced'),
-    },
-    {
-      id: 'table',
-      label: 'К столу',
-      name: 'Вкусный вечер',
-      line: 'Нарезка «22», крупные оливки и гриссини к бокалу.',
-      items: [
-        { productId: 'hamon-sliced-22', packIdx: 0 },
-        { productId: 'olives-gordal', packIdx: 0 },
-        { productId: 'grissini', packIdx: 0 },
-      ],
-      total: priceOf('hamon-sliced-22', 0) + priceOf('olives-gordal', 0) + priceOf('grissini', 0),
-    },
-    {
-      id: 'gift',
-      label: 'На подарок',
-      name: 'Бокс «В подарок»',
-      line: 'Соберём и упакуем - останется подписать открытку.',
-      items: [
-        { productId: 'hamon-sliced-22', packIdx: 1 },
-        { productId: 'olives-manzanilla', packIdx: 0 },
-        { productId: 'cheese-manchego', packIdx: 0 },
-      ],
-      total: priceOf('hamon-sliced-22', 1) + priceOf('olives-manzanilla', 0) + priceOf('cheese-manchego', 0),
-    },
-  ];
-
-  function add(scenario: Scenario) {
-    for (const item of scenario.items) {
-      const product = products.find((x) => x.id === item.productId);
-      const pack = product?.packs[item.packIdx ?? 0];
-      if (!product || !pack) continue;
-      addLine({
-        productId: product.id,
-        title: product.title,
-        label: pack.label,
-        price: pack.price,
-        weightG: pack.weightG,
-        requiresWeightCheck: false,
-        pieceId1c: null,
-        kind: 'pack',
-        packIdx: item.packIdx ?? 0,
-        qty: 1,
-      });
-    }
-    const btn = btnRefs.current[scenario.id];
-    if (btn) flyTokenToCart(btn.getBoundingClientRect(), 'ham');
-    runPig();
-    setDoneId(scenario.id);
-    setTimeout(() => setDoneId(null), 1200);
+  function add(kit: (typeof kits)[number]) {
+    if (!kit.resolved) return;
+    const success = addLines(kit.resolved.map(({ product, pack, packIdx }) => ({
+      productId: product.id, title: product.title, label: pack.label, price: pack.price,
+      weightG: pack.weightG, requiresWeightCheck: false, pieceId1c: null, kind: 'pack', packIdx, qty: 1,
+    })));
+    setFeedback((previous) => ({ ...previous, [kit.id]: success
+      ? 'Весь набор добавлен в корзину.'
+      : 'Набор не добавлен: достигнут лимит корзины. Уменьшите количество товаров и попробуйте снова.' }));
+    const button = buttons.current[kit.id];
+    if (success && button) flyTokenToCart(button.getBoundingClientRect(), 'ham');
   }
 
-  return (
-    <section id="scenarios" className="section" style={{ borderTop: 'none' }}>
-      <div className="container">
-        <div className="section-head">
-          <h2 className="section-title">Три сценария — выберите свой</h2>
-          <p className="section-subtitle">Хамон — главный герой. Вкусы собираем вокруг него: для себя, к столу и на подарок.</p>
-        </div>
-        <div className="scenarios-grid">
-          {scenarios.map((sc) => (
-            <article key={sc.id} className="scenario-card">
-              <div className="scenario-label">{sc.label}</div>
-              <div className="scenario-name">{sc.name}</div>
-              <p style={{ fontSize: '0.9375rem', color: 'var(--graphite-muted)' }}>{sc.line}</p>
-              <ul className="scenario-list">
-                {sc.items.map((it, i) => (
-                  <li key={i}>{nameOf(it.productId)}</li>
-                ))}
-              </ul>
-              <div className="scenario-total-row">
-                <span style={{ fontSize: '0.8125rem', color: 'var(--graphite-muted)' }}>Готовый набор</span>
-                <span className="scenario-total tabular">{formatRub(sc.total)}</span>
-              </div>
-              <button
-                type="button"
-                ref={(el) => { btnRefs.current[sc.id] = el; }}
-                className="btn-primary"
-                style={{ width: '100%' }}
-                onClick={() => add(sc)}
-              >
-                {doneId === sc.id ? 'Собрано в корзине' : 'Собрать сценарий'}
-              </button>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
+  return <section className="section"><div className="container">
+    <div className="section-head"><h2 className="section-title">Для себя, к столу и на подарок</h2><p className="section-subtitle">Примеры подборок из лавки. Состав выбираем под ваш вкус и повод.</p></div>
+    <ChoicePhotos />
+    <div className="section-head catalog-kits-heading"><h3 className="checkout-title">Готовые наборы из каталога</h3><p className="checkout-hint">Фотографии выше — примеры выбора, а не фиксированный состав этих наборов. Состав и цены наборов указаны ниже.</p></div>
+    {kits.length ? <div className="scenarios-grid">{kits.map((kit) => <article className="scenario-card" key={kit.id}>
+      <p className="scenario-label">{kit.label}</p><h4 className="scenario-name">{kit.title}</h4><p className="card-desc">{kit.description}</p>
+      <ul className="scenario-list">{kit.resolved!.map(({ product, pack }) => <li key={product.id}><span>{product.title}<small>{pack.label}</small></span><span className="tabular">{formatRub(pack.price)}</span></li>)}</ul>
+      <div className="scenario-total-row"><span>Стоимость товаров</span><strong className="scenario-total tabular">{formatRub(kit.resolved!.reduce((sum, item) => sum + item.pack.price, 0))}</strong></div>
+      <button ref={(element) => { buttons.current[kit.id] = element; }} type="button" className="btn-primary" onClick={() => add(kit)}>Добавить весь набор</button>
+      <p className="card-feedback" role="status">{feedback[kit.id] ?? ''}</p>
+    </article>)}</div> : <div className="cart-empty-state"><h3>Наборы пока недоступны</h3><p>Выберите отдельные деликатесы из актуального каталога.</p><Link href="/catalog" className="btn-primary">Выбрать в каталоге</Link></div>}
+  </div></section>;
 }

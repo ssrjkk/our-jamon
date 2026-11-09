@@ -1,96 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CartItemInput, DeliveryOption, Order } from '@/lib/types';
-import { resolveCart, saveOrder, readOrders, generateOrderId, reservedPieceIds } from '@/lib/orders';
-import { createTbankPayment } from '@/lib/tbank';
-import { pushOrderToOneC } from '@/lib/onec';
+import { Order } from '@/lib/types';
+import { saveOrder, readOrders, generateOrderId, newAccessToken, OrderConflict } from '@/lib/orders';
+import { CheckoutError, initializeOrderPayment, quoteCart } from '@/lib/checkout';
+import { orderCookieName } from '@/lib/order-access';
+import { syncOrderToOneC } from '@/lib/onec';
 import { isAdmin } from '@/lib/admin';
 
-// ЗАМЕНИТЬ: порог бесплатной доставки курьером по СПб - согласовать с Виталием
-const FREE_DELIVERY_FROM = Number(process.env.FREE_DELIVERY_FROM || 3000);
-
-const DELIVERY: Record<string, DeliveryOption> = {
-  cdek: { id: 'cdek', name: 'СДЭК (ПВЗ)', cost: 290, note: 'Пункты выдачи по СПб и России [заглушка тарифов]' },
-  yandex: { id: 'yandex', name: 'Яндекс Доставка', cost: 350, note: 'Курьер до двери по СПб [заглушка тарифов]' },
-  drivee: { id: 'drivee', name: 'Drivee Курьер', cost: 300, note: 'Курьер до двери по СПб [заглушка тарифов]' },
-  pickup: { id: 'pickup', name: 'Самовывоз', cost: 0, note: 'Сытнинская ул., 4П, вт-вс 10:30-20:30' },
-};
-
 export async function POST(req: NextRequest) {
-  let body: {
-    customer?: { name?: string; phone?: string };
-    deliveryId?: string;
-    deliveryAddress?: string;
-    messenger?: Order['messenger'];
-    items?: CartItemInput[];
-  };
+  const body: unknown = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object' || !('customer' in body) || !body.customer || typeof body.customer !== 'object') return NextResponse.json({ error: 'Укажите данные для связи.' }, { status: 400 });
+  const customer = body.customer;
+  if (!('name' in customer) || typeof customer.name !== 'string' || !customer.name.trim() || customer.name.length > 100) return NextResponse.json({ error: 'Укажите ваше имя.' }, { status: 400 });
+  if (!('phone' in customer) || typeof customer.phone !== 'string' || customer.phone.length > 30 || !/^[+\d\s()-]+$/.test(customer.phone)) return NextResponse.json({ error: 'Введите полный номер телефона.' }, { status: 400 });
+  const digits = customer.phone.replace(/\D/g, '').replace(/^8/, '7');
+  if (!/^7\d{10}$/.test(digits)) return NextResponse.json({ error: 'Введите номер +7 и 10 цифр.' }, { status: 400 });
+  if (!('consent' in body) || body.consent !== true) return NextResponse.json({ error: 'Подтвердите согласие на обработку данных для заказа.' }, { status: 400 });
+  if (!('items' in body) || !('deliveryId' in body)) return NextResponse.json({ error: 'Некорректная корзина.' }, { status: 400 });
+  const address = 'deliveryAddress' in body ? body.deliveryAddress : '';
+  if (typeof address !== 'string' || address.length > 500) return NextResponse.json({ error: 'Проверьте адрес получения заказа.' }, { status: 400 });
+  if (body.deliveryId !== 'pickup' && !address.trim()) return NextResponse.json({ error: 'Укажите адрес доставки или пункта выдачи.' }, { status: 400 });
+  const messenger = 'messenger' in body ? body.messenger : 'SMS';
+  if (messenger !== 'Telegram' && messenger !== 'WhatsApp' && messenger !== 'SMS') return NextResponse.json({ error: 'Выберите способ связи.' }, { status: 400 });
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Некорректный JSON' }, { status: 400 });
-  }
-
-  const name = (body.customer?.name || '').trim();
-  const rawPhone = (body.customer?.phone || '').trim();
-  const phoneDigits = rawPhone.replace(/\D/g, '');
-  if (!name) return NextResponse.json({ error: 'Укажите ваше имя' }, { status: 400 });
-  if (phoneDigits.length !== 11) return NextResponse.json({ error: 'Введите полный номер телефона с кодом оператора' }, { status: 400 });
-  const phone = rawPhone;
-
-  const deliveryId = body.deliveryId && DELIVERY[body.deliveryId] ? body.deliveryId : 'cdek';
-  const delivery = DELIVERY[deliveryId];
-
-  const reserved = await reservedPieceIds();
-  const resolved = resolveCart(body.items || [], reserved);
-  if (!resolved.ok || !resolved.items || resolved.itemsSum === undefined) {
-    return NextResponse.json({ error: resolved.error || 'Не удалось собрать заказ' }, { status: 409 });
-  }
-
-  // Бесплатная доставка курьером по СПб от порога (СДЭК и самовывоз не меняются)
-  let deliveryCost = delivery.cost;
-  if ((deliveryId === 'yandex' || deliveryId === 'drivee') && resolved.itemsSum >= FREE_DELIVERY_FROM) {
-    deliveryCost = 0;
-  }
-
-  const orderId = generateOrderId();
-  const baseUrl = process.env.SHOP_URL || req.nextUrl.origin;
-  const order: Order = {
-    id: orderId,
-    createdAt: new Date().toISOString(),
-    customer: { name, phone },
-    delivery: { id: deliveryId, name: delivery.name, cost: deliveryCost, address: body.deliveryAddress },
-    messenger: body.messenger || 'Telegram',
-    items: resolved.items,
-    itemsSum: resolved.itemsSum,
-    total: resolved.itemsSum + deliveryCost,
-    status: 'awaiting_weight',
-  };
-
-  // Два сценария оплаты: только фасовка - сразу Т-Банк; есть весовое - ждём подтверждения веса
-  if (!resolved.hasWeightCheck) {
-    const payment = await createTbankPayment({
-      orderId,
-      amountRub: order.total,
-      description: `Заказ ${orderId} - Наш Хамон`,
-      customerPhone: order.customer.phone,
-      baseUrl,
-    });
-    if (!payment.ok) {
-      return NextResponse.json({ error: 'Платёжный шлюз недоступен: ' + payment.error }, { status: 502 });
+    const quote = await quoteCart(body.items, body.deliveryId, address.trim());
+    if (!('expectedItemsSum' in body) || body.expectedItemsSum !== quote.itemsSum || !('expectedDeliveryCost' in body) || body.expectedDeliveryCost !== quote.delivery.cost) {
+      return NextResponse.json({ error: 'Стоимость обновилась. Проверьте расчёт и отправьте заказ ещё раз.', quote }, { status: 409 });
     }
-    order.status = 'awaiting_payment';
-    order.paymentUrl = payment.paymentUrl;
-    order.paymentId = payment.paymentId;
+    const now = new Date().toISOString();
+    const order: Order = {
+      id: generateOrderId(), accessToken: newAccessToken(), createdAt: now, consentedAt: now, demo: quote.demo,
+      customer: { name: customer.name.trim(), phone: '+' + digits }, delivery: quote.delivery, messenger,
+      items: quote.items, itemsSum: quote.itemsSum, total: quote.total,
+      status: quote.needsConfirmation ? 'awaiting_confirmation' : 'awaiting_payment',
+    };
+    let saved = await saveOrder(order);
+    if (saved.status === 'awaiting_payment') saved = await initializeOrderPayment(saved.id, process.env.SHOP_URL || req.nextUrl.origin) || saved;
+    await syncOrderToOneC(saved);
+    const response = NextResponse.json({ orderId: saved.id, accessToken: saved.accessToken, status: saved.status, paymentUrl: saved.paymentUrl || null, paymentError: Boolean(saved.paymentError), total: saved.total, demo: saved.demo }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
+    response.cookies.set(orderCookieName(saved.id), saved.accessToken, { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', maxAge: 30 * 24 * 60 * 60, path: '/' });
+    return response;
+  } catch (error) {
+    if (error instanceof CheckoutError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof OrderConflict) return NextResponse.json({ error: error.message }, { status: 409 });
+    return NextResponse.json({ error: 'Не удалось сохранить заказ. Попробуйте позже или свяжитесь с лавкой.' }, { status: 503 });
   }
-
-  await saveOrder(order);
-  await pushOrderToOneC(order);
-
-  return NextResponse.json({
-    orderId: order.id,
-    status: order.status,
-    paymentUrl: order.paymentUrl || null,
-    total: order.total,
-  }, { status: 201 });
 }
 
 // GET /api/orders — список заказов (только админ)

@@ -1,9 +1,11 @@
 import type { MetadataRoute } from 'next';
 import { getProducts } from '@/lib/products';
+import { connection } from 'next/server';
 
 const SITE_URL = process.env.SHOP_URL || 'https://ssrjkk.github.io/our-jamon';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await connection();
   const products = await getProducts();
   return [
     { url: SITE_URL, changeFrequency: 'weekly', priority: 1 },
