@@ -429,7 +429,7 @@ test('обе витрины заявляют эксклюзивное дистр
     await supplier.scrollIntoViewIfNeeded();
     const supplierText = normalize((await supplier.textContent()) || '');
     for (const fact of CLAIM.slice(1)) expect(supplierText).toContain(normalize(fact));
-    expect(supplierText).toContain(normalize('И ближе, и роднее. Сделано в Коломне.'));
+    expect(supplierText).toContain(normalize('Окорок, соль и время. Ничего лишнего. Сделано в Коломне.'));
     // Реквизиты поставщика из брендбука не должны притворяться контактами лавки.
     expect(supplierText).not.toContain('101-30-30');
     expect(supplierText).not.toContain('domhamona');
@@ -861,6 +861,31 @@ test('надзаголовки без капс-разрядки, а счётчи
   expect(initial, 'подложка счётчика до запуска JS').toBe(label);
   await page.goto(`${staticURL}/index.html`);
   await expect(page.locator('#catalog-count')).toHaveText(label);
+});
+
+test('свинки нет нигде: вето маркетолога от 8 ноября, а полёт в корзину цел', async ({ page }) => {
+  const sources = {
+    'бумажная витрина': fs.readFileSync(path.resolve(root, '../index.html'), 'utf8'),
+    'globals.css': fs.readFileSync(path.resolve(root, 'app/globals.css'), 'utf8'),
+    'компоненты': fs.readdirSync(path.resolve(root, 'components')).map((f) => fs.readFileSync(path.resolve(root, 'components', f), 'utf8')).join('\n'),
+    'страницы': fs.readdirSync(path.resolve(root, 'app'), { recursive: true, encoding: 'utf8' }).filter((f) => /page\.tsx$/.test(f)).map((f) => fs.readFileSync(path.resolve(root, 'app', f), 'utf8')).join('\n'),
+  };
+  const banned = Object.entries(sources).flatMap(([label, text]) =>
+    (text.match(/[^\n]*(?:pig|свинк)[^\n]*/gi) || []).map((line) => `${label}: ${line.trim().slice(0, 80)}`));
+  expect(banned, `образ свинки запрещён: [${banned.join(' || ')}]`).toEqual([]);
+  expect(sources['бумажная витрина'], 'бумажная витрина: полёт иконки в корзину').toMatch(/flyTokenToCart/);
+  expect(sources['компоненты'], 'движок: полёт иконки в корзину').toMatch(/flyTokenToCart/);
+  for (const url of [`/product/${PACK}`, `${staticURL}/index.html`]) {
+    await page.goto(url);
+    const found = await page.evaluate(() => ({
+      idsWithPig: [...document.querySelectorAll('[id]')].filter((el) => /pig/i.test(el.id)).map((el) => el.id),
+      classesWithPig: [...document.querySelectorAll('[class]')].flatMap((el) => [...el.classList]).filter((c) => /pig/i.test(c)),
+      pigInMarkup: /pig|свинк/i.test(document.documentElement.innerHTML),
+    }));
+    expect(found.idsWithPig, `${url}: id со свинкой`).toEqual([]);
+    expect(found.classesWithPig, `${url}: классы со свинкой`).toEqual([]);
+    expect(found.pigInMarkup, `${url}: свинка в разметке страницы`).toBe(false);
+  }
 });
 
 test('удаление позиции корзины можно отменить на обеих витринах', async ({ page }) => {

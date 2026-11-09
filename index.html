@@ -327,9 +327,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 #submit-order-btn { width: 100%; }
 #submit-order-btn[disabled] { opacity: 0.6; cursor: wait; }
 
-/* СВИНКА И ПОЛЁТ В КОРЗИНУ */
-.pig-runner-layer { position: fixed; left: 0; bottom: 12px; width: 140px; height: 92px; pointer-events: none; z-index: 60; opacity: 0; transform: translateX(-180px); }
-@media (max-width: 899px) { .pig-runner-layer { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); } }
+/* ПОЛЁТ В КОРЗИНУ */
 .flying-token { position: fixed; left: 0; top: 0; width: 28px; height: 28px; pointer-events: none; z-index: 70; will-change: transform, opacity; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -803,7 +801,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
   <div class="container footer-supplier">
     <strong>«Дом Хамона» · Коломна</strong>
     <p>«Наш Хамон — лавка деликатесов» — эксклюзивный дистрибьютор бренда «Дом Хамона» по Санкт-Петербургу и Ленинградской области.</p>
-    <p class="footer-slogan">И ближе, и роднее. Сделано в Коломне.</p>
+    <p class="footer-slogan">Окорок, соль и время. Ничего лишнего. Сделано в Коломне.</p>
   </div>
 </footer>
 
@@ -918,42 +916,6 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
     </div>
     <div id="story-action-slot"></div>
   </div>
-</div>
-
-<!-- СВИНКА С ОКОРОКОМ -->
-<div id="pig-runner-layer" class="pig-runner-layer" aria-hidden="true">
-  <svg viewBox="0 0 160 105" width="140" height="92" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <g id="pig-body-group">
-      <g id="pig-tail" style="transform-origin: 24px 54px;">
-        <path d="M24 54 C12 48, 12 38, 20 40" stroke="#181615" stroke-width="3" stroke-linecap="round"/>
-      </g>
-      <g id="pig-leg-bl" style="transform-origin: 42px 68px;">
-        <rect x="39" y="66" width="6" height="22" rx="3" fill="#181615"/>
-      </g>
-      <g id="pig-leg-br" style="transform-origin: 54px 68px;">
-        <rect x="51" y="66" width="6" height="22" rx="3" fill="#7A1C1C"/>
-      </g>
-      <g id="pig-leg-fl" style="transform-origin: 86px 68px;">
-        <rect x="83" y="66" width="6" height="22" rx="3" fill="#181615"/>
-      </g>
-      <rect x="24" y="38" width="76" height="34" rx="17" fill="#181615"/>
-      <g id="pig-head">
-        <rect x="84" y="28" width="34" height="28" rx="12" fill="#181615"/>
-        <rect x="112" y="36" width="10" height="14" rx="4" fill="#7A1C1C"/>
-        <circle cx="104" cy="38" r="2.2" fill="#F6F5F0"/>
-      </g>
-      <g id="pig-ear" style="transform-origin: 94px 30px;">
-        <path d="M88 30 L96 17 L103 29 Z" fill="#7A1C1C"/>
-      </g>
-      <g id="pig-front-arm" style="transform-origin: 96px 56px;">
-        <rect x="94" y="52" width="24" height="6" rx="3" fill="#181615"/>
-        <g id="pig-held-ham">
-          <path d="M114 30 C126 22, 142 30, 138 44 C135 53, 124 56, 117 50 L110 58 L106 54 L113 46 Z" fill="#7A1C1C"/>
-          <path d="M122 35 Q129 38 131 44" stroke="#F6F5F0" stroke-width="1.6" stroke-linecap="round" fill="none"/>
-        </g>
-      </g>
-    </g>
-  </svg>
 </div>
 
 <script>
@@ -1251,8 +1213,7 @@ var state = {
     cdekPvz: '',
     courierAddress: '',
     messenger: 'Telegram'
-  },
-  lastPigRunTime: 0
+  }
 };
 
 function normaliseCartItem(item) {
@@ -1701,55 +1662,6 @@ function flyTokenToCart(startRect, tokenType) {
   });
 }
 
-// Фирменная сцена B: свинка пробегает по нижней кромке (не чаще раза в 8 секунд)
-function triggerPigRunner() {
-  var now = Date.now();
-  var badge = document.getElementById('header-cart-count');
-  if (prefersReducedMotion() || !window.gsap || (now - state.lastPigRunTime < 8000)) {
-    if (badge && window.gsap && !prefersReducedMotion()) {
-      gsap.fromTo(badge, { scale: 1.3 }, { scale: 1, duration: 0.25 });
-    }
-    return;
-  }
-  state.lastPigRunTime = now;
-  var layer = document.getElementById('pig-runner-layer');
-  var bodyGroup = document.getElementById('pig-body-group');
-  var legBL = document.getElementById('pig-leg-bl');
-  var legBR = document.getElementById('pig-leg-br');
-  var legFL = document.getElementById('pig-leg-fl');
-  var ear = document.getElementById('pig-ear');
-  var tail = document.getElementById('pig-tail');
-  var arm = document.getElementById('pig-front-arm');
-  var heldHam = document.getElementById('pig-held-ham');
-
-  var vw = window.innerWidth;
-  var stopX = Math.min(vw * 0.68, vw - 180);
-  gsap.killTweensOf([layer, bodyGroup, legBL, legBR, legFL, ear, tail, arm, heldHam]);
-  gsap.set(layer, { x: -160, opacity: 1 });
-  gsap.set(heldHam, { opacity: 1, scale: 1 });
-
-  var gaitTl = gsap.timeline({ repeat: 9, yoyo: true });
-  gaitTl.fromTo([legBL, legFL], { rotation: -25 }, { rotation: 25, duration: 0.14, ease: 'sine.inOut' }, 0)
-    .fromTo(legBR, { rotation: 25 }, { rotation: -25, duration: 0.14, ease: 'sine.inOut' }, 0)
-    .fromTo(bodyGroup, { y: 0 }, { y: -5, duration: 0.14, ease: 'sine.inOut' }, 0)
-    .fromTo(ear, { rotation: -8 }, { rotation: 10, duration: 0.14, ease: 'sine.inOut' }, 0.03)
-    .fromTo(tail, { rotation: -12 }, { rotation: 14, duration: 0.14, ease: 'sine.inOut' }, 0.04)
-    .fromTo(arm, { rotation: -6 }, { rotation: 8, duration: 0.14, ease: 'sine.inOut' }, 0.02);
-
-  var mainTl = gsap.timeline();
-  mainTl.to(layer, {
-    x: stopX, duration: 1.85, ease: 'power1.out',
-    onComplete: function () {
-      var hamRect = heldHam.getBoundingClientRect();
-      gsap.set(heldHam, { opacity: 0 });
-      flyTokenToCart(hamRect, 'ham');
-    }
-  }).to(layer, {
-    x: vw + 180, duration: 0.85, ease: 'power1.in',
-    onComplete: function () { gsap.set(layer, { opacity: 0 }); }
-  });
-}
-
 // =========================================================================
 // 7. КОРЗИНА
 // =========================================================================
@@ -1800,8 +1712,6 @@ function addProductToCart(productId, triggerBtn) {
   if (product.category === 'olives') {
     bounceOlivesInCard(product.id);
     if (triggerBtn) flyTokenToCart(triggerBtn.getBoundingClientRect(), 'olive');
-  } else if (['piece', 'leg', 'sliced'].indexOf(product.category) !== -1) {
-    triggerPigRunner();
   } else if (triggerBtn) {
     flyTokenToCart(triggerBtn.getBoundingClientRect(), 'ham');
   }
@@ -1821,8 +1731,8 @@ function addBulkPortion(product, weightG, pricePerKg, sourceRect) {
   if (product.category === 'olives') {
     bounceOlivesInCard(product.id);
     if (sourceRect) flyTokenToCart(sourceRect, 'olive');
-  } else {
-    triggerPigRunner();
+  } else if (sourceRect) {
+    flyTokenToCart(sourceRect, 'ham');
   }
 }
 

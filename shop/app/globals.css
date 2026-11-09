@@ -392,7 +392,6 @@ label.delivery-option-btn { cursor: pointer; }
 .footer-supplier > strong { font-weight: 600; color: var(--cured-ruby); }
 .footer-supplier p { font-size: .8125rem; color: var(--graphite-muted); max-width: 88ch; }
 .footer-supplier .footer-slogan { font-family: var(--font-serif); font-size: .9375rem; color: var(--cured-ruby); }
-.pig-runner-layer { position: fixed; bottom: 12px; left: 0; z-index: 60; width: 140px; height: 92px; pointer-events: none; opacity: 0; transform: translateX(-180px); }
 .flying-token { position: fixed; top: 0; left: 0; z-index: 65; width: 28px; height: 28px; pointer-events: none; }
 
 @media (min-width: 680px) {
@@ -460,5 +459,5 @@ label.delivery-option-btn { cursor: pointer; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
-  .pig-runner-layer, .flying-token { display: none; }
+  .flying-token { display: none; }
 }

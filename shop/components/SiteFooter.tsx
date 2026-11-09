@@ -36,7 +36,7 @@ export default function SiteFooter() {
       <div className="container footer-supplier">
         <strong>«Дом Хамона» · Коломна</strong>
         <p>«Наш Хамон — лавка деликатесов» — эксклюзивный дистрибьютор бренда «Дом Хамона» по Санкт-Петербургу и Ленинградской области.</p>
-        <p className="footer-slogan">И ближе, и роднее. Сделано в Коломне.</p>
+        <p className="footer-slogan">Окорок, соль и время. Ничего лишнего. Сделано в Коломне.</p>
       </div>
     </footer>
   );

@@ -1,24 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 // =========================================================================
-// Фирменные анимации: свинка с окороком и полёт в корзину.
+// Фирменные микро-анимации: полёт иконки в корзину и упругие оливки.
 // Триггеры из любого клиентского компонента:
-//   runPig()                  - свинка пробегает по нижней кромке (кулдаун 8 с)
 //   flyTokenToCart(rect, 'olive' | 'ham')  - дуга в иконку корзины
+//   bounceOlives(stage)                    - оливки скачут внутри карточки
 // =========================================================================
-
-let lastPigRun = 0;
-
-export function runPig() {
-  if (typeof window === 'undefined') return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const now = Date.now();
-  if (now - lastPigRun < 8000) return;
-  lastPigRun = now;
-  window.dispatchEvent(new CustomEvent('nh-pig-run'));
-}
 
 export function flyTokenToCart(startRect: DOMRect, tokenType: 'olive' | 'ham') {
   if (typeof window === 'undefined') return;
@@ -27,51 +16,9 @@ export function flyTokenToCart(startRect: DOMRect, tokenType: 'olive' | 'ham') {
 }
 
 export default function AnimationsLayer() {
-  const pigRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     let gsap: typeof import('gsap')['gsap'] | null = null;
     import('gsap').then((mod) => { gsap = mod.gsap; });
-
-    const onPigRun = () => {
-      const layer = pigRef.current;
-      if (!layer || !gsap) return;
-      const g = gsap;
-      const vw = window.innerWidth;
-      const stopX = Math.min(vw * 0.68, vw - 180);
-      g.killTweensOf(layer);
-      g.set(layer, { x: -160, opacity: 1 });
-      const body = layer.querySelector('#pig-body-group');
-      const legs = layer.querySelectorAll('.pig-leg');
-      const ear = layer.querySelector('#pig-ear');
-      const tail = layer.querySelector('#pig-tail');
-      const arm = layer.querySelector('#pig-front-arm');
-      const ham = layer.querySelector('#pig-held-ham');
-
-      const gait = g.timeline({ repeat: 9, yoyo: true });
-      gait.fromTo(legs[0], { rotation: -25 }, { rotation: 25, duration: 0.14, ease: 'sine.inOut' }, 0)
-        .fromTo(legs[1], { rotation: 25 }, { rotation: -25, duration: 0.14, ease: 'sine.inOut' }, 0)
-        .fromTo(legs[2], { rotation: -25 }, { rotation: 25, duration: 0.14, ease: 'sine.inOut' }, 0)
-        .fromTo(body, { y: 0 }, { y: -5, duration: 0.14, ease: 'sine.inOut' }, 0)
-        .fromTo(ear, { rotation: -8 }, { rotation: 10, duration: 0.14, ease: 'sine.inOut' }, 0.03)
-        .fromTo(tail, { rotation: -12 }, { rotation: 14, duration: 0.14, ease: 'sine.inOut' }, 0.04)
-        .fromTo(arm, { rotation: -6 }, { rotation: 8, duration: 0.14, ease: 'sine.inOut' }, 0.02);
-
-      const main = g.timeline();
-      main.to(layer, {
-        x: stopX, duration: 1.85, ease: 'power1.out',
-        onComplete: () => {
-          if (ham) {
-            const rect = ham.getBoundingClientRect();
-            g.set(ham, { opacity: 0 });
-            flyTokenToCart(rect, 'ham');
-          }
-        },
-      }).to(layer, {
-        x: vw + 180, duration: 0.85, ease: 'power1.in',
-        onComplete: () => { g.set(layer, { opacity: 0 }); },
-      });
-    };
 
     const onFly = (e: Event) => {
       if (!gsap) return;
@@ -112,50 +59,11 @@ export default function AnimationsLayer() {
       });
     };
 
-    window.addEventListener('nh-pig-run', onPigRun);
     window.addEventListener('nh-fly-token', onFly);
-    return () => {
-      window.removeEventListener('nh-pig-run', onPigRun);
-      window.removeEventListener('nh-fly-token', onFly);
-    };
+    return () => window.removeEventListener('nh-fly-token', onFly);
   }, []);
 
-  return (
-    <div ref={pigRef} className="pig-runner-layer" aria-hidden="true">
-      <svg viewBox="0 0 160 105" width="140" height="92" fill="none">
-        <g id="pig-body-group">
-          <g id="pig-tail" style={{ transformOrigin: '24px 54px' }}>
-            <path d="M24 54 C12 48, 12 38, 20 40" stroke="#181615" strokeWidth="3" strokeLinecap="round" />
-          </g>
-          <g className="pig-leg" style={{ transformOrigin: '42px 68px' }}>
-            <rect x="39" y="66" width="6" height="22" rx="3" fill="#181615" />
-          </g>
-          <g className="pig-leg" style={{ transformOrigin: '54px 68px' }}>
-            <rect x="51" y="66" width="6" height="22" rx="3" fill="#7A1C1C" />
-          </g>
-          <g className="pig-leg" style={{ transformOrigin: '86px 68px' }}>
-            <rect x="83" y="66" width="6" height="22" rx="3" fill="#181615" />
-          </g>
-          <rect x="24" y="38" width="76" height="34" rx="17" fill="#181615" />
-          <g id="pig-head">
-            <rect x="84" y="28" width="34" height="28" rx="12" fill="#181615" />
-            <rect x="112" y="36" width="10" height="14" rx="4" fill="#7A1C1C" />
-            <circle cx="104" cy="38" r="2.2" fill="#F6F5F0" />
-          </g>
-          <g id="pig-ear" style={{ transformOrigin: '94px 30px' }}>
-            <path d="M88 30 L96 17 L103 29 Z" fill="#7A1C1C" />
-          </g>
-          <g id="pig-front-arm" style={{ transformOrigin: '96px 56px' }}>
-            <rect x="94" y="52" width="24" height="6" rx="3" fill="#181615" />
-            <g id="pig-held-ham">
-              <path d="M114 30 C126 22, 142 30, 138 44 C135 53, 124 56, 117 50 L110 58 L106 54 L113 46 Z" fill="#7A1C1C" />
-              <path d="M122 35 Q129 38 131 44" stroke="#F6F5F0" strokeWidth="1.6" strokeLinecap="round" fill="none" />
-            </g>
-          </g>
-        </g>
-      </svg>
-    </div>
-  );
+  return null;
 }
 
 // Прыгающие оливки внутри карточки
