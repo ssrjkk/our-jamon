@@ -43,6 +43,33 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
   const currentKey = useRef('');
+  const removedUid = useRef<string | null>(null);
+  const pendingFocus = useRef<'undo' | 'remove' | null>(null);
+  const undoButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (pendingFocus.current === 'undo' && canUndoRemove) {
+      undoButtonRef.current?.focus();
+      pendingFocus.current = null;
+    } else if (pendingFocus.current === 'remove' && !canUndoRemove) {
+      if (removedUid.current !== null) {
+        document.getElementById(`cart-line-${removedUid.current}`)?.querySelector<HTMLButtonElement>('.cart-remove-btn')?.focus();
+      }
+      pendingFocus.current = null;
+      removedUid.current = null;
+    }
+  }, [lines, canUndoRemove]);
+
+  function handleRemove(uid: string) {
+    removedUid.current = uid;
+    pendingFocus.current = 'undo';
+    removeLine(uid);
+  }
+
+  function handleUndo() {
+    pendingFocus.current = 'remove';
+    undoRemove();
+  }
 
   const items = useMemo<CartItemInput[]>(() => lines.map((line) => ({
     productId: line.productId, kind: line.kind, pieceId1c: line.pieceId1c ?? undefined,
@@ -165,7 +192,7 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
           <h1 className="section-title">Корзина пока пуста</h1>
           <p>Выберите кусок, нарезку или целую ногу в каталоге.</p>
           {notice && <p role="status">{notice}</p>}
-          {canUndoRemove && <p className="cart-undo" role="status">Позиция удалена из корзины. <button type="button" className="cart-undo-btn" onClick={undoRemove}>Вернуть</button></p>}
+          {canUndoRemove && <p className="cart-undo" role="status">Позиция удалена из корзины. <button type="button" className="cart-undo-btn" ref={undoButtonRef} onClick={handleUndo}>Вернуть</button></p>}
           <Link href="/catalog" className="btn-primary">Выбрать деликатесы</Link>
         </div>
       </main>
@@ -181,12 +208,12 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
           <p className="cart-head-sub">Без регистрации. Весовые позиции проверим перед оплатой.</p>
         </header>
         {notice && <p className="form-status-box" role="status">{notice}</p>}
-        {canUndoRemove && <p className="cart-undo" role="status">Позиция удалена из корзины. <button type="button" className="cart-undo-btn" onClick={undoRemove}>Вернуть</button></p>}
+        {canUndoRemove && <p className="cart-undo" role="status">Позиция удалена из корзины. <button type="button" className="cart-undo-btn" ref={undoButtonRef} onClick={handleUndo}>Вернуть</button></p>}
         <div className="cart-items">
           {lines.map((line, index) => {
             const item = quote?.items[index];
             return (
-              <article key={line.uid} className="cart-item-row">
+              <article key={line.uid} id={`cart-line-${line.uid}`} className="cart-item-row">
                 <div className="cart-item-details">
                   <strong className="cart-item-title">{item?.title ?? line.title}</strong>
                   <span className="cart-item-sub">{item?.label ?? line.label}</span>
@@ -208,7 +235,7 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
                 </div>
                 <div className="cart-item-price">
                   <strong className="tabular">{item ? formatRub(item.price * item.qty) : 'Уточняем…'}</strong>
-                  <button type="button" className="cart-remove-btn" disabled={busy} onClick={() => removeLine(line.uid)} aria-label={`Удалить из корзины: ${item?.title ?? line.title}`}>Удалить</button>
+                  <button type="button" className="cart-remove-btn" disabled={busy} onClick={() => handleRemove(line.uid)} aria-label={`Удалить из корзины: ${item?.title ?? line.title}`}>Удалить</button>
                 </div>
               </article>
             );

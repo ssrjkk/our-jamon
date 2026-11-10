@@ -63,16 +63,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [notice, setNotice] = useState('');
   const [removed, setRemoved] = useState<{ line: CartLine; index: number } | null>(null);
-  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const current = useRef<CartLine[]>([]);
   const commit = useCallback((next: CartLine[]) => {
     current.current = next;
     setLines(next);
     setRemoved(null);
-    if (undoTimer.current) clearTimeout(undoTimer.current);
   }, []);
-
-  useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
   useEffect(() => {
     const saved = loadLines();
@@ -108,7 +104,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const line = current.current[index];
     commit(current.current.filter((item) => item.uid !== uid));
     setRemoved({ line, index });
-    undoTimer.current = setTimeout(() => setRemoved(null), 8000);
   }, [commit]);
   const undoRemove = useCallback(() => {
     if (!removed) return;

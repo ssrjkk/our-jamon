@@ -21,6 +21,7 @@ interface CatalogItem {
   agingMonths: number | null;
   description: string;
   image: string | null;
+  imageCaption?: string;
   imageW?: number | null;
   imageH?: number | null;
   kind?: 'piece' | 'pack';
@@ -61,6 +62,7 @@ const toProduct = (entry: CatalogItem): Product => ({
   packs: entry.packs ?? [],
   bulk: entry.bulk ?? null,
   imageUrl: entry.image ? `/${entry.image}` : undefined,
+  imageCaption: entry.imageCaption,
   imageW: entry.imageW ?? undefined,
   imageH: entry.imageH ?? undefined,
 });
@@ -75,6 +77,7 @@ export interface CatalogPreview {
   agingMonths: number | null;
   description: string;
   imageUrl?: string;
+  imageCaption?: string;
 }
 
 export const PREVIEWS: CatalogPreview[] = entries.previews.map((entry) => ({
@@ -85,6 +88,7 @@ export const PREVIEWS: CatalogPreview[] = entries.previews.map((entry) => ({
   agingMonths: entry.agingMonths,
   description: entry.description,
   imageUrl: entry.image ? `/${entry.image}` : undefined,
+  imageCaption: entry.imageCaption,
   imageW: entry.imageW ?? undefined,
   imageH: entry.imageH ?? undefined,
 }));
@@ -132,6 +136,7 @@ function validCatalog(value: unknown): value is Product[] {
     if (p.kind === 'piece' && !positive(p.pricePerKg)) return false;
     if (p.bulk !== null && (!p.bulk || !positive(p.bulk.minG) || !positive(p.bulk.maxG) || p.bulk.maxG < p.bulk.minG || !positive(p.bulk.stepG) || !positive(p.bulk.pricePerKg))) return false;
     if (p.imageUrl !== undefined && (typeof p.imageUrl !== 'string' || !(/^https:\/\//.test(p.imageUrl) || /^\/(?!\/)/.test(p.imageUrl)))) return false;
+    if (p.imageCaption !== undefined && typeof p.imageCaption !== 'string') return false;
     return true;
   });
 }

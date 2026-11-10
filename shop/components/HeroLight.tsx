@@ -7,7 +7,7 @@ export default function HeroLight() {
           <h1 id="hero-title" className="hero-big">Хамон — главный герой нашей лавки.</h1>
           <p className="hero-sub">Подберем вкус для каждого</p>
           <div className="hero-cta-row">
-            <a href="#catalog" className="btn-primary">Выбрать хамон <span aria-hidden="true">→</span></a>
+            <a href="#catalog" className="btn-primary">Выбрать хамон <span className="arrow" aria-hidden="true"></span></a>
             <a href="#shop" className="btn-secondary">Найти лавку</a>
           </div>
           <p className="hero-footnote">Оливки, выдержанные сыры и всё, что хорошо рядом.</p>

@@ -490,7 +490,7 @@ test('статическая витрина: разделы, фото лавки
     await noOverflow(page);
   }
   await page.getByRole('tab', { name: 'Наша лавка', exact: true }).click();
-  await expect(page.locator('img[src="brand/shop-interior.webp"]')).toHaveJSProperty('naturalWidth', 720);
+  await expect(page.locator('#shop img[src="brand/shop-interior.webp"]')).toHaveJSProperty('naturalWidth', 720);
   await screenshot(page, info, 'static-shop');
 
   await page.goto(`${staticURL}/#dept-olives`);
@@ -511,6 +511,17 @@ test('статическая витрина: разделы, фото лавки
 });
 
 test('истории обеих витрин ведут на рабочие разделы и добавляют товар прайса', async ({ page }) => {
+  // Кольца историй — только собственные снимки лавки: фото поставщика без зафиксированного разрешения не публикуются.
+  for (const url of ['/', `${staticURL}/#catalog`]) {
+    await page.goto(url);
+    const rings = page.locator('.story-art img');
+    await expect(rings).toHaveCount(5);
+    for (const ring of await rings.all()) {
+      await expect.poll(() => ring.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+      expect(await ring.evaluate((img) => img.getAttribute('src'))).toMatch(/brand\/(hero-slicing|choice-table-1|choice-self|choice-gift|shop-interior)\.webp$/);
+    }
+  }
+
   await page.goto('/');
   await page.getByRole('button', { name: 'Открыть историю: Честный вес', exact: true }).click();
   await page.getByRole('button', { name: 'Посчитать на весах', exact: true }).click();
@@ -727,6 +738,8 @@ test('статичная витрина живёт без CDN — шрифты �
 });
 
 test('фото не растягиваются выше исходного разрешения ни на одной витрине', async ({ page }) => {
+  // 12 отделов × 2 витрины с декодированием всех кадров: в 45с мобильный проект не вмещается.
+  test.setTimeout(150000);
   const measure = async () => {
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     await page.evaluate(() => { document.querySelectorAll('img[loading="lazy"]').forEach((image) => { image.loading = 'eager'; }); });
@@ -814,6 +827,71 @@ test('активный таб или фильтр всегда визуальн�
   }
 });
 
+// Наведение курсора не имеет права стирать выбранное состояние: на бумажной витрине и в движке
+// активный таб обязан оставаться контрастным, пока по нему ведёт мышь.
+test('выбранное состояние остаётся читаемым под курсором', async ({ page }) => {
+  const contrast = (a, b) => {
+    const lin = (v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+    const lum = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+    const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m);
+    return (x + 0.05) / (y + 0.05);
+  };
+  const bars = ['.site-tabs button', '.dept-tabs button'];
+  const probe = (node, selector) => {
+    const rgba = (value) => {
+      const n = String(value).match(/[\d.]+/g);
+      return n ? [Number(n[0]), Number(n[1]), Number(n[2]), n.length > 3 ? Number(n[3]) : 1] : [0, 0, 0, 0];
+    };
+    const behind = (current0) => {
+      for (let current = current0; current; current = current.parentElement) {
+        const color = rgba(getComputedStyle(current).backgroundColor);
+        if (color[3] > 0) return color;
+      }
+      return [255, 255, 255, 1];
+    };
+    const s = getComputedStyle(node);
+    const siblings = [...node.parentElement.querySelectorAll(selector)];
+    const inactive = siblings.find((x) => x !== node);
+    const style = (x) => { const c = getComputedStyle(x); return [c.backgroundColor, c.color, c.fontWeight].join('|'); };
+    return {
+      fg: rgba(s.color), bg: behind(node), text: (node.textContent || '').trim().slice(0, 24),
+      signature: [s.backgroundColor, s.color, s.fontWeight].join('|'),
+      inactiveSignature: inactive ? style(inactive) : null,
+    };
+  };
+  for (const surface of ['next', 'static']) {
+    const violations = [];
+    const routes = surface === 'next' ? ['/', '/catalog'] : [`${staticURL}/`, `${staticURL}/#catalog`];
+    for (const route of routes) {
+      await page.goto(route);
+      await page.waitForLoadState('load');
+      for (const sel of bars) {
+        const active = page.locator(`${sel}[aria-selected="true"],${sel}[aria-pressed="true"]`);
+        for (let i = 0; i < await active.count(); i += 1) {
+          const el = active.nth(i);
+          await el.scrollIntoViewIfNeeded();
+          await el.hover();
+          // Ждём конца CSS-перехода: стиль в момент наведения ещё старый, им проверять нельзя.
+          let measured = null;
+          let previous = null;
+          await expect.poll(async () => {
+            measured = await el.evaluate(probe, sel);
+            const stable = previous !== null && previous === measured.signature;
+            previous = measured.signature;
+            return stable ? 'stable' : 'moving';
+          }, { timeout: 3000, intervals: [120, 120, 120] }).toBe('stable');
+          const ratio = contrast(measured.fg, measured.bg);
+          const sameAsInactive = measured.inactiveSignature !== null && measured.signature === measured.inactiveSignature;
+          if (ratio < 4.5 || sameAsInactive) {
+            violations.push(`${route} ${sel} «${measured.text}»: контраст ${ratio.toFixed(2)}${sameAsInactive ? ', как у соседа' : ''}`);
+          }
+        }
+      }
+    }
+    expect(violations, `${surface}: выбранное состояние под курсором`).toEqual([]);
+  }
+});
+
 test('в CSS обеих витрин нет мёртвых классов и якорей на несуществующие id', () => {
   const ruleSelectors = (css) => css.split(/\r?\n/).flatMap((raw) => {
     const media = /^@media [^{]+\{\s*(.+?)\s*\}\s*$/.exec(raw);
@@ -888,28 +966,336 @@ test('свинки нет нигде: вето маркетолога от 8 н�
   }
 });
 
-test('удаление позиции корзины можно отменить на обеих витринах', async ({ page }) => {
-
+test('удаление позиции можно отменить без таймера и потери фокуса', async ({ page }) => {
   await page.goto(`/product/${PACK}`);
   await page.getByRole('button', { name: /В корзину/ }).click();
   await page.goto('/cart');
-  await page.locator('.cart-remove-btn').first().click();
+  await page.clock.install();
+  await page.locator('.cart-item-row .cart-remove-btn').click();
   await expect(page.locator('.cart-item-row')).toHaveCount(0);
   const undo = page.getByRole('button', { name: 'Вернуть', exact: true });
+  await expect(undo).toBeFocused();
+  await page.clock.fastForward(9000);
   await expect(undo).toBeVisible();
-  await undo.click();
+  await expect(undo).toBeFocused();
+  await page.keyboard.press('Enter');
   await expect(page.locator('.cart-item-row')).toHaveCount(1);
   await expect(page.locator('[data-cart-badge]')).toHaveText('1');
+  await expect(page.locator('.cart-item-row .cart-remove-btn')).toBeFocused();
   await expect(undo).toHaveCount(0);
 
   await page.goto(`${staticURL}/#dept-olives`);
   await page.locator(`[data-action="add-to-cart"][data-product-id="${PACK}"]`).click();
   await page.locator('#header-cart-btn').click();
-  await page.locator('.cart-remove-btn').first().click();
+  await page.locator('.cart-item-row .cart-remove-btn').click();
   await expect(page.locator('.cart-item-row')).toHaveCount(0);
+  await expect(page.locator('#cart-undo-btn')).toBeFocused();
+  await page.clock.fastForward(9000);
   await expect(page.locator('#cart-undo')).toBeVisible();
-  await page.locator('#cart-undo-btn').click();
+  await expect(page.locator('#cart-undo-btn')).toBeFocused();
+  await page.keyboard.press('Enter');
   await expect(page.locator('.cart-item-row')).toHaveCount(1);
   await expect(page.locator('#header-cart-count')).toHaveText('1');
+  await expect(page.locator('.cart-item-row .cart-remove-btn')).toBeFocused();
   await expect(page.locator('#cart-undo')).toBeHidden();
+});
+
+test('клавиатурный фокус поиска и категорий остаётся видимым', async ({ page }) => {
+  await page.goto('/catalog');
+  await page.evaluate(() => document.fonts.ready);
+  const search = page.getByRole('searchbox', { name: 'Поиск по всей лавке' });
+  await search.fill('несуществующийтовар');
+  await page.getByRole('button', { name: 'Очистить поиск' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue('');
+  const buttons = page.locator('.dept-tabs button');
+  await buttons.first().focus();
+  for (let i = 0; i < await buttons.count(); i++) {
+    if (i) await page.keyboard.press('Tab');
+    await expect(buttons.nth(i)).toBeFocused();
+    const visible = await buttons.nth(i).evaluate(button => {
+      const r = button.getBoundingClientRect();
+      const bar = button.parentElement.getBoundingClientRect();
+      return r.left >= bar.left - 1 && r.right <= bar.right + 1;
+    });
+    expect(visible, `видна подпись категории ${i}`).toBe(true);
+  }
+});
+
+test('ошибки веса и подписи действий доступны без визуальных догадок', async ({ page }) => {
+  for (const surface of ['next', 'static']) {
+    await page.goto(surface === 'next' ? `/product/${CUT}` : `${staticURL}/#dept-piece`);
+    const weight = surface === 'next' ? page.getByLabel('Желаемый вес отреза, г') : page.locator(`#custom-weight-${CUT}`);
+    for (const value of ['300.5', '49', '2001', '']) {
+      await weight.fill(value);
+      await expect(weight).toHaveAttribute('aria-invalid', 'true');
+      await expect(weight).toHaveAccessibleDescription(/Укажите целый вес от 50 до 2 000 г/);
+    }
+    await weight.fill('300');
+    await expect(weight).toHaveAttribute('aria-invalid', 'false');
+  }
+  await page.goto(`${staticURL}/#dept-chocolate`);
+  for (const link of await page.locator('.preview-contact').all()) {
+    await expect(link).toHaveAccessibleName(/^Уточнить в лавке:/);
+  }
+  await page.goto('/');
+  await page.locator('.story-bubble').first().click();
+  await expect(page.getByRole('button', { name: 'Назад: предыдущая история' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Далее: следующая история' })).toBeVisible();
+});
+
+test('первый экран, переходы и фото подборок сохраняют визуальную ясность', async ({ page }) => {
+  const viewport = page.viewportSize();
+  for (const surface of ['next', 'static']) {
+    await page.setViewportSize(viewport);
+    await page.goto(surface === 'next' ? '/' : `${staticURL}/`);
+    await page.evaluate(() => document.fonts.ready);
+    const hero = page.locator('.hero-light img');
+    const image = await hero.boundingBox();
+    const bottomBar = surface === 'static' && viewport.width < 900 ? 68 : 0;
+    expect(image.y + image.height, `${surface}: фото целиком в первом экране`).toBeLessThanOrEqual(viewport.height - bottomBar);
+    const tab = surface === 'next' ? page.locator('#tab-scenarios') : page.locator('.site-tabs [data-tab="scenarios"]');
+    await tab.focus();
+    await page.keyboard.press('Enter');
+    await expect(tab).toBeFocused();
+    // Скролл к выбранной панели отдаётся в requestAnimationFrame, поэтому ждем его, а не угадываем.
+    await expect.poll(async () => (await page.locator('#scenarios').boundingBox())?.y, { message: `${surface}: выбранный раздел не прячется под hero` }).toBeLessThan(180);
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('#tab-buyer-choices')).toBeFocused();
+    await expect(page.locator('#tab-buyer-choices')).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('Space');
+    await expect(page.locator('#tab-buyer-choices')).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('#tab-shop')).toBeFocused();
+    await expect(page.locator('#tab-shop')).toHaveAttribute('aria-selected', 'true');
+    await page.setViewportSize({ width: 999, height: 1024 });
+    await page.goto(surface === 'next' ? '/#buyer-choices' : `${staticURL}/#buyer-choices`);
+    for (const photo of await page.locator('#buyer-choices .photo-choice-images img').all()) {
+      await photo.scrollIntoViewIfNeeded();
+      await expect.poll(() => photo.evaluate(img => img.naturalWidth)).toBeGreaterThan(0);
+      const size = await photo.evaluate(img => ({ width: img.getBoundingClientRect().width, natural: img.naturalWidth }));
+      expect(size.width).toBeLessThanOrEqual(size.natural);
+    }
+    await page.goto(surface === 'next' ? '/catalog' : `${staticURL}/#catalog`);
+    const radius = await page.locator('.product-card').first().evaluate(card => parseFloat(getComputedStyle(card).borderRadius));
+    expect(radius).toBeGreaterThanOrEqual(8);
+  }
+});
+
+// Острый угол считаем дефектом только у закрытой панели: залитый фон или замкнутая рамка,
+// размеры не во всю полосу, и ни один предок со скруглением и overflow не срезает углы.
+const sharpPanels = () => {
+  const clipped = (el) => {
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      const s = getComputedStyle(p);
+      if (s.overflow !== 'visible' && parseFloat(s.borderTopLeftRadius) > 0.5) return true;
+    }
+    return false;
+  };
+  const bad = [];
+  for (const el of document.querySelectorAll('body *')) {
+    const r = el.getBoundingClientRect();
+    if (r.width < 40 || r.height < 40 || r.width >= innerWidth * 0.9) continue;
+    const s = getComputedStyle(el);
+    if (s.visibility === 'hidden' || s.display === 'none' || Number(s.opacity) === 0) continue;
+    // Fixed-элементы вне вьюпорта — это спрятанная обвязка (skip-link, закрытые шторки), а не панель.
+    if (s.position === 'fixed' && (r.bottom <= 0 || r.top >= innerHeight || r.right <= 0 || r.left >= innerWidth)) continue;
+    const sides = [s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth, s.borderLeftWidth].map(parseFloat);
+    const fill = (s.backgroundColor !== 'rgba(0, 0, 0, 0)' || s.backgroundImage !== 'none');
+    if (!fill && !sides.every((v) => v > 0)) continue;
+    if (parseFloat(s.borderTopLeftRadius) > 0.5 || parseFloat(s.borderBottomRightRadius) > 0.5) continue;
+    if (clipped(el)) continue;
+    const cls = (typeof el.className === 'string' ? el.className : '').trim().split(/\s+/).filter(Boolean);
+    bad.push(`${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${cls.length ? '.' + cls.slice(0, 2).join('.') : ''} ${Math.round(r.width)}x${Math.round(r.height)}`);
+  }
+  return bad;
+};
+
+// Полный обход DOM дорогой, поэтому поверхности разведены по отдельным тестам:
+// один тест — один surface, иначе не влезает в 45с на проект.
+const collectSharp = async (page, label, offenders) => {
+  for (const hit of await page.evaluate(sharpPanels)) offenders.push(`${label}: ${hit}`);
+};
+
+// Простые позиции без выбора формата: их добавление точно кладёт строку в корзину.
+const addPlainItems = async (page) => {
+  const buttons = await page.locator('.product-card:not(:has(.option-chip)) .add-btn:not([disabled])').all();
+  expect(buttons.length, 'в каталоге есть позиции без выбора формата').toBeGreaterThanOrEqual(3);
+  for (const button of buttons.slice(0, 3)) await button.click();
+};
+
+test('next: острые углы закрытых панелей убраны', async ({ page }) => {
+  const offenders = [];
+  await page.goto('/');
+  await collectSharp(page, 'главная', offenders);
+  await page.locator('.story-bubble').first().click();
+  await expect(page.locator('.stories-frame')).toBeVisible();
+  await collectSharp(page, 'плеер историй', offenders);
+  await page.keyboard.press('Escape');
+  await page.locator('.menu-toggle').first().click();
+  await expect(page.locator('.menu-drawer.is-open')).toBeVisible();
+  await collectSharp(page, 'меню', offenders);
+  await page.keyboard.press('Escape');
+  await page.goto('/catalog');
+  await addPlainItems(page);
+  await page.goto('/cart');
+  await expect(page.locator('.cart-item-row').first()).toBeVisible();
+  await collectSharp(page, 'корзина', offenders);
+  await page.goto(`/product/${CUT}`);
+  await collectSharp(page, 'карточка товара', offenders);
+  expect(offenders, `острые панели next:\n${offenders.join('\n')}`).toEqual([]);
+});
+
+test('static: острые углы закрытых панелей убраны', async ({ page }) => {
+  const offenders = [];
+  await page.goto(`${staticURL}/#catalog`);
+  await page.locator('[data-tab="catalog"]').click();
+  await collectSharp(page, 'витрина: каталог', offenders);
+  for (const tab of await page.locator('.site-tabs button').all()) {
+    await tab.click();
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
+    await collectSharp(page, `витрина: ${await tab.getAttribute('data-tab')}`, offenders);
+  }
+  await page.locator('[data-tab="catalog"]').click();
+  await page.locator('.story-bubble').first().click();
+  await expect(page.locator('.stories-frame')).toBeVisible();
+  await collectSharp(page, 'плеер историй', offenders);
+  await page.keyboard.press('Escape');
+  await page.locator('#menu-toggle').click();
+  await expect(page.locator('.menu-drawer.is-open')).toBeVisible();
+  await collectSharp(page, 'меню', offenders);
+  await page.keyboard.press('Escape');
+  await addPlainItems(page);
+  await page.locator('#header-cart-btn').click();
+  await expect(page.locator('.cart-sheet.is-open')).toBeVisible();
+  await expect(page.locator('.cart-item-row').first()).toBeVisible();
+  await collectSharp(page, 'шторка корзины', offenders);
+  expect(offenders, `острые панели static:\n${offenders.join('\n')}`).toEqual([]);
+});
+
+// Тонкие блоки геометрия обхода не ловит: у полосок истории высота 3px, а полоса
+// доставки и поле количества narrower 40px по другой оси.
+test('next: полоски историй и поле количества в корзине скруглены', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.story-bubble').first().click();
+  await expect(page.locator('.stories-frame')).toBeVisible();
+  const bars = page.locator('.story-bars span');
+  expect(await bars.count(), 'next: полоски прогресса истории').toBeGreaterThanOrEqual(2);
+  for (const bar of await bars.all()) {
+    expect(await bar.evaluate(el => parseFloat(getComputedStyle(el).borderRadius)), 'next: полоска истории острая').toBeGreaterThan(0);
+  }
+  await page.keyboard.press('Escape');
+  await page.goto(`/product/${PACK}`);
+  await page.locator('.product-detail-card .add-btn').click();
+  await page.goto('/cart');
+  const line = page.locator('.cart-line-controls input');
+  await expect(line, 'next: поле количества в корзине').toBeVisible();
+  expect(await line.evaluate(el => parseFloat(getComputedStyle(el).borderRadius)), 'next: угол поля количества острый').toBeGreaterThan(0);
+});
+
+test('static: полоски историй и кнопки количества в корзине скруглены', async ({ page }) => {
+  await page.goto(`${staticURL}/#catalog`);
+  await page.locator('[data-tab="catalog"]').click();
+  await page.locator('.story-bubble').first().click();
+  await expect(page.locator('.stories-frame')).toBeVisible();
+  const bars = page.locator('.story-bars span');
+  expect(await bars.count(), 'static: полоски прогресса истории').toBeGreaterThanOrEqual(2);
+  for (const bar of await bars.all()) {
+    expect(await bar.evaluate(el => parseFloat(getComputedStyle(el).borderRadius)), 'static: полоска истории острая').toBeGreaterThan(0);
+  }
+  await page.keyboard.press('Escape');
+  await addPlainItems(page);
+  await page.locator('#header-cart-btn').click();
+  const quantity = page.locator('.cart-quantity button').first();
+  await expect(quantity, 'static: кнопка количества в корзине').toBeVisible();
+  expect(await quantity.evaluate(el => parseFloat(getComputedStyle(el).borderRadius)), 'static: угол кнопки количества острый').toBeGreaterThan(0);
+});
+
+// Состояния, которые полный обход DOM пропускает: skip-link вне вьюпорта, пока его не открыли
+// с клавиатуры, а обводка бургера живёт только под курсором.
+// Заход без хэша обязателен: на `#catalog` Chrome передвигает старт последовательного фокуса на
+// саму панель (panel.tabIndex = 0), и первая Tab уходит в историю, а не в skip-link.
+test('скруглены состояния контролов вне основного обхода', async ({ page }) => {
+  const surfaces = [
+    ['next', '/', '.menu-toggle'],
+    ['static', `${staticURL}/index.html`, '#menu-toggle'],
+  ];
+  for (const [label, url, toggleSelector] of surfaces) {
+    await page.goto(url);
+    await page.keyboard.press('Tab');
+    const skip = page.locator('.skip-link');
+    await expect(skip, `${label}: первая клавиша Tab ведёт не на skip-link`).toBeFocused();
+    expect(await skip.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius)), `${label}: угол панели skip-link острый`).toBeGreaterThan(0.5);
+
+    const toggle = page.locator(toggleSelector).first();
+    await toggle.scrollIntoViewIfNeeded();
+    await expect(toggle, `${label}: бургер меню не виден`).toBeVisible();
+    await toggle.hover();
+    expect(await toggle.evaluate((el) => getComputedStyle(el).borderTopWidth), `${label}: у бургера нет обводки при наведении`).not.toBe('0px');
+    expect(await toggle.evaluate((el) => getComputedStyle(el).borderTopColor), `${label}: обводка бургера при наведении прозрачна`).not.toBe('rgba(0, 0, 0, 0)');
+    expect(await toggle.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius)), `${label}: угол обводки бургера острый`).toBeGreaterThan(0.5);
+  }
+});
+
+// Встроенная 404 Next — английская и системным шрифтом. Своя страница обязана остаться русской,
+// в бренд-стиле, с рабочими ссылками и кодом 404, иначе заглушка вернётся незаметно.
+test('своя 404 остаётся русской, брендированной и отдаёт 404', async ({ page, baseURL }) => {
+  const resp = await page.goto(`${baseURL}/net-takoy-stranitsy`);
+  expect(resp?.status(), 'несуществующий путь должен отдавать 404').toBe(404);
+  await expect(page.locator('h1').first()).toHaveText('Страница не найдена');
+  expect(await page.title(), 'английская заглушка Next вернулась в заголовок').not.toContain('could not be found');
+  const robots = await page.evaluate(() => document.querySelector('meta[name="robots"]')?.content ?? '');
+  expect(robots, `на 404 нет noindex (content=«${robots}»)`).toContain('noindex');
+  const links = page.locator('main a.btn-primary, main a.btn-secondary');
+  expect(await links.count(), 'на 404 нет кнопок возврата в лавку').toBeGreaterThanOrEqual(2);
+  const hrefs = await links.evaluateAll((els) => els.map((el) => el.getAttribute('href')));
+  expect(hrefs, `ссылки 404 ведут не в лавку: ${hrefs}`).toEqual(['/catalog', '/']);
+  const radius = await links.first().evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius));
+  expect(radius, 'угол кнопки на 404 острый').toBeGreaterThan(0.5);
+});
+
+// Контролы измеряются в браузере, а не по тексту CSS: каскад и медиазапросы решают.
+test('главные контролы обеих витрин совпадают по размеру, цвету и фокусу', async ({ page }) => {
+  const read = () => page.evaluate(() => {
+    const style = (sel, props) => {
+      const el = document.querySelector(sel);
+      if (!el) return null;
+      const s = getComputedStyle(el);
+      return Object.fromEntries(props.map((p) => [p, s[p]]));
+    };
+    const probe = document.createElement('button');
+    probe.type = 'button';
+    probe.textContent = 'фокус';
+    probe.style.cssText = 'position:fixed;top:0;left:0;width:60px;height:40px';
+    document.body.appendChild(probe);
+    probe.focus();
+    const matched = probe.matches(':focus-visible');
+    const s = getComputedStyle(probe);
+    const ring = { matched, width: s.outlineWidth, style: s.outlineStyle, offset: s.outlineOffset, color: s.outlineColor };
+    probe.remove();
+    return {
+      add: style('.product-card .add-btn', ['minHeight', 'backgroundColor', 'fontSize', 'borderRadius']),
+      primary: style('.btn-primary', ['minHeight', 'fontSize', 'borderRadius']),
+      input: style('.form-input', ['minHeight', 'fontSize', 'borderRadius']),
+      ring,
+    };
+  });
+  const measured = {};
+  for (const surface of ['next', 'static']) {
+    await page.goto(surface === 'next' ? '/' : `${staticURL}/`);
+    await page.keyboard.press('Tab');
+    measured[surface] = await read();
+  }
+  for (const key of ['add', 'primary', 'input']) {
+    expect(measured.next[key], `next: контрол ${key} не найден`).toBeTruthy();
+    expect(measured.static[key], `static: контрол ${key} не найден`).toBeTruthy();
+    expect(measured.static[key], `контрол ${key} расходится между витринами`).toEqual(measured.next[key]);
+  }
+  // Поле ввода не меньше 16px: иначе iOS приближает страницу при фокусе.
+  expect(parseFloat(measured.static.input.fontSize), 'static: поле ввода вызывает автозум iOS').toBeGreaterThanOrEqual(16);
+  expect(parseFloat(measured.static.input.minHeight), 'static: поле ввода ниже 48px').toBeGreaterThanOrEqual(48);
+  expect(measured.next.ring.matched, 'next: кольцо фокуса не применилось').toBe(true);
+  expect(measured.static.ring.matched, 'static: кольцо фокуса не применилось').toBe(true);
+  expect(measured.static.ring, 'кольцо фокуса расходится между витринами').toEqual(measured.next.ring);
 });

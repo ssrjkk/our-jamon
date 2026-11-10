@@ -19,11 +19,13 @@ const products = catalog.products.map((product) => line([
   ['agingMonths', product.agingMonths], ['description', product.description], ['kind', product.kind],
   ['pricePerKg', product.pricePerKg], ['pieces', product.pieces], ['packs', product.packs],
   ['bulk', product.bulk], ['image', product.image], ['imageW', product.imageW], ['imageH', product.imageH],
+  ...(product.imageCaption ? [['imageCaption', product.imageCaption]] : []),
 ]));
 
 const previews = catalog.previews.map((preview) => line([
   ['id', preview.id], ['code', preview.code], ['category', preview.category], ['title', preview.title],
   ['agingMonths', preview.agingMonths], ['description', preview.description], ['image', preview.image], ['imageW', preview.imageW], ['imageH', preview.imageH], ['preview', true],
+  ...(preview.imageCaption ? [['imageCaption', preview.imageCaption]] : []),
 ]));
 
 const departments = catalog.categories.map((category) => line([

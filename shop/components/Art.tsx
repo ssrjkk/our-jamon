@@ -7,6 +7,7 @@ export interface Media {
   category: Product['category'];
   agingMonths: number | null;
   imageUrl?: string;
+  imageCaption?: string;
   imageW?: number;
   imageH?: number;
 }
@@ -15,9 +16,12 @@ export interface Media {
 export function ProductArt({ product }: { product: Media }) {
   if (product.imageUrl) {
     return (
-      <div className="product-photo">
-        <img src={product.imageUrl} alt={product.title} width={product.imageW ?? 560} height={product.imageH ?? 560} style={product.imageW ? { maxWidth: `${product.imageW}px` } : undefined} loading="lazy" decoding="async" />
-      </div>
+      <>
+        <div className="product-photo">
+          <img src={product.imageUrl} alt={product.title} width={product.imageW ?? 560} height={product.imageH ?? 560} style={product.imageW ? { maxWidth: `${product.imageW}px` } : undefined} loading="lazy" decoding="async" />
+        </div>
+        {product.imageCaption && <p className="product-photo-note">{product.imageCaption}</p>}
+      </>
     );
   }
   const aged = Boolean(product.agingMonths && product.agingMonths > 0);
@@ -30,10 +34,11 @@ export function ProductArt({ product }: { product: Media }) {
   );
 }
 
+/** Кольца историй — реальные снимки лавки, те же файлы, что уже грузятся на странице. */
 export const STORY_ART: Record<string, ReactNode> = {
-  cut: <span className="story-monogram">Х</span>,
-  evening: <span className="story-monogram italic">к столу</span>,
-  weigh: <span className="story-monogram">г</span>,
-  aging: <span className="story-monogram italic">время</span>,
-  shop: <img src="/brand/logo-stacked.svg" alt="" width="160" height="130" />,
+  cut: <img src="/brand/hero-slicing.webp" alt="" width="1314" height="1230" decoding="async" />,
+  evening: <img src="/brand/choice-table-1.webp" alt="" width="720" height="1280" loading="lazy" decoding="async" />,
+  weigh: <img src="/brand/choice-self.webp" alt="" width="720" height="1280" loading="lazy" decoding="async" />,
+  aging: <img src="/brand/choice-gift.webp" alt="" width="720" height="1280" loading="lazy" decoding="async" />,
+  shop: <img src="/brand/shop-interior.webp" alt="" width="720" height="1280" loading="lazy" decoding="async" />,
 };

@@ -34,6 +34,7 @@ export interface Product {
   packs: Pack[];
   bulk: Bulk | null;
   imageUrl?: string;
+  imageCaption?: string;
   imageW?: number;
   imageH?: number;
 }

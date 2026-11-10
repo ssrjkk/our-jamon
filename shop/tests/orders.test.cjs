@@ -86,9 +86,35 @@ test('the supplier price list is the only catalog source', () => withSystem(asyn
     const source = priceByCode.get(product.code);
     return product.kind === 'piece' ? product.pricePerKg === source : product.packs.some((pack) => pack.price === source);
   }), true);
-  const mediaCodes = new Set(rows.filter((row) => row.media).map((row) => row.code));
-  assert.equal(PRODUCTS.filter((product) => product.imageUrl).length, mediaCodes.size);
-  assert.equal(PRODUCTS.filter((product) => product.imageUrl).every((product) => mediaCodes.has(product.code)), true);
+}));
+
+test('product photos match verified sources and both asset mirrors', () => withSystem(async s => {
+  const { PRODUCTS, PREVIEWS } = s.load('lib/products.ts');
+  const rows = JSON.parse(fs.readFileSync(path.join(root, 'scripts/price-0711.rows.json'), 'utf8'));
+  const { photos } = JSON.parse(fs.readFileSync(path.join(root, 'scripts/supplier-photos.json'), 'utf8'));
+  const rejected = new Set(['НФ-00000112', 'НФ-00000228']);
+  const mediaCodes = new Set(rows.filter(row => row.media && !rejected.has(row.code)).map(row => row.code));
+  for (const product of PRODUCTS) {
+    const expected = photos[product.id]?.image ?? (mediaCodes.has(product.code) ? `img/${product.id}.webp` : undefined);
+    assert.equal(product.imageUrl, expected ? `/${expected}` : undefined, product.id);
+  }
+  const entries = [...PRODUCTS, ...PREVIEWS];
+  assert.equal(Object.keys(photos).length, 9);
+  for (const [id, photo] of Object.entries(photos)) {
+    const entry = entries.find(item => item.id === id);
+    assert.equal(entry.imageUrl, `/${photo.image}`, id);
+    assert.equal(entry.imageCaption, photo.caption, id);
+    assert.equal(new URL(photo.page).hostname, 'domhamona.ru');
+    assert.equal(new URL(photo.original).hostname, 'static.tildacdn.com');
+  }
+  for (const entry of entries.filter(item => item.imageUrl)) {
+    const asset = entry.imageUrl.slice(1);
+    const next = fs.readFileSync(path.join(root, 'public', asset));
+    assert.deepEqual(next, fs.readFileSync(path.join(root, '..', asset)), entry.id);
+    const meta = await require('sharp')(next).metadata();
+    assert.equal(meta.width, entry.imageW, entry.id);
+    assert.equal(meta.height, entry.imageH, entry.id);
+  }
 }));
 
 test('custom cut is priced from the price-list rate and stays inside 50–2000 g', () => withSystem(async s => {

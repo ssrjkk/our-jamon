@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
+import supplierPhotos from './supplier-photos.json' with { type: 'json' };
 
 const rows = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, 'price-0711.rows.json'), 'utf8'));
 
@@ -98,6 +99,9 @@ const KREOLA_PHOTO = {
   'НФ-00000296': 'kreola-white-cashew',
 };
 
+// В прайсе у сыра 24 мес. фото 36 мес., у оливок без косточки — CON HUESO.
+const REJECTED_PRICE_PHOTOS = new Set(['НФ-00000112', 'НФ-00000228']);
+
 const items = rows.map((row) => {
   const category = row.group === 'Сладкие дополнения' && KREOLA_CODES.has(row.code) ? 'chocolate' : CATEGORY_BY_PRICE[row.group];
   if (!category) throw new Error(`Строка ${row.row}: неизвестная группа прайса «${row.group}»`);
@@ -105,6 +109,7 @@ const items = rows.map((row) => {
   if (price !== null && !Number.isSafeInteger(price)) throw new Error(`Нецелая цена в строке ${row.row}: ${row.price}`);
   const title = typography(row.title);
   const id = row.code ? `nf-${row.code.replace(/^НФ-?/i, '')}` : `${category}-${agingOf(title) ?? slugify(title)}`;
+  const supplierPhoto = supplierPhotos.photos[id];
   return {
     id,
     code: row.code ?? '',
@@ -112,7 +117,8 @@ const items = rows.map((row) => {
     title,
     description: typography(row.note ?? ''),
     price,
-    image: KREOLA_PHOTO[row.code] ? `brand/${KREOLA_PHOTO[row.code]}.webp` : row.media ? `img/${id}.webp` : null,
+    image: supplierPhoto?.image ?? (KREOLA_PHOTO[row.code] ? `brand/${KREOLA_PHOTO[row.code]}.webp` : row.media && !REJECTED_PRICE_PHOTOS.has(row.code) ? `img/${id}.webp` : null),
+    imageCaption: supplierPhoto?.caption,
   };
 });
 
@@ -127,7 +133,8 @@ const products = [];
 const previews = [];
 for (const item of items) {
   const base = { id: item.id, code: item.code, title: item.title, category: item.category,
-    agingMonths: agingOf(item.title), description: item.description, image: item.image, imageW: item.imageW ?? null, imageH: item.imageH ?? null };
+    agingMonths: agingOf(item.title), description: item.description, image: item.image, imageW: item.imageW ?? null, imageH: item.imageH ?? null,
+    ...(item.imageCaption ? { imageCaption: item.imageCaption } : {}) };
   if (item.price === null) { previews.push(base); continue; }
   if (item.category === 'piece') {
     products.push({ ...base, kind: 'piece', pricePerKg: item.price, pieces: [], packs: [], bulk: null });

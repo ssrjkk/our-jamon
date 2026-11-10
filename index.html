@@ -20,6 +20,7 @@
 <meta name="description" content="«Наш Хамон» — лавка деликатесов на Сытном рынке в Санкт-Петербурге. Хамон куском, в нарезке и целые ноги, оливки и сыры. Демонстрационная витрина без отправки заказов и оплаты.">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="brand/fonts/geologica-var-cyrillic.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="brand/fonts/geologica-var-latin.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="brand/fonts/geologica-var-latin-ext.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="brand/fonts/playfair-display-var-cyrillic.woff2">
 <link rel="stylesheet" href="brand/fonts/fonts.css">
 <script src="brand/vendor/gsap.min.js" defer></script>
@@ -36,11 +37,17 @@
   --bone-line: #E7DEC9;
   --surface-tint: #F4EDDE;
   --error-red: #9E2A2B;
-  /* Temporary heading fallback; authentic Pizza Hut lettering is outlined in the SVG wordmark. */
-  --font-serif: 'Playfair Display', Georgia, serif;
+  /* Temporary heading fallback; authentic Pizza Hut lettering is outlined in the SVG wordmark.
+     Geologica стоит вторым: знак ₽ есть только в нём, иначе в ценах с засечками подставляется Times. */
+  --font-serif: 'Playfair Display', 'Geologica', Georgia, serif;
   --font-sans: 'Geologica', Arial, sans-serif;
-  --container: 1280px;
+  --container: 1320px;
   --header-h: 64px;
+  --radius: 10px;
+  --scrim: rgba(36, 27, 23, 0.55);
+  --scrim-story: rgba(36, 27, 23, 0.8);
+  --lift-shadow: 0 10px 28px rgba(36, 27, 23, 0.1);
+  --tap-tint: rgba(91, 40, 36, 0.16);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html {
@@ -54,7 +61,7 @@ html {
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: var(--cured-ruby) var(--surface-tint);
-  -webkit-tap-highlight-color: rgba(91, 40, 36, 0.16);
+  -webkit-tap-highlight-color: var(--tap-tint);
 }
 ::selection { background-color: var(--cured-ruby); color: var(--fat-white); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -70,7 +77,7 @@ body {
 @media (min-width: 900px) { body { padding-bottom: 0; } }
 a, button, input, select, textarea { font: inherit; color: inherit; }
 button { background: none; border: none; cursor: pointer; touch-action: manipulation; }
-:focus-visible { outline: 2px solid var(--cured-ruby); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--cured-ruby); outline-offset: 4px; }
 .tabular { font-variant-numeric: tabular-nums; }
 [hidden] { display: none !important; }
 .container { width: 100%; max-width: var(--container); margin: 0 auto; padding: 0 16px; }
@@ -84,33 +91,37 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 
 /* ШАПКА */
 .site-header { position: sticky; top: 0; z-index: 30; background-color: var(--paper-salt); border-bottom: 1px solid var(--bone-line); }
-.header-inner { display: flex; align-items: center; justify-content: space-between; min-height: 64px; gap: 16px; }
-.menu-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; min-width: 44px; padding: 0 12px; margin-left: -12px; border: 1px solid transparent; font-size: 0.875rem; font-weight: 500; border-radius: 2px; transition: border-color 0.15s ease; }
+.header-inner { display: flex; align-items: center; justify-content: space-between; min-height: var(--header-h); gap: 16px; }
+.menu-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; min-width: 44px; padding: 0 12px; margin-left: -12px; border: 1px solid transparent; font-size: 0.875rem; font-weight: 500; border-radius: var(--radius); transition: border-color 0.15s ease; }
 .menu-toggle:hover { border-color: var(--bone-line); }
 @media (min-width: 900px) { .menu-toggle-label { display: none; } }
 .menu-group { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
-.menu-backdrop { position: fixed; inset: 0; z-index: 62; background-color: rgba(24, 22, 21, 0.55); opacity: 0; pointer-events: none; transition: opacity 0.28s ease; }
+.menu-backdrop { position: fixed; inset: 0; z-index: 62; background-color: var(--scrim); opacity: 0; pointer-events: none; transition: opacity 0.28s ease; }
 .menu-backdrop.is-open { opacity: 1; pointer-events: auto; }
-.menu-drawer { position: fixed; inset: 0 auto 0 0; z-index: 63; width: min(360px, 92vw); background: var(--paper-salt); border-right: 1px solid var(--bone-line); display: flex; flex-direction: column; overflow-y: auto; padding: 18px 22px calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-106%); transition: transform .25s; }
+.menu-drawer { position: fixed; inset: 0 auto 0 0; z-index: 63; width: min(360px, 92vw); background: var(--paper-salt); border-right: 1px solid var(--bone-line); border-radius: 0 var(--radius) var(--radius) 0; display: flex; flex-direction: column; overflow-y: auto; padding: 18px 22px calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-106%); transition: transform .25s; }
 .menu-drawer.is-open { transform: translate(0, 0); }
 .menu-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--bone-line); margin-bottom: 10px; }
 .menu-link { display: flex; align-items: center; min-height: 52px; font-size: 1.0625rem; font-weight: 500; text-decoration: none; color: var(--hoof-graphite); border-bottom: 1px solid var(--bone-line); transition: color 0.15s ease; }
 .menu-link:hover { color: var(--cured-ruby); }
 .menu-foot { margin-top: auto; padding-top: 16px; display: flex; flex-direction: column; gap: 6px; font-size: 0.875rem; color: var(--graphite-muted); }
-.menu-foot a { color: var(--hoof-graphite); font-weight: 600; text-decoration: none; }
+.menu-foot a { display: inline-flex; align-items: center; min-height: 24px; color: var(--hoof-graphite); font-weight: 600; text-decoration: none; }
 .main-nav { display: none; align-items: center; gap: 24px; }
 @media (min-width: 900px) { .main-nav { display: flex; } }
 .main-nav a { text-decoration: none; font-size: 0.9375rem; color: var(--graphite-muted); padding: 10px 0; transition: color 0.15s ease; min-height: 44px; display: inline-flex; align-items: center; }
 .main-nav a:hover { color: var(--hoof-graphite); }
-.cart-trigger { display: inline-flex; align-items: center; flex-shrink: 0; gap: 10px; min-height: 44px; padding: 0 16px; border: 1px solid var(--hoof-graphite); background-color: var(--fat-white); font-size: 0.9375rem; font-weight: 500; transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
+.cart-trigger { display: inline-flex; align-items: center; flex-shrink: 0; gap: 10px; min-height: 44px; padding: 0 16px; border: 1px solid var(--hoof-graphite); border-radius: var(--radius); background-color: var(--fat-white); font-size: 0.9375rem; font-weight: 500; transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
 .cart-trigger:active { transform: scale(0.97); }
-.cart-count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 6px; background-color: var(--cured-ruby); color: var(--fat-white); font-size: 0.8125rem; font-weight: 600; border-radius: 2px; }
+.cart-count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 6px; background-color: var(--cured-ruby); color: var(--fat-white); font-size: 0.8125rem; font-weight: 600; border-radius: var(--radius); }
 
 /* ПЕРВЫЙ ЭКРАН */
 .hero-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
-.btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 24px; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.9375rem; text-decoration: none; border: 1px solid var(--cured-ruby); border-radius: 2px; transition: background-color 0.15s ease, transform 0.15s ease; }
+.btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 20px; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.875rem; text-decoration: none; border: 1px solid var(--cured-ruby); border-radius: var(--radius); transition: background-color 0.15s ease, transform 0.15s ease; }
 .btn-primary:hover { background-color: var(--cured-ruby-hover); }
 .btn-primary:active { transform: scale(0.97); }
+/* Стрелки значков: глифов → и ↗ нет ни в одной нарезке Geologica/Playfair, поэтому значок рисуется маской и наследует цвет текста. */
+.arrow, .arrow-up { display: inline-block; vertical-align: middle; background-color: currentColor; -webkit-mask: var(--mask) center / contain no-repeat; mask: var(--mask) center / contain no-repeat; }
+.arrow { --mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M.75 5h10.9M8.1 1.5 11.9 5 8.1 8.5' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); width: 14px; height: 10px; }
+.arrow-up { --mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3.2 8.8 8.8 3.2M4.4 3.2h4.4v4.4' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); width: 11px; height: 11px; }
 
 /* ИСТОРИИ */
 .stories-section { padding: 20px 0 8px; }
@@ -120,24 +131,24 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .story-ring { width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--cured-ruby); padding: 3px; transition: transform 0.15s ease; }
 .story-ring.is-seen { border-color: var(--bone-line); }
 .story-bubble:active .story-ring { transform: scale(0.96); }
-.story-art { width: 100%; height: 100%; border-radius: 50%; background-color: var(--surface-tint); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.story-art svg { width: 44px; height: 44px; }
+.story-art { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; background-color: var(--surface-tint); overflow: hidden; }
+.story-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%; }
 .story-label { font-size: 0.75rem; color: var(--graphite-muted); text-align: center; max-width: 84px; }
-.stories-player { position: fixed; inset: 0; z-index: 80; background-color: rgba(24, 22, 21, 0.92); display: none; align-items: center; justify-content: center; padding: 16px; }
+.stories-player { position: fixed; inset: 0; z-index: 80; background-color: var(--scrim-story); display: none; align-items: center; justify-content: center; padding: 16px; }
 .stories-player.is-open { display: flex; }
-.stories-frame { position: relative; width: 100%; max-width: 380px; max-height: calc(100dvh - 32px); overflow-y: auto; background-color: var(--paper-salt); border: 1px solid var(--bone-line); border-radius: 4px; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.stories-frame { position: relative; width: 100%; max-width: 380px; max-height: calc(100dvh - 32px); overflow-y: auto; background-color: var(--paper-salt); border: 1px solid var(--bone-line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 16px; }
 .story-bars { display: flex; gap: 6px; }
-.story-bars span { flex: 1; height: 3px; background-color: var(--bone-line); border-radius: 2px; overflow: hidden; position: relative; }
+.story-bars span { flex: 1; height: 3px; background-color: var(--bone-line); border-radius: var(--radius); overflow: hidden; position: relative; }
 .story-bars span i { position: absolute; inset: 0; background-color: var(--cured-ruby); transform: scaleX(0); transform-origin: left; }
 .story-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .story-head-title { font-family: var(--font-serif); font-size: 1.15rem; font-weight: 700; }
-.story-close { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bone-line); font-size: 0.875rem; background-color: var(--fat-white); }
-.story-visual { min-height: 110px; background-color: var(--surface-tint); border: 1px solid var(--bone-line); display: flex; align-items: center; justify-content: center; }
-.story-visual svg { width: 120px; height: 120px; }
+.story-close { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bone-line); border-radius: var(--radius); font-size: 0.875rem; background-color: var(--fat-white); }
+.story-visual { position: relative; min-height: 220px; background-color: var(--surface-tint); border-radius: var(--radius); overflow: hidden; }
+.story-visual img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%; }
 .story-text { font-size: 0.9375rem; color: var(--graphite-muted); line-height: 1.55; min-height: 3.1em; }
 .story-nav-row { display: flex; align-items: center; gap: 10px; }
-.story-step-btn { min-height: 44px; padding: 0 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.8125rem; flex: 1; }
-.story-action-btn { min-height: 48px; padding: 0 16px; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.9375rem; border-radius: 2px; flex: 2.2; transition: background-color 0.15s ease, transform 0.15s ease; }
+.story-step-btn { min-height: 44px; padding: 0 14px; border: 1px solid var(--bone-line); border-radius: var(--radius); background-color: var(--fat-white); font-size: 0.8125rem; flex: 1; }
+.story-action-btn { min-height: 48px; padding: 0 16px; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.9375rem; border-radius: var(--radius); flex: 2.2; transition: background-color 0.15s ease, transform 0.15s ease; }
 .story-action-btn:hover { background-color: var(--cured-ruby-hover); }
 .story-action-btn:active { transform: scale(0.97); }
 .story-action-btn:disabled { background-color: var(--bone-line); color: var(--graphite-muted); cursor: not-allowed; }
@@ -156,8 +167,8 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .filter-label { font-size: 0.8125rem; color: var(--graphite-muted); margin-right: 2px; min-width: 84px; }
 @media (max-width: 560px) { .filter-label { min-width: 100%; } }
-.filter-btn { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.875rem; font-weight: 500; color: var(--hoof-graphite); display: inline-flex; align-items: center; gap: 8px; border-radius: 2px; transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
-.filter-btn:hover { border-color: var(--graphite-muted); }
+.filter-btn { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.875rem; font-weight: 500; color: var(--hoof-graphite); display: inline-flex; align-items: center; gap: 8px; border-radius: var(--radius); transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
+.filter-btn:hover:not([aria-pressed="true"]) { border-color: var(--graphite-muted); }
 .filter-btn:active { transform: scale(0.97); }
 .filter-btn[aria-pressed="true"] { background-color: var(--hoof-graphite); color: var(--fat-white); border-color: var(--hoof-graphite); }
 
@@ -171,16 +182,17 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .dept-grid { border-top: none; }
 
 /* СЕТКА КАТАЛОГА */
-.catalog-grid { display: grid; grid-template-columns: 1fr; border-top: 1px solid var(--bone-line); border-left: 1px solid var(--bone-line); }
+.catalog-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 @media (min-width: 680px) { .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1080px) { .catalog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.product-card, .catalog-preview-card { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 20px; background-color: var(--fat-white); border-right: 1px solid var(--bone-line); border-bottom: 1px solid var(--bone-line); padding: 24px; transition: background-color 0.18s ease; }
+.product-card, .catalog-preview-card { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; gap: 20px; background-color: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); padding: 24px; transition: background-color 0.18s ease, border-color 0.18s ease; }
 .product-card:hover, .catalog-preview-card:hover { background-color: var(--surface-tint); }
 .catalog-preview-card { min-width: 0; }
 .card-media.has-photo { padding: 0; display: block; }
 .product-photo { width: 100%; display: grid; place-items: center; aspect-ratio: 1 / 1; background-color: var(--surface-tint); }
 .product-photo img { width: 100%; height: 100%; object-fit: contain; }
-.card-media { position: relative; width: 100%; min-height: 156px; background: var(--paper-salt); border: 1px solid var(--bone-line); overflow: hidden; padding: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.product-photo-note { padding: 10px 12px; font-size: .75rem; color: var(--graphite-muted); background: var(--fat-white); }
+.card-media { position: relative; width: 100%; min-height: 156px; background: var(--paper-salt); border: 1px solid var(--bone-line); border-radius: var(--radius); overflow: hidden; padding: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .card-media svg { width: 100%; height: 100%; display: block; }
 .olive-stage { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; }
 .card-header-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 12px; }
@@ -192,23 +204,23 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .selector-dynamic-slot { border-top: 1px solid var(--bone-line); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
 .selector-caption { font-size: 0.8125rem; color: var(--graphite-muted); display: flex; justify-content: space-between; gap: 8px; }
 .options-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
-.option-chip { min-height: 44px; padding: 6px 12px; border: 1px solid var(--bone-line); background-color: var(--paper-salt); font-size: 0.8125rem; font-weight: 500; display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; line-height: 1.2; border-radius: 2px; transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
+.option-chip { min-height: 44px; padding: 6px 12px; border: 1px solid var(--bone-line); background-color: var(--paper-salt); font-size: 0.8125rem; font-weight: 500; display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; line-height: 1.2; border-radius: var(--radius); transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
 .option-chip:active:not([disabled]) { transform: scale(0.97); }
 .option-chip[aria-checked="true"] { border-color: var(--hoof-graphite); background-color: var(--hoof-graphite); color: var(--fat-white); }
 .option-chip[data-olive="true"][aria-checked="true"] { background-color: var(--brine-olive); border-color: var(--brine-olive); }
 .chip-sub { font-size: 0.7rem; opacity: 0.8; }
 /* Единственный формат: строка вместо группы из одной радиокнопки. */
 .option-static { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0; font-size: 0.8125rem; font-weight: 500; }
-.custom-cut-note { font-size: 0.8125rem; padding: 8px 10px; background-color: var(--paper-salt); border-left: 2px solid var(--cured-ruby); color: var(--hoof-graphite); min-height: 38px; display: flex; align-items: center; line-height: 1.45; }
-.bulk-slider-box { padding: 10px 12px; background-color: var(--paper-salt); border: 1px solid var(--bone-line); display: flex; flex-direction: column; gap: 8px; }
+.custom-cut-note { font-size: 0.8125rem; padding: 8px 10px; background-color: var(--paper-salt); border-left: 2px solid var(--cured-ruby); border-radius: var(--radius); color: var(--hoof-graphite); min-height: 38px; display: flex; align-items: center; line-height: 1.45; }
+.bulk-slider-box { padding: 10px 12px; background-color: var(--paper-salt); border: 1px solid var(--bone-line); border-radius: var(--radius); display: flex; flex-direction: column; gap: 8px; }
 .bulk-slider-box input[type="range"] { width: 100%; accent-color: var(--brine-olive); height: 28px; cursor: pointer; }
 .tolerance-hint { font-size: 0.75rem; color: var(--graphite-muted); }
 .card-footer { border-top: 1px solid var(--bone-line); padding-top: 14px; display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
 .price-stack { display: flex; flex-direction: column; flex: 1 1 150px; gap: 4px; }
 .price-label { font-size: 0.75rem; color: var(--graphite-muted); }
 .price-value { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; min-width: 7ch; display: inline-block; }
-.add-btn { min-height: 44px; padding: 10px 16px; background-color: var(--hoof-graphite); color: var(--fat-white); font-size: 0.875rem; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1 1 150px; min-width: 0; border-radius: 2px; transition: background-color 0.15s ease, transform 0.15s ease; }
-.add-btn:hover:not([disabled]) { background-color: var(--cured-ruby); }
+.add-btn { min-height: 44px; padding: 10px 14px; background-color: var(--cured-ruby); color: var(--fat-white); font-size: 0.8125rem; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 10px; flex: 1 1 150px; min-width: 0; border-radius: var(--radius); transition: background-color 0.15s ease, transform 0.15s ease; }
+.add-btn:hover:not([disabled]) { background-color: var(--cured-ruby-hover); }
 .add-btn:active:not([disabled]) { transform: scale(0.97); }
 .add-btn[disabled] { background-color: var(--bone-line); color: var(--graphite-muted); cursor: not-allowed; }
 
@@ -218,34 +230,34 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .section-dark .section-subtitle { color: var(--bone-line); }
 .scale-bento { display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 28px; }
 @media (min-width: 920px) { .scale-bento { grid-template-columns: 7fr 5fr; } }
-.scale-panel { border: 1px solid #35312E; background-color: #211E1C; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px; }
-.scale-readout { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px; background-color: #141211; border: 1px solid #35312E; }
+.scale-panel { border: 1px solid var(--graphite-muted); border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px; }
+.scale-readout { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px; border: 1px solid var(--graphite-muted); border-radius: var(--radius); }
 .readout-cell { display: flex; flex-direction: column; gap: 4px; }
-.readout-label { font-size: 0.75rem; color: #9E978F; }
-.readout-digits { font-size: clamp(1.15rem, 2.5vw, 1.85rem); font-weight: 600; color: #F6F5F0; }
+.readout-label { font-size: 0.75rem; color: var(--bone-line); }
+.readout-digits { font-size: clamp(1.15rem, 2.5vw, 1.85rem); font-weight: 600; color: var(--paper-salt); }
 .readout-digits.highlight { color: var(--paper-salt); }
-.scale-range-wrap input[type="range"] { width: 100%; accent-color: var(--cured-ruby); height: 32px; cursor: pointer; }
-.scale-range-label { display: block; font-size: 0.8125rem; color: #C8C2B8; margin-bottom: 6px; }
+.scale-range-wrap input[type="range"] { width: 100%; accent-color: var(--paper-salt); height: 32px; cursor: pointer; }
+.scale-range-label { display: block; font-size: 0.8125rem; color: var(--bone-line); margin-bottom: 6px; }
 .magnet-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.magnet-btn { min-height: 44px; padding: 8px 14px; border: 1px solid #4A443F; color: var(--paper-salt); font-size: 0.8125rem; background-color: transparent; border-radius: 2px; transition: background-color 0.15s ease, border-color 0.15s ease; }
-.magnet-btn[aria-pressed="true"] { background-color: var(--cured-ruby); border-color: var(--cured-ruby); }
-.scale-add-btn { min-height: 48px; background-color: var(--paper-salt); color: var(--hoof-graphite); font-weight: 600; font-size: 0.9375rem; border-radius: 2px; transition: transform 0.15s ease, background-color 0.15s ease; }
+.magnet-btn { min-height: 44px; padding: 8px 14px; border: 1px solid var(--graphite-muted); color: var(--paper-salt); font-size: 0.8125rem; background-color: transparent; border-radius: var(--radius); transition: background-color 0.15s ease, border-color 0.15s ease; }
+.magnet-btn[aria-pressed="true"] { background-color: var(--paper-salt); color: var(--hoof-graphite); border-color: var(--paper-salt); }
+.scale-add-btn { min-height: 48px; background-color: var(--paper-salt); color: var(--hoof-graphite); font-weight: 600; font-size: 0.9375rem; border-radius: var(--radius); transition: transform 0.15s ease, background-color 0.15s ease; }
 .scale-add-btn:hover { background-color: var(--fat-white); }
 .scale-add-btn:active { transform: scale(0.97); }
 .scale-info-panel h3 { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 600; margin-bottom: 12px; }
-.scale-info-panel p { font-size: 0.9375rem; color: #C8C2B8; line-height: 1.6; margin-bottom: 12px; }
-.scale-info-foot { font-size: 0.8125rem; color: #9E978F; border-top: 1px solid #35312E; padding-top: 12px; }
+.scale-info-panel p { font-size: 0.9375rem; color: var(--bone-line); line-height: 1.6; margin-bottom: 12px; }
+.scale-info-foot { font-size: 0.8125rem; color: var(--bone-line); border-top: 1px solid var(--graphite-muted); padding-top: 12px; }
 
 /* ВЫДЕРЖКА И ДОСТАВКА */
 .bento-3 { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 860px) { .bento-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.bento-card { background-color: var(--fat-white); border: 1px solid var(--bone-line); padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.bento-card { background-color: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column; gap: 16px; }
 .bento-period { font-size: 0.875rem; font-weight: 600; color: var(--cured-ruby); }
 .bento-title { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 700; line-height: 1.15; }
 .bento-list { list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; color: var(--graphite-muted); flex: 1; }
-.bento-btn { min-height: 44px; padding: 0 14px; border: 1px solid var(--cured-ruby); color: var(--cured-ruby); background-color: transparent; font-size: 0.875rem; font-weight: 500; text-align: left; border-radius: 2px; transition: background-color 0.15s ease, color 0.15s ease; }
+.bento-btn { min-height: 44px; padding: 0 14px; border: 1px solid var(--cured-ruby); color: var(--cured-ruby); background-color: transparent; font-size: 0.875rem; font-weight: 500; text-align: left; border-radius: var(--radius); transition: background-color 0.15s ease, color 0.15s ease; }
 .bento-btn:hover { background-color: var(--cured-ruby); color: var(--fat-white); }
-.tyrosine-callout { margin-top: 16px; padding: 20px 24px; background-color: var(--surface-tint); border: 1px solid var(--bone-line); display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
+.tyrosine-callout { margin-top: 16px; padding: 20px 24px; background-color: var(--surface-tint); border: 1px solid var(--bone-line); border-radius: var(--radius); display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
 .tyrosine-callout strong { font-family: var(--font-serif); font-size: 1.2rem; }
 .tyrosine-callout p { font-size: 0.9375rem; color: var(--graphite-muted); }
 .delivery-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
@@ -267,57 +279,61 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .footer-supplier .footer-slogan { font-family: var(--font-serif); font-size: 0.9375rem; color: var(--cured-ruby); }
 
 /* НИЖНЯ МОБИЛЬНАЯ ПАНЕЛЬ */
-.mobile-bottom-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 28; background-color: var(--hoof-graphite); color: var(--fat-white); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #35312E; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mobile-bottom-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 28; background-color: var(--hoof-graphite); color: var(--fat-white); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--graphite-muted); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mobile-bar-label { font-size: 0.75rem; color: var(--bone-line); }
+#mobile-bar-summary { font-weight: 600; font-size: 0.9375rem; }
 @media (min-width: 900px) { .mobile-bottom-bar { display: none; } }
-.mobile-bar-btn { min-height: 44px; padding: 0 18px; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.875rem; border-radius: 2px; }
+.mobile-bar-btn { min-height: 44px; padding: 0 18px; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.875rem; border-radius: var(--radius); }
 
 /* КОРЗИНА */
-.cart-backdrop { position: fixed; inset: 0; z-index: 50; background-color: rgba(24, 22, 21, 0.55); opacity: 0; pointer-events: none; transition: opacity 0.28s ease; }
+.cart-backdrop { position: fixed; inset: 0; z-index: 50; background-color: var(--scrim); opacity: 0; pointer-events: none; transition: opacity 0.28s ease; }
 .cart-backdrop.is-open { opacity: 1; pointer-events: auto; }
-.cart-sheet { position: fixed; z-index: 51; background-color: var(--paper-salt); display: flex; flex-direction: column; justify-content: space-between; left: 0; right: 0; bottom: 0; max-height: 92vh; border-top: 1px solid var(--hoof-graphite); transform: translateY(102%); transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+.cart-sheet { position: fixed; z-index: 51; background-color: var(--paper-salt); display: flex; flex-direction: column; justify-content: space-between; left: 0; right: 0; bottom: 0; max-height: 92vh; overflow: hidden; border-top: 1px solid var(--hoof-graphite); border-radius: var(--radius) var(--radius) 0 0; transform: translateY(102%); transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
 .cart-sheet.is-open { transform: translate(0, 0); }
 @media (min-width: 768px) {
-  .cart-sheet { top: 0; bottom: 0; left: auto; right: 0; width: 100%; max-width: 480px; max-height: 100vh; border-top: none; border-left: 1px solid var(--hoof-graphite); transform: translateX(102%); }
+  .cart-sheet { top: 0; bottom: 0; left: auto; right: 0; width: 100%; max-width: 480px; max-height: 100vh; border-top: none; border-left: 1px solid var(--hoof-graphite); border-radius: var(--radius) 0 0 var(--radius); transform: translateX(102%); }
 }
 .cart-head { padding: 18px 20px; background-color: var(--fat-white); border-bottom: 1px solid var(--bone-line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .cart-head-title { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; }
 .cart-head-sub { font-size: 0.75rem; color: var(--graphite-muted); }
-.cart-close { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bone-line); font-size: 0.8125rem; background-color: var(--paper-salt); }
+.cart-close { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bone-line); border-radius: var(--radius); font-size: 0.8125rem; background-color: var(--paper-salt); }
 .cart-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; flex: 1; }
 .cart-items-list { display: flex; flex-direction: column; gap: 10px; }
-.cart-item-row { background-color: var(--fat-white); border: 1px solid var(--bone-line); padding: 12px 14px; overflow: hidden; }
+.cart-item-row { background-color: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); padding: 12px 14px; overflow: hidden; }
 .cart-item-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
 .cart-item-title { font-size: 0.9375rem; font-weight: 600; display: block; }
 .cart-item-sub { display: block; margin-top: 4px; font-size: .8125rem; color: var(--graphite-muted); }
 .cart-remove-btn { min-height: 44px; padding: 0 8px; font-size: 0.8125rem; color: var(--graphite-muted); text-decoration: underline; }
-.cart-undo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 14px; background-color: var(--surface-tint); border-left: 3px solid var(--cured-ruby); border-radius: 2px; font-size: 0.875rem; }
-.cart-undo-btn { min-height: 32px; padding: 4px 12px; border: 1px solid var(--cured-ruby); border-radius: 2px; background-color: var(--fat-white); color: var(--cured-ruby); font-weight: 600; font-size: 0.8125rem; }
+.cart-undo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 14px; background-color: var(--surface-tint); border-left: 3px solid var(--cured-ruby); border-radius: var(--radius); font-size: 0.875rem; }
+.cart-undo-btn { min-height: 32px; padding: 4px 12px; border: 1px solid var(--cured-ruby); border-radius: var(--radius); background-color: var(--fat-white); color: var(--cured-ruby); font-weight: 600; font-size: 0.8125rem; }
 .cart-undo-btn:hover { background-color: var(--cured-ruby); color: var(--fat-white); }
-.cart-empty-state { padding: 32px 16px; text-align: center; border: 1px solid var(--bone-line); background-color: var(--fat-white); display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.cart-empty-state { padding: 32px 16px; text-align: center; border: 1px solid var(--bone-line); border-radius: var(--radius); background-color: var(--fat-white); display: flex; flex-direction: column; gap: 14px; align-items: center; }
 .cart-empty-state p { color: var(--graphite-muted); }
-.cart-progress { padding: 12px 14px; background-color: var(--fat-white); border: 1px solid var(--bone-line); display: flex; flex-direction: column; gap: 8px; }
+.cart-progress { padding: 12px 14px; background-color: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); display: flex; flex-direction: column; gap: 8px; }
 .cart-progress-label { font-size: 0.8125rem; color: var(--graphite-muted); }
-.cart-progress-track { height: 6px; background-color: var(--surface-tint); border: 1px solid var(--bone-line); overflow: hidden; }
+.cart-progress-track { height: 6px; background-color: var(--surface-tint); border: 1px solid var(--bone-line); border-radius: 999px; overflow: hidden; }
 .cart-progress-fill { height: 100%; background-color: var(--brine-olive); width: 0%; transition: width 0.3s ease; }
 .cart-addons { display: flex; flex-wrap: wrap; gap: 8px; }
-.addon-chip { min-height: 44px; padding: 8px 12px; border: 1px dashed var(--bone-line); background-color: var(--fat-white); font-size: 0.8125rem; display: inline-flex; align-items: center; gap: 8px; border-radius: 2px; transition: border-color 0.15s ease, transform 0.15s ease; }
+.addon-chip { min-height: 44px; padding: 8px 12px; border: 1px dashed var(--bone-line); background-color: var(--fat-white); font-size: 0.8125rem; display: inline-flex; align-items: center; gap: 8px; border-radius: var(--radius); transition: border-color 0.15s ease, transform 0.15s ease; }
 .addon-chip:hover { border-color: var(--brine-olive); }
 .addon-chip:active { transform: scale(0.97); }
 .addon-plus { font-weight: 600; color: var(--brine-olive); }
-.scenario-banner { padding: 12px 14px; background-color: var(--surface-tint); border-left: 3px solid var(--cured-ruby); font-size: 0.8125rem; line-height: 1.45; }
+.scenario-banner { padding: 12px 14px; background-color: var(--surface-tint); border-left: 3px solid var(--cured-ruby); border-radius: var(--radius); font-size: 0.8125rem; line-height: 1.45; }
 .form-field { display: flex; flex-direction: column; gap: 6px; }
 .form-field label { font-size: 0.8125rem; font-weight: 500; }
-.form-input { min-height: 44px; padding: 10px 12px; background-color: var(--fat-white); border: 1px solid var(--bone-line); font-size: 0.9375rem; border-radius: 2px; }
+.form-input { min-height: 48px; padding: 10px 12px; background-color: var(--fat-white); border: 1px solid var(--bone-line); font-size: 1rem; border-radius: var(--radius); }
 .form-input[aria-invalid="true"] { border-color: var(--error-red); }
+/* Бумажная витрина: в тёмной секции поле наследует светлый текст, а подложка у него белая — правило из globals.css:284. */
+.scale-panel .form-input { background-color: var(--paper-salt); color: var(--hoof-graphite); }
 .delivery-radio-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.delivery-option-btn { min-height: 48px; padding: 8px 10px; border: 1px solid var(--bone-line); background-color: var(--fat-white); text-align: left; font-size: 0.8125rem; display: flex; flex-direction: column; justify-content: center; border-radius: 2px; }
+.delivery-option-btn { min-height: 48px; padding: 8px 10px; border: 1px solid var(--bone-line); background-color: var(--fat-white); text-align: left; font-size: 0.8125rem; display: flex; flex-direction: column; justify-content: center; border-radius: var(--radius); }
 .delivery-option-btn[aria-checked="true"], .delivery-option-btn:has(input:checked) { border-color: var(--cured-ruby); background-color: var(--paper-salt); color: var(--cured-ruby); }
 .delivery-option-btn .deliv-cost { font-size: 0.75rem; opacity: 0.8; }
-.btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 14px; border: 1px solid var(--cured-ruby); color: var(--cured-ruby); background-color: var(--paper-salt); font-size: .8125rem; font-weight: 600; border-radius: 2px; text-decoration: none; }
+.btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 14px; border: 1px solid var(--cured-ruby); color: var(--cured-ruby); background-color: var(--paper-salt); font-size: .8125rem; font-weight: 600; border-radius: var(--radius); text-decoration: none; }
 .messenger-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.messenger-chip { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.8125rem; font-weight: 500; border-radius: 2px; }
+.messenger-chip { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.8125rem; font-weight: 500; border-radius: var(--radius); }
 .messenger-chip[aria-pressed="true"] { background-color: var(--brine-olive); border-color: var(--brine-olive); color: var(--fat-white); }
-.form-status-box { padding: 12px; font-size: .875rem; border: 1px solid var(--bone-line); background-color: var(--fat-white); line-height: 1.5; overflow-wrap: anywhere; }
+.form-status-box { padding: 12px; font-size: .875rem; border: 1px solid var(--bone-line); border-radius: var(--radius); background-color: var(--fat-white); line-height: 1.5; overflow-wrap: anywhere; }
 .form-status-box.error { border-color: var(--cured-ruby); color: var(--cured-ruby); }
 .form-status-box.success { border-color: var(--brine-olive); background-color: var(--brine-olive-soft); }
 .cart-foot { padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px)); background-color: var(--fat-white); border-top: 1px solid var(--bone-line); display: flex; flex-direction: column; gap: 12px; }
@@ -346,7 +362,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .hero-light { padding: 40px 0 56px; border-bottom: 1px solid var(--bone-line); background-color: var(--paper-salt); }
 @media (min-width: 900px) { .hero-light { padding: 72px 0 88px; } }
 .hero-light-grid { display: grid; grid-template-columns: 1fr; gap: 36px; align-items: center; }
-@media (min-width: 960px) { .hero-light-grid { grid-template-columns: 6fr 5fr; gap: 56px; } }
+@media (min-width: 680px) { .hero-light-grid { grid-template-columns: 6fr 5fr; gap: clamp(24px, 4vw, 56px); } }
 .hero-kicker { font-size: 0.75rem; letter-spacing: 0.045em; color: var(--graphite-muted); font-weight: 600; }
 .hero-big { font-family: var(--font-serif); font-weight: 800; font-size: clamp(2.6rem, 5.4vw, 4.6rem); line-height: 1.06; letter-spacing: -.035em; color: var(--cured-ruby); max-width: 16ch; }
 .hero-big em { font-style: italic; font-weight: 700; color: var(--cured-ruby); }
@@ -355,8 +371,8 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .hero-art { width: 100%; }
 .scenarios-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 820px) { .scenarios-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.scenario-card { background-color: var(--fat-white); border: 1px solid var(--bone-line); border-radius: 6px; padding: 26px; display: flex; flex-direction: column; gap: 12px; transition: border-color 0.15s ease, box-shadow 0.18s ease, transform 0.18s ease; }
-.scenario-card:hover { border-color: var(--cured-ruby); box-shadow: 0 10px 28px rgba(36, 27, 23, 0.1); transform: translateY(-2px); }
+.scenario-card { background-color: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); padding: 26px; display: flex; flex-direction: column; gap: 12px; transition: border-color 0.15s ease, box-shadow 0.18s ease, transform 0.18s ease; }
+.scenario-card:hover { border-color: var(--cured-ruby); box-shadow: var(--lift-shadow); transform: translateY(-2px); }
 .scenario-label { font: 600 .8125rem/1.4 var(--font-sans); color: var(--cured-ruby); }
 .scenario-name { font-family: var(--font-serif); font-weight: 700; font-size: 1.3rem; }
 .scenario-list { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 0.9375rem; color: var(--graphite-muted); flex: 1; }
@@ -365,15 +381,16 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .scenario-list small { display: block; margin-top: 2px; font-size: 0.6875rem; }
 .scenario-total-row { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px dashed var(--bone-line); padding-top: 12px; }
 .scenario-total { font-family: var(--font-serif); font-weight: 700; font-size: 1.4rem; }
+.scenario-total-row span { font-size: 0.8125rem; color: var(--graphite-muted); }
 
 /* Реальная лавка и честно обозначенные примеры */
 .shop-visit-grid { display: grid; gap: 28px; align-items: center; }
 .shop-interior { width: 100%; max-width: 360px; min-width: 0; justify-self: center; }
-.shop-interior img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; max-height: 520px; object-fit: cover; object-position: center 65%; border-radius: 4px; }
+.shop-interior img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; max-height: 520px; object-fit: cover; object-position: center 65%; border-radius: var(--radius); }
 .shop-interior figcaption { margin-top: 12px; color: var(--graphite-muted); font-size: .75rem; max-width: 42ch; }
 .shop-supplier-strip { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-top: 28px; }
 .shop-supplier-strip figure { min-width: 0; display: grid; justify-items: center; }
-.shop-supplier-strip img { width: 100%; height: auto; border-radius: 2px; border: 1px solid var(--bone-line); }
+.shop-supplier-strip img { width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--bone-line); }
 .shop-supplier-strip figcaption { margin-top: 10px; font-size: .75rem; color: var(--graphite-muted); }
 @media (max-width: 767px) { .shop-supplier-strip { grid-template-columns: 1fr; } }
 .shop-visit-copy { display: grid; gap: 20px; min-width: 0; }
@@ -385,14 +402,14 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .about-facts-grid { display: grid; gap: 24px; }
 .about-facts-grid article { display: grid; align-content: start; gap: 14px; border-top: 1px solid var(--bone-line); padding-top: 20px; min-width: 0; }
 .about-facts-grid p { font-size: .875rem; color: var(--graphite-muted); }
-.photo-choice-gallery { display: grid; grid-auto-flow: column; grid-auto-columns: calc(100% - 16px); gap: 16px; width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--cured-ruby) var(--bone-line); padding-bottom: 12px; }
+.photo-choice-gallery { display: grid; grid-auto-flow: column; grid-auto-columns: min(calc(100% - 24px), 360px); gap: 16px; width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--cured-ruby) var(--bone-line); padding-bottom: 12px; }
 .photo-choice-gallery:focus-visible { outline: 2px solid var(--cured-ruby); outline-offset: -2px; }
-.photo-choice-group { display: flex; flex-direction: column; gap: 12px; min-width: 0; align-self: start; background: var(--fat-white); border: 1px solid var(--bone-line); border-radius: 4px; }
+.photo-choice-group { display: flex; flex-direction: column; gap: 12px; min-width: 0; align-self: start; background: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); }
 .photo-choice-group[data-choice-category="table"] { grid-column: span 2; }
 .photo-choice-label { padding: 14px 14px 0; font: 600 1rem/1.4 var(--font-sans); color: var(--cured-ruby); }
 .photo-choice-images { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
 .photo-choice-group[data-choice-category="table"] .photo-choice-images { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.photo-choice-images img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; object-fit: contain; }
+.photo-choice-images img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; object-fit: contain; border-radius: var(--radius); }
 .photo-choice-note { padding: 0 14px 14px; max-width: 48ch; color: var(--graphite-muted); font-size: .8125rem; }
 .photo-choice-hint { margin-top: 8px; color: var(--graphite-muted); font-size: .75rem; }
 .scenario-catalog-head { margin-top: 40px; }
@@ -404,7 +421,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 }
 .card-feedback { min-height: 1.5em; font-size: .75rem; color: var(--cured-ruby); }
 .site-demo-notice { padding: 12px 0; border-bottom: 1px solid var(--bone-line); background: var(--surface-tint); color: var(--cured-ruby); font-size: .75rem; }
-.skip-link { position: fixed; top: 8px; left: 16px; z-index: 100; padding: 12px; background: var(--fat-white); transform: translateY(-150%); }
+.skip-link { position: fixed; top: 8px; left: 16px; z-index: 100; padding: 12px; background: var(--fat-white); border-radius: var(--radius); transform: translateY(-150%); }
 .skip-link:focus { transform: none; }
 .footer-site-links { flex-direction: row; flex-wrap: wrap; gap: 12px 20px; margin-top: 18px; }
 @media (min-width: 680px) { .shop-visit-grid { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 36px; } .shop-interior { max-width: 320px; } }
@@ -415,23 +432,24 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .site-tabs { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px; scrollbar-width: thin; scroll-padding-inline: 16px; position: sticky; top: var(--header-h); z-index: 26; background-color: var(--paper-salt); border-bottom: 1px solid var(--bone-line); }
 .site-tabs::-webkit-scrollbar { display: none; }
 .site-tabs button { flex-shrink: 0; min-height: 56px; padding: 12px 4px; font-size: .8125rem; font-weight: 600; color: var(--graphite-muted); border-bottom: 2px solid transparent; white-space: nowrap; transition: color .15s, border-color .15s; }
-.site-tabs button:focus-visible { outline-offset: -4px; }
-.site-tabs button:hover { color: var(--hoof-graphite); }
+.site-tabs button:focus-visible { outline-offset: -5px; }
+.site-tabs button:hover:not([aria-selected="true"]) { color: var(--hoof-graphite); }
 .site-tabs button[aria-selected="true"] { color: var(--cured-ruby); border-bottom-color: var(--cured-ruby); }
 .catalog-controls { flex-direction: row; flex-wrap: wrap; gap: 6px 10px; border-bottom: none; padding-bottom: 4px; margin-bottom: 14px; }
 .catalog-controls .filter-row { gap: 2px; }
 .catalog-controls .filter-btn { border-color: transparent; background-color: transparent; padding: 8px 10px; }
-.catalog-controls .filter-btn:hover { border-color: var(--bone-line); }
+.catalog-controls .filter-btn:hover:not([aria-pressed="true"]) { border-color: var(--bone-line); }
 .catalog-controls .filter-btn[aria-pressed="true"] { background-color: var(--surface-tint); color: var(--cured-ruby); border-color: transparent; }
 #aging-filter-row[hidden] { display: none !important; }
 .dept-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 12px 0 14px; scrollbar-width: none; border-bottom: 1px solid var(--bone-line); margin-bottom: 20px; }
 .dept-tabs::-webkit-scrollbar { display: none; }
-.dept-tabs button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--cured-ruby); background-color: var(--fat-white); font-size: 0.875rem; font-weight: 600; color: var(--cured-ruby); border-radius: 3px; white-space: nowrap; transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
-.dept-tabs button:hover { border-color: var(--cured-ruby); background-color: var(--surface-tint); }
+.dept-tabs button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--cured-ruby); background-color: var(--fat-white); font-size: 0.875rem; font-weight: 600; color: var(--cured-ruby); border-radius: var(--radius); white-space: nowrap; transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
+.dept-tabs button:hover:not([aria-selected="true"]) { border-color: var(--cured-ruby); background-color: var(--surface-tint); }
 
 /* Бумажная витрина: реальное макрофото нарезки и печати фактической выдержки. */
-.hero-art { margin: 0; overflow: hidden; border: 1px solid var(--bone-line); background: var(--surface-tint); }
+.hero-art { margin: 0; overflow: hidden; border: 1px solid var(--bone-line); border-radius: var(--radius); background: var(--surface-tint); }
 .hero-art img { display: block; width: 100%; height: auto; }
+@media (max-width: 679px) { .hero-art { aspect-ratio: 16 / 10; } .hero-art img { height: 100%; object-fit: cover; object-position: center 30%; } }
 .hero-detail { font-size: .8125rem; color: var(--graphite-muted); }
 .hero-cta-row .btn-secondary { padding: 12px 20px; }
 .site-tabs { padding-left: max(16px, calc((100vw - 1216px) / 2)); padding-right: 16px; }
@@ -445,6 +463,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .catalog-controls { display: flex; flex-direction: column; gap: 8px; }
 .filter-btn:disabled { opacity: .45; cursor: not-allowed; }
 .dept-tabs button[aria-selected="true"] { background: var(--cured-ruby); color: var(--fat-white); border-color: var(--cured-ruby); font-weight: 700; }
+.dept-tabs button[aria-selected="true"]:hover { background-color: var(--cured-ruby-hover); border-color: var(--cured-ruby-hover); }
 .dept-tab-count { font-size: .75rem; opacity: .8; margin-left: 6px; }
 .dept-head { padding-top: 0; border-bottom: 1px solid var(--bone-line); padding-bottom: 12px; }
 .dept-note { padding-top: 14px; }
@@ -455,9 +474,9 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .product-origin { font-size: .8125rem; color: var(--cured-ruby); text-align: right; max-width: 13ch; }
 .custom-weight-field { display: flex; flex-direction: column; gap: 6px; font-size: .8125rem; }
 .custom-weight-field input { width: 100%; }
-.demo-notice { padding: 12px 14px; border-left: 2px solid var(--cured-ruby); background: var(--surface-tint); color: var(--graphite-muted); font-size: .8125rem; }
+.demo-notice { padding: 12px 14px; border-left: 2px solid var(--cured-ruby); border-radius: var(--radius); background: var(--surface-tint); color: var(--graphite-muted); font-size: .8125rem; }
 .cart-quantity { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-.cart-quantity button { min-width: 44px; min-height: 44px; border: 1px solid var(--bone-line); background: var(--paper-salt); }
+.cart-quantity button { min-width: 44px; min-height: 44px; border: 1px solid var(--bone-line); border-radius: var(--radius); background: var(--paper-salt); }
 .cart-quantity span { min-width: 2ch; text-align: center; }
 .cart-quantity-note { color: var(--graphite-muted); font-size: .8125rem; margin-left: 4px; }
 .cart-sheet:not(.is-open), .menu-drawer:not(.is-open) { visibility: hidden; }
@@ -465,8 +484,8 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .section-dark :focus-visible { outline-color: var(--paper-salt); }
 .bento-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (min-width: 900px) and (max-width: 1199px) { .main-nav { gap: 12px; } .main-nav a { font-size: .8125rem; } .brand-logo { width: 150px; } }
-@media (max-width: 767px) { .hero-light { padding: 28px 0 36px; } .hero-light-grid { gap: 24px; } .hero-big { font-size: clamp(2.4rem, 8vw, 3.7rem); max-width: 18ch; } .section { padding: 36px 0; } .product-card, .catalog-preview-card { padding: 18px; } .catalog-intro { gap: 16px; } .bento-3 { grid-template-columns: 1fr; } }
-@media (max-width: 480px) { .header-inner { gap: 6px; } .menu-group { gap: 2px; } .menu-toggle { padding: 0 8px; margin-left: -8px; } .menu-toggle-label { display: none; } .brand-logo { width: 132px; height: auto; } .cart-trigger { padding: 0 8px; gap: 6px; font-size: .8125rem; } .site-tabs button { padding: 10px 12px; font-size: .8125rem; } .hero-cta-row { width: 100%; } .hero-cta-row a { flex: 1 1 145px; padding: 12px; } .delivery-radio-grid { grid-template-columns: 1fr; } .scale-panel { padding: 16px; } .cart-head, .cart-body, .cart-foot { padding-left: 16px; padding-right: 16px; } }
+@media (max-width: 767px) { .hero-light { padding: 24px 0 32px; } .hero-light-grid { gap: 20px; } .hero-copy { gap: 14px; } .hero-big { font-size: clamp(2.1rem, 9vw, 2.65rem); max-width: 18ch; } .section { padding: 36px 0; } .product-card, .catalog-preview-card { padding: 18px; } .catalog-intro { gap: 16px; } .bento-3 { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .header-inner { gap: 6px; } .menu-group { gap: 2px; } .menu-toggle { padding: 0 8px; margin-left: -8px; } .menu-toggle-label { display: none; } .brand-logo { width: 132px; height: auto; } .cart-trigger { padding: 0 8px; gap: 6px; font-size: .8125rem; } .site-tabs button { padding: 10px 12px; font-size: .8125rem; } .hero-cta-row { width: 100%; } .hero-light .hero-cta-row { gap: 8px; } .hero-light .hero-cta-row a { flex: 1 1 0; min-width: 0; padding: 12px; font-size: .8125rem; } .delivery-radio-grid { grid-template-columns: 1fr; } .scale-panel { padding: 16px; } .cart-head, .cart-body, .cart-foot { padding-left: 16px; padding-right: 16px; } }
 
 </style>
 </head>
@@ -534,7 +553,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
   <section class="hero-light">
       <div class="container hero-light-grid">
         <div class="hero-copy">
-          <p class="hero-kicker">Наш Хамон · Сытный рынок · Санкт-Петербург</p>
+          <p class="hero-kicker">Санкт-Петербург · Сытный рынок</p>
           <h1 class="hero-big">Хамон — главный герой нашей лавки.</h1>
           <p class="hero-sub">Подберем вкус для каждого</p>
           <div class="hero-cta-row">
@@ -744,7 +763,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
         <figure class="shop-interior"><img src="brand/shop-interior.webp" width="720" height="1280" loading="lazy" decoding="async" alt="Интерьер лавки «Наш Хамон»: стеклянная витрина и светящаяся вывеска с окороком на красной стене"><figcaption>Наша лавка на Сытном рынке. Фото интерьера; актуальные товары и цены — в каталоге.</figcaption></figure>
         <div class="shop-visit-copy"><p class="bento-period">Санкт-Петербург · Сытный рынок</p><h2 id="shop-heading" class="section-title">Наша лавка</h2><p class="section-subtitle">Та самая вывеска. Настоящая витрина. Приходите выбрать свой хамон.</p>
           <dl class="shop-facts"><div><dt>Где мы</dt><dd>Сытнинская улица, 4П<br>Фуд-аллея рынка «Сытный»</dd></div><div><dt>Когда открыты</dt><dd>Вторник–воскресенье<br><span class="tabular">10:30–20:30</span></dd></div><div><dt>Связаться с лавкой</dt><dd><a href="tel:+79068960099" class="tabular">+7 (906) 896-00-99</a><br><a href="mailto:619896@mail.ru">619896@mail.ru</a></dd></div></dl>
-          <p class="hero-detail">Перед поездкой уточните наличие нужного товара по телефону.</p><div class="hero-cta-row"><a href="https://yandex.ru/maps/-/CXq~AInl" target="_blank" rel="noopener noreferrer" class="btn-primary">Маршрут в Яндекс Картах ↗</a><a href="#about" class="btn-secondary">О нас →</a></div>
+          <p class="hero-detail">Перед поездкой уточните наличие нужного товара по телефону.</p><div class="hero-cta-row"><a href="https://yandex.ru/maps/-/CXq~AInl" target="_blank" rel="noopener noreferrer" class="btn-primary">Маршрут в Яндекс Картах <span class="arrow-up" aria-hidden="true"></span></a><a href="#about" class="btn-secondary">О нас <span class="arrow" aria-hidden="true"></span></a></div>
         </div>
       </div>
       <div class="container shop-supplier-strip">
@@ -754,7 +773,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
     </section>
     <section id="about" class="site-panel section" hidden>
       <div class="container"><div class="section-head"><p class="bento-period">Наш Хамон · Сытный рынок</p><h2 class="section-title">О нас</h2><p class="section-subtitle">Небольшая лавка с главным героем — хамоном. Мы на фуд-аллее Сытного рынка в Санкт-Петербурге.</p></div>
-        <div class="about-facts-grid"><article><h3 class="bento-title">Что в лавке</h3><p>Хамон куском и в нарезке, целые ноги и палеты. Рядом — оливки, выдержанные сыры, антипасти, хамонеры и нож для нарезки. Конкретные товары и цены смотрите в каталоге.</p><a href="#catalog">Открыть каталог →</a></article><article><h3 class="bento-title">Как выбираем вес</h3><p>Средний кусок и желаемый отрез имеют предварительный расчёт: фактический вес и сумму нужно подтвердить до оплаты. Упаковки и подставки имеют цену за выбранный вариант. Демо-корзина не бронирует товары.</p><a href="#weight-system">Как считаем вес →</a></article><article><h3 class="bento-title">Как связаться</h3><p>Наличие, получение и условия покупки уточняйте по телефону <a href="tel:+79068960099">+7 (906) 896-00-99</a> или в <a href="https://t.me/mvn_ge" target="_blank" rel="noopener noreferrer">Telegram лавки</a>. Срок и стоимость доставки согласуются до оплаты.</p><a href="#shop">Адрес и часы работы →</a></article></div>
+        <div class="about-facts-grid"><article><h3 class="bento-title">Что в лавке</h3><p>Хамон куском и в нарезке, целые ноги и палеты. Рядом — оливки, выдержанные сыры, антипасти, хамонеры и нож для нарезки. Конкретные товары и цены смотрите в каталоге.</p><a href="#catalog">Открыть каталог <span class="arrow" aria-hidden="true"></span></a></article><article><h3 class="bento-title">Как выбираем вес</h3><p>Средний кусок и желаемый отрез имеют предварительный расчёт: фактический вес и сумму нужно подтвердить до оплаты. Упаковки и подставки имеют цену за выбранный вариант. Демо-корзина не бронирует товары.</p><a href="#weight-system">Как считаем вес <span class="arrow" aria-hidden="true"></span></a></article><article><h3 class="bento-title">Как связаться</h3><p>Наличие, получение и условия покупки уточняйте по телефону <a href="tel:+79068960099">+7 (906) 896-00-99</a> или в <a href="https://t.me/mvn_ge" target="_blank" rel="noopener noreferrer">Telegram лавки</a>. Срок и стоимость доставки согласуются до оплаты.</p><a href="#shop">Адрес и часы работы <span class="arrow" aria-hidden="true"></span></a></article></div>
       </div>
     </section>
     <section id="buyer-choices" class="site-panel section" hidden>
@@ -808,8 +827,8 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 <!-- НИЖНЯ МОБИЛЬНАЯ ПАНЕЛЬ -->
 <div class="mobile-bottom-bar" role="region" aria-label="Панель быстрого перехода в корзину">
   <div>
-    <div style="font-size:0.75rem;color:#C8C2B8;">Ваш заказ</div>
-    <div id="mobile-bar-summary" class="tabular" style="font-weight:600;font-size:0.9375rem;">Пока пусто</div>
+    <div class="mobile-bar-label">Ваш заказ</div>
+    <div id="mobile-bar-summary" class="tabular">Пока пусто</div>
   </div>
   <button type="button" id="mobile-cart-btn" class="mobile-bar-btn">Открыть корзину</button>
 </div>
@@ -973,7 +992,7 @@ var PRODUCTS = [
   { id: "nf-00000226", code: "НФ-00000226", category: "olives", title: "Оливки ARAGON, Bernal, вяленые, с/к, стекло, 180 г", agingMonths: null, description: "Черные вяленые оливки с мягкой и мясистой текстурой и с небольшой косточкой. Вкус горьковато-соленый. Рекомендуем перед подачей на стол полить оливковым маслом и добавить специи. Хранить в прохладном темном месте. Открытую емкость хранить в холодильнике не более 7 суток.", kind: "pack", pricePerKg: 2222, pieces: [], packs: [{"label":"180 г","weightG":180,"price":400}], bulk: null, image: "img/nf-00000226.webp", imageW: 303, imageH: 425 },
   { id: "nf-00000222", code: "НФ-00000222", category: "olives", title: "Оливки CHUPADEDOS, Bernal, с/к, 436 г", agingMonths: null, description: "Цельные ярко-зеленые оливки с чесноком, перцем, травами и пряностями (тимьян, укроп, душица, лавровый лист). Оливки имеют замечательный чуть сладковатый вкус и плотную текстуру. Название оливок говорит само за себя: chupadedos буквально означает «пальчики оближешь». Идеальны в качестве закуски в чистом виде и в салатах.", kind: "pack", pricePerKg: 1032, pieces: [], packs: [{"label":"436 г","weightG":436,"price":450}], bulk: null, image: "img/nf-00000222.webp", imageW: 318, imageH: 404 },
   { id: "nf-00000230", code: "НФ-00000230", category: "olives", title: "Оливки GASPACHA с перцем и морковью, Bernal, 300 г", agingMonths: null, description: "Испанский коктейль Гаспача — традиционное средиземноморское блюдо. В состав коктейля входят оливки без косточки, резаная морковь, чеснок, а также кусочки сладкого и острого перца.", kind: "pack", pricePerKg: 1067, pieces: [], packs: [{"label":"300 г","weightG":300,"price":320}], bulk: null, image: "img/nf-00000230.webp", imageW: 332, imageH: 451 },
-  { id: "nf-00000228", code: "НФ-00000228", category: "olives", title: "Оливки GORDAL FREE, -30% соли, б/к, Bernal, 436 г", agingMonths: null, description: "Крупные округлые оливки интенсивного зеленого цвета без косточки, мягкие по текстуре, с классическим горьковато-солоноватым вкусом. В качестве аперитива пользуются большой популярностью как в Испании, так и за ее пределами.", kind: "pack", pricePerKg: 1743, pieces: [], packs: [{"label":"436 г","weightG":436,"price":760}], bulk: null, image: "img/nf-00000228.webp", imageW: 313, imageH: 405 },
+  { id: "nf-00000228", code: "НФ-00000228", category: "olives", title: "Оливки GORDAL FREE, -30% соли, б/к, Bernal, 436 г", agingMonths: null, description: "Крупные округлые оливки интенсивного зеленого цвета без косточки, мягкие по текстуре, с классическим горьковато-солоноватым вкусом. В качестве аперитива пользуются большой популярностью как в Испании, так и за ее пределами.", kind: "pack", pricePerKg: 1743, pieces: [], packs: [{"label":"436 г","weightG":436,"price":760}], bulk: null, image: null, imageW: null, imageH: null },
   { id: "nf-00000225", code: "НФ-00000225", category: "olives", title: "Оливки GORDAL FREE, -30% соли, с/к, Bernal, 436 г", agingMonths: null, description: "Крупные округлые оливки интенсивного зеленого цвета с косточкой, мягкие по текстуре, с классическим горьковато-солоноватым вкусом. В качестве аперитива пользуются большой популярностью как в Испании, так и за ее пределами.", kind: "pack", pricePerKg: 1743, pieces: [], packs: [{"label":"436 г","weightG":436,"price":760}], bulk: null, image: "img/nf-00000225.webp", imageW: 345, imageH: 447 },
   { id: "nf-00000219", code: "НФ-00000219", category: "olives", title: "Оливки GORDAL в анчоусном рассоле, Bernal, с/к, 300 г", agingMonths: null, description: "Крупные зеленые оливки с плотной, мясистой и ломкой текстурой и с небольшой косточкой. Вкус гармоничный горьковато-соленый, с характерным тонким ароматом, без горечи в послевкусии. Эти оливки украсят самые изысканные блюда и закуски.", kind: "pack", pricePerKg: 1667, pieces: [], packs: [{"label":"300 г","weightG":300,"price":500}], bulk: null, image: "img/nf-00000219.webp", imageW: 328, imageH: 429 },
   { id: "nf-00000229", code: "НФ-00000229", category: "olives", title: "Оливки GORDAL, Bernal, Б/К, стекло, 300 г", agingMonths: null, description: "Крупные зеленые оливки (калибр 60/80) с плотной, мясистой и ломкой текстурой. Вкус гармоничный горьковато-соленый, с характерным тонким ароматом, без горечи в послевкусии. Эти оливки украсят самые изысканные блюда и закуски.", kind: "pack", pricePerKg: 1500, pieces: [], packs: [{"label":"300 г","weightG":300,"price":450}], bulk: null, image: "img/nf-00000229.webp", imageW: 283, imageH: 415 },
@@ -1031,7 +1050,7 @@ var PRODUCTS = [
   { id: "nf-00000245", code: "НФ-00000245", category: "spices", title: "Соль морская мельница 360 гр", agingMonths: null, description: "Морская соль, вручную собранная вдоль западного побережья Южной Африки, образуется засчет закачки холодных атлантических вод в огромные соляные ванны, позволяя ей кристаллизоваться под теплым солнцем пустыни Намиб. Соль сортируют, отбирая лишь самые чистые и крупные кристаллы, поэтому мы гарантируем, что на вашей кухне и на вашем столе будет продукт самого лучшего качества.", kind: "pack", pricePerKg: 2000, pieces: [], packs: [{"label":"360 г","weightG":360,"price":720}], bulk: null, image: "img/nf-00000245.webp", imageW: 217, imageH: 451 },
   { id: "nf-00000257", code: "НФ-00000257", category: "spices", title: "Соль розовая гималайская мельница 390 гр", agingMonths: null, description: "Добытая из древних соляных месторождений в Гималаях, эта удивительная розовая соль известна во всем мире своей прозрачностью, необычным натуральным цветом и полезным минеральным составом.", kind: "pack", pricePerKg: 1846, pieces: [], packs: [{"label":"390 г","weightG":390,"price":720}], bulk: null, image: "img/nf-00000257.webp", imageW: 211, imageH: 461 },
   { id: "nf-00000055", code: "НФ-00000055", category: "cheese", title: "Сыр твёрдый «Сальково» 12 мес вакуум 150 гр. (для наборов)", agingMonths: 12, description: "Вся сырная продукция «Сальково» производится из МОЛОКА А2 джерсейских коров. Самое главное – в нём содержится полезный бета-казеин А2. Это означает, что такое молоко легче усваивается и не вызывает аллергических реакций у людей, которые столкнулись с непереносимостью молочного белка — казеина. Приятный аромат луговых трав, специи, прекрасный баланс и долгое, приятное послевкусие. Тает во рту и напоминает о лете. Секрет богатого, насыщенного вкуса – натуральное 5% молоко коров Джерсейской породы и натуральные закваски. Только из жирного, 5% молока получаются полутвердые и твердые сыры. Каждая головка сыра изготавливается вручную – важна любая тонкость, от рецептуры и влажности воздуха в помещении до момента переворачивания сырных головок. Твердый крафтовый сыр – гордость нашего хозяйства, ведь для большинства российских сыроварен из-за сложных условий созревания, производство твердых сыров остается пока не доступным.", kind: "pack", pricePerKg: 4667, pieces: [], packs: [{"label":"150 г","weightG":150,"price":700}], bulk: null, image: "img/nf-00000055.webp", imageW: 488, imageH: 416 },
-  { id: "nf-00000112", code: "НФ-00000112", category: "cheese", title: "Сыр твёрдый «Сальково» 24 мес вакуум 150 гр. (Сальково)", agingMonths: 24, description: "Вся сырная продукция «Сальково» производится из МОЛОКА А2 джерсейских коров. Самое главное – в нём содержится полезный бета-казеин А2. Это означает, что такое молоко легче усваивается и не вызывает аллергических реакций у людей, которые столкнулись с непереносимостью молочного белка — казеина. Приятный аромат луговых трав, специи, прекрасный баланс и долгое, незабываемое послевкусие. Тает во рту и напоминает о лете. Секрет богатого, насыщенного вкуса – натуральное 5% молоко коров Джерсейской породы и натуральные закваски. Только из жирного, 5% молока получаются полутвердые и твердые сыры. Каждая головка сыра изготавливается вручную – важна любая тонкость, от рецептуры и влажности воздуха в помещении до момента переворачивания сырных головок. Твердый крафтовый сыр – гордость нашего хозяйства, ведь для большинства российских сыроварен из-за сложных условий созревания, производство твердых сыров остается пока не доступным.", kind: "pack", pricePerKg: 5867, pieces: [], packs: [{"label":"150 г","weightG":150,"price":880}], bulk: null, image: "img/nf-00000112.webp", imageW: 412, imageH: 413 },
+  { id: "nf-00000112", code: "НФ-00000112", category: "cheese", title: "Сыр твёрдый «Сальково» 24 мес вакуум 150 гр. (Сальково)", agingMonths: 24, description: "Вся сырная продукция «Сальково» производится из МОЛОКА А2 джерсейских коров. Самое главное – в нём содержится полезный бета-казеин А2. Это означает, что такое молоко легче усваивается и не вызывает аллергических реакций у людей, которые столкнулись с непереносимостью молочного белка — казеина. Приятный аромат луговых трав, специи, прекрасный баланс и долгое, незабываемое послевкусие. Тает во рту и напоминает о лете. Секрет богатого, насыщенного вкуса – натуральное 5% молоко коров Джерсейской породы и натуральные закваски. Только из жирного, 5% молока получаются полутвердые и твердые сыры. Каждая головка сыра изготавливается вручную – важна любая тонкость, от рецептуры и влажности воздуха в помещении до момента переворачивания сырных головок. Твердый крафтовый сыр – гордость нашего хозяйства, ведь для большинства российских сыроварен из-за сложных условий созревания, производство твердых сыров остается пока не доступным.", kind: "pack", pricePerKg: 5867, pieces: [], packs: [{"label":"150 г","weightG":150,"price":880}], bulk: null, image: null, imageW: null, imageH: null },
   { id: "nf-00000058", code: "НФ-00000058", category: "cheese", title: "Сыр твёрдый «Сальково» 36 мес вакуум 150 гр. (для наборов)", agingMonths: 36, description: "Вся сырная продукция «Сальково» производится из МОЛОКА А2 джерсейских коров. Самое главное – в нём содержится полезный бета-казеин А2. Это означает, что такое молоко легче усваивается и не вызывает аллергических реакций у людей, которые столкнулись с непереносимостью молочного белка — казеина. Приятный аромат луговых трав, специи, прекрасный баланс и долгое, незабываемое послевкусие. Тает во рту и напоминает о лете. Секрет богатого, насыщенного вкуса – натуральное 5% молоко коров Джерсейской породы и натуральные закваски. Только из жирного, 5% молока получаются полутвердые и твердые сыры. Каждая головка сыра изготавливается вручную – важна любая тонкость, от рецептуры и влажности воздуха в помещении до момента переворачивания сырных головок. Твердый крафтовый сыр – гордость нашего хозяйства, ведь для большинства российских сыроварен из-за сложных условий созревания, производство твердых сыров остается пока не доступным.", kind: "pack", pricePerKg: 7000, pieces: [], packs: [{"label":"150 г","weightG":150,"price":1050}], bulk: null, image: "img/nf-00000058.webp", imageW: 488, imageH: 416 },
   { id: "nf-00000110", code: "НФ-00000110", category: "cheese", title: "Сыр твёрдый 12 мес вакуум 150 гр. (Сальково)", agingMonths: 12, description: "Вся сырная продукция «Сальково» производится из МОЛОКА А2 джерсейских коров. Самое главное – в нём содержится полезный бета-казеин А2. Это означает, что такое молоко легче усваивается и не вызывает аллергических реакций у людей, которые столкнулись с непереносимостью молочного белка — казеина. Приятный аромат луговых трав, специи, прекрасный баланс и долгое, приятное послевкусие. Тает во рту и напоминает о лете. Секрет богатого, насыщенного вкуса – натуральное 5% молоко коров Джерсейской породы и натуральные закваски. Только из жирного, 5% молока получаются полутвердые и твердые сыры. Каждая головка сыра изготавливается вручную – важна любая тонкость, от рецептуры и влажности воздуха в помещении до момента переворачивания сырных головок. Твердый крафтовый сыр – гордость нашего хозяйства, ведь для большинства российских сыроварен из-за сложных условий созревания, производство твердых сыров остается пока не доступным.", kind: "pack", pricePerKg: 5000, pieces: [], packs: [{"label":"150 г","weightG":150,"price":750}], bulk: null, image: "img/nf-00000110.webp", imageW: 375, imageH: 416 },
   { id: "nf-00000111", code: "НФ-00000111", category: "cheese", title: "Сыр твёрдый 18 мес 45% вакуум 150 гр. (Сальково)", agingMonths: 18, description: "Вся сырная продукция «Сальково» производится из МОЛОКА А2 джерсейских коров. Самое главное – в нём содержится полезный бета-казеин А2. Это означает, что такое молоко легче усваивается и не вызывает аллергических реакций у людей, которые столкнулись с непереносимостью молочного белка — казеина. Приятный аромат луговых трав, специи, прекрасный баланс и долгое, приятное послевкусие. Тает во рту и напоминает о лете. Секрет богатого, насыщенного вкуса – натуральное 5% молоко коров Джерсейской породы и натуральные закваски. Только из жирного, 5% молока получаются полутвердые и твердые сыры. Каждая головка сыра изготавливается вручную – важна любая тонкость, от рецептуры и влажности воздуха в помещении до момента переворачивания сырных головок. Твердый крафтовый сыр – гордость нашего хозяйства, ведь для большинства российских сыроварен из-за сложных условий созревания, производство твердых сыров остается пока не доступным.", kind: "pack", pricePerKg: 5467, pieces: [], packs: [{"label":"150 г","weightG":150,"price":820}], bulk: null, image: "img/nf-00000111.webp", imageW: 402, imageH: 420 },
@@ -1077,8 +1096,8 @@ var PRODUCTS = [
   { id: "nf-00000178", code: "НФ-00000178", category: "sliced", title: "Хамон, нарезка в вакууме 100 г. выдержка 20 мес.", agingMonths: 20, description: "", kind: "pack", pricePerKg: 15500, pieces: [], packs: [{"label":"100 г","weightG":100,"price":1550}], bulk: null, image: null, imageW: null, imageH: null },
   { id: "nf-00000009", code: "НФ-00000009", category: "sliced", title: "Хамон, нарезка в вакууме 100 г. выдержка 22 мес.", agingMonths: 22, description: "", kind: "pack", pricePerKg: 16500, pieces: [], packs: [{"label":"100 г","weightG":100,"price":1650}], bulk: null, image: null, imageW: null, imageH: null },
   { id: "nf-00000010", code: "НФ-00000010", category: "sliced", title: "Хамон, нарезка в вакууме 100 г. выдержка 24 мес.", agingMonths: 24, description: "", kind: "pack", pricePerKg: 17500, pieces: [], packs: [{"label":"100 г","weightG":100,"price":1750}], bulk: null, image: null, imageW: null, imageH: null },
-  { id: "nf-00000004", code: "НФ-00000004", category: "sliced", title: "Хамон, нарезка в вакууме 100 г. выдержка 8 мес.", agingMonths: 8, description: "", kind: "pack", pricePerKg: 9500, pieces: [], packs: [{"label":"100 г","weightG":100,"price":950}], bulk: null, image: null, imageW: null, imageH: null },
-  { id: "nf-00000179", code: "НФ-00000179", category: "sliced", title: "Хамон, соломка, 150 г.", agingMonths: null, description: "", kind: "pack", pricePerKg: 7333, pieces: [], packs: [{"label":"150 г","weightG":150,"price":1100}], bulk: null, image: null, imageW: null, imageH: null },
+  { id: "nf-00000004", code: "НФ-00000004", category: "sliced", title: "Хамон, нарезка в вакууме 100 г. выдержка 8 мес.", agingMonths: 8, description: "", kind: "pack", pricePerKg: 9500, pieces: [], packs: [{"label":"100 г","weightG":100,"price":950}], bulk: null, image: "img/domhamona-sliced-08.webp", imageW: 1200, imageH: 1200, imageCaption: "Фото производителя." },
+  { id: "nf-00000179", code: "НФ-00000179", category: "sliced", title: "Хамон, соломка, 150 г.", agingMonths: null, description: "", kind: "pack", pricePerKg: 7333, pieces: [], packs: [{"label":"150 г","weightG":150,"price":1100}], bulk: null, image: "img/domhamona-solomka.webp", imageW: 926, imageH: 926, imageCaption: "Фото производителя: вариант подачи. Тарелка не входит в заказ." },
   { id: "nf-00000181", code: "НФ-00000181", category: "extras", title: "Хамонера, сосна светлая", agingMonths: null, description: "", kind: "pack", pricePerKg: 0, pieces: [], packs: [{"label":"За штуку","weightG":0,"price":3500}], bulk: null, image: null, imageW: null, imageH: null },
   { id: "nf-00000243", code: "НФ-00000243", category: "snacks", title: "Хлебные палочки с оливковым маслом Панеальба Грис Д`ОР 100 гр", agingMonths: null, description: "", kind: "pack", pricePerKg: 3700, pieces: [], packs: [{"label":"100 г","weightG":100,"price":370}], bulk: null, image: null, imageW: null, imageH: null },
   { id: "nf-00000241", code: "НФ-00000241", category: "snacks", title: "Хлебные палочки с оливковым маслом Панеальба Грицини 125 гр", agingMonths: null, description: "", kind: "pack", pricePerKg: 2960, pieces: [], packs: [{"label":"125 г","weightG":125,"price":370}], bulk: null, image: null, imageW: null, imageH: null },
@@ -1134,13 +1153,13 @@ var PRODUCTS = [
   { id: "nf-00000286", code: "НФ-00000286", category: "extras", title: "Сервировочная доска из дуба", agingMonths: null, description: "", image: null, imageW: null, imageH: null, preview: true },
   { id: "nf-00000183", code: "НФ-00000183", category: "certificate", title: "Сертификат подарочный", agingMonths: null, description: "", image: null, imageW: null, imageH: null, preview: true },
   { id: "nf-00000309", code: "НФ-00000309", category: "extras", title: "Сумка шоппер 45х30 см с думя принтами", agingMonths: null, description: "", image: null, imageW: null, imageH: null, preview: true },
-  { id: "nf-00000291", code: "НФ-00000291", category: "leg", title: "Хамон, окорок. выдержка 12 мес.", agingMonths: 12, description: "", image: null, imageW: null, imageH: null, preview: true },
-  { id: "nf-00000292", code: "НФ-00000292", category: "leg", title: "Хамон, окорок. выдержка 14 мес.", agingMonths: 14, description: "", image: null, imageW: null, imageH: null, preview: true },
-  { id: "leg-20", code: "", category: "leg", title: "Хамон, окорок. выдержка 20 мес.", agingMonths: 20, description: "", image: null, imageW: null, imageH: null, preview: true },
-  { id: "leg-18", code: "", category: "leg", title: "Хамон, окорок. выдержка 18 мес.", agingMonths: 18, description: "", image: null, imageW: null, imageH: null, preview: true },
-  { id: "nf-00000293", code: "НФ-00000293", category: "leg", title: "Хамон, окорок. выдержка 16 мес.", agingMonths: 16, description: "", image: null, imageW: null, imageH: null, preview: true },
-  { id: "leg-10", code: "", category: "leg", title: "Хамон, окорок. выдержка 10 мес", agingMonths: 10, description: "", image: null, imageW: null, imageH: null, preview: true },
-  { id: "nf-00000290", code: "НФ-00000290", category: "leg", title: "Хамон, окорок. выдержка 8 мес.", agingMonths: 8, description: "", image: null, imageW: null, imageH: null, preview: true }
+  { id: "nf-00000291", code: "НФ-00000291", category: "leg", title: "Хамон, окорок. выдержка 12 мес.", agingMonths: 12, description: "", image: "img/domhamona-leg-12.webp", imageW: 800, imageH: 800, preview: true, imageCaption: "Фото производителя. Хамонера продаётся отдельно." },
+  { id: "nf-00000292", code: "НФ-00000292", category: "leg", title: "Хамон, окорок. выдержка 14 мес.", agingMonths: 14, description: "", image: "img/domhamona-leg-14.webp", imageW: 800, imageH: 800, preview: true, imageCaption: "Фото производителя. Хамонера продаётся отдельно." },
+  { id: "leg-20", code: "", category: "leg", title: "Хамон, окорок. выдержка 20 мес.", agingMonths: 20, description: "", image: "img/domhamona-leg-20.webp", imageW: 800, imageH: 800, preview: true, imageCaption: "Фото производителя. Хамонера продаётся отдельно." },
+  { id: "leg-18", code: "", category: "leg", title: "Хамон, окорок. выдержка 18 мес.", agingMonths: 18, description: "", image: "img/domhamona-leg-18.webp", imageW: 800, imageH: 800, preview: true, imageCaption: "Фото производителя. Хамонера продаётся отдельно." },
+  { id: "nf-00000293", code: "НФ-00000293", category: "leg", title: "Хамон, окорок. выдержка 16 мес.", agingMonths: 16, description: "", image: "img/domhamona-leg-16.webp", imageW: 800, imageH: 800, preview: true, imageCaption: "Фото производителя. Хамонера продаётся отдельно." },
+  { id: "leg-10", code: "", category: "leg", title: "Хамон, окорок. выдержка 10 мес", agingMonths: 10, description: "", image: "img/domhamona-leg-10.webp", imageW: 800, imageH: 800, preview: true, imageCaption: "Фото производителя. Хамонера продаётся отдельно." },
+  { id: "nf-00000290", code: "НФ-00000290", category: "leg", title: "Хамон, окорок. выдержка 8 мес.", agingMonths: 8, description: "", image: "img/domhamona-leg-08.webp", imageW: 800, imageH: 800, preview: true, imageCaption: "Фото производителя. Хамонера продаётся отдельно." }
 ];
 function catalogEntries() { return PRODUCTS.concat(CATALOG_PREVIEWS); }
 function catalogCountLabel(items) {
@@ -1302,7 +1321,8 @@ function initProductSelections() {
 function productArt(product) {
   if (product.image) {
     var pw = product.imageW || 560, ph = product.imageH || 560;
-    return '<div class="product-photo"><img src="' + escapeHtml(product.image) + '" alt="' + escapeHtml(product.title) + '" width="' + pw + '" height="' + ph + '" style="max-width:' + pw + 'px" loading="lazy" decoding="async"></div>';
+    return '<div class="product-photo"><img src="' + escapeHtml(product.image) + '" alt="' + escapeHtml(product.title) + '" width="' + pw + '" height="' + ph + '" style="max-width:' + pw + 'px" loading="lazy" decoding="async"></div>' +
+      (product.imageCaption ? '<p class="product-photo-note">' + escapeHtml(product.imageCaption) + '</p>' : '');
   }
   var ages = productAges(product);
   return '<img class="card-engraving" src="brand/logo-stacked.svg" alt="" width="110" height="89" loading="lazy">' +
@@ -1436,9 +1456,9 @@ function cardHtml(product) {
         (custom ? '<label class="custom-weight-field" for="custom-weight-' + product.id + '">Желаемый вес отреза, г' +
           '<input id="custom-weight-' + product.id + '" type="number" class="form-input tabular" min="50" max="2000" step="1" value="' +
           (state.customWeightByProduct[product.id] || '') + '" placeholder="Например, 300" data-action="custom-weight" data-product-id="' +
-          product.id + '" aria-describedby="cut-note-' + product.id + '"></label>' : '') +
-        '<div class="custom-cut-note" id="cut-note-' + product.id + '">' +
-        (custom ? 'Подберём отрез по вашему запросу. Точный вес и сумму согласуем перед оплатой.'
+          product.id + '" aria-invalid="' + String(!active.canAdd) + '" aria-describedby="cut-note-' + product.id + '"></label>' : '') +
+        '<div class="custom-cut-note" id="cut-note-' + product.id + '" aria-live="polite">' +
+        (custom ? (active.canAdd ? 'Подберём отрез по вашему запросу. Точный вес и сумму согласуем перед оплатой.' : 'Укажите целый вес от 50 до 2 000 г.')
           : 'Вес уточним при сборке. Итоговая сумма — по фактическому весу.') +
         '</div>';
     } else {
@@ -1497,7 +1517,7 @@ function previewCardHtml(preview) {
     '<div class="custom-cut-note">Позиция есть в прайсе поставщика, но цену и наличие подтверждаем перед заказом.</div>' +
     '<div class="card-footer"><div class="price-stack"><span class="price-label">Цена уточняется</span>' +
     '<strong class="price-value">—</strong></div>' +
-    '<a class="add-btn preview-contact" href="tel:+79068960099" aria-label="Уточнить цену: ' + escapeHtml(preview.title) + '">Уточнить в лавке</a></div>' +
+    '<a class="add-btn preview-contact" href="tel:+79068960099" aria-label="Уточнить в лавке: ' + escapeHtml(preview.title) + '">Уточнить в лавке</a></div>' +
     '</div></article>';
 }
 function resetCatalog() {
@@ -1758,11 +1778,8 @@ function addSetToCart(setId, triggerBtn) {
 }
 
 var cartUndo = null;
-var cartUndoTimer = null;
 function clearCartUndo() {
   cartUndo = null;
-  if (cartUndoTimer) clearTimeout(cartUndoTimer);
-  cartUndoTimer = null;
 }
 function removeCartItem(uid) {
   var index = state.cart.findIndex(function (item) { return item.uid === uid; });
@@ -1770,11 +1787,8 @@ function removeCartItem(uid) {
   var removedItem = state.cart[index];
   state.cart = state.cart.filter(function (item) { return item.uid !== uid; });
   cartUndo = { item: removedItem, index: index };
-  if (cartUndoTimer) clearTimeout(cartUndoTimer);
-  cartUndoTimer = setTimeout(function () { cartUndo = null; updateCartUI(); }, 8000);
   savePersistedState(); updateCartUI();
-  var next = document.querySelectorAll('[data-remove-uid]')[Math.max(0, Math.min(index, state.cart.length - 1))];
-  (next || document.getElementById('empty-to-catalog-btn')).focus();
+  document.getElementById('cart-undo-btn').focus();
 }
 function cartItemsSum() {
   return state.cart.reduce(function (acc, item) { return acc + item.price * item.quantity; }, 0);
@@ -1978,11 +1992,11 @@ function initDemoScale() {
 // 9. НАБОРЫ
 // =========================================================================
 var STORY_ART = {
-  cut: '<svg viewBox="0 0 96 96" fill="none"><path d="M20 70 L76 70 L72 62 L24 62 Z" fill="#6E6155"/><rect x="46" y="26" width="4" height="38" fill="#6E6155"/><path d="M24 30 C48 20, 76 24, 72 46 C68 60, 40 62, 26 52 Z" fill="#5B2824"/><path d="M32 38 C48 30, 62 32, 68 42" stroke="#FAF5EA" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="34" rx="4" ry="6" fill="#E3D4B4"/></svg>',
-  evening: '<svg viewBox="0 0 96 96" fill="none"><ellipse cx="48" cy="64" rx="30" ry="8" fill="#E7DEC9"/><circle cx="34" cy="52" r="10" fill="#5E6B33"/><ellipse cx="38" cy="50" rx="2.4" ry="3.4" fill="#5B2824"/><circle cx="58" cy="50" r="8" fill="#4E5A29"/><rect x="68" y="38" width="4" height="20" fill="#6E6155"/><path d="M56 24 C64 20, 72 22, 70 30 C68 36, 58 36, 56 30 Z" fill="#5B2824"/></svg>',
-  weigh: '<svg viewBox="0 0 96 96" fill="none"><rect x="24" y="58" width="48" height="18" rx="4" fill="#241B17"/><rect x="32" y="30" width="32" height="24" rx="3" fill="#FAF5EA" stroke="#241B17" stroke-width="2"/><text x="36" y="47" font-family="Geologica, sans-serif" font-size="12" fill="#5B2824">230</text><rect x="30" y="24" width="36" height="4" rx="2" fill="#241B17"/></svg>',
-  aging: '<svg viewBox="0 0 96 96" fill="none"><path d="M20 72 C36 68, 44 56, 52 40 C58 28, 68 22, 78 20" stroke="#5B2824" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="34" cy="66" r="3" fill="#E7DEC9"/><circle cx="52" cy="44" r="3" fill="#FAF5EA"/><circle cx="70" cy="26" r="3" fill="#FAF5EA"/><circle cx="76" cy="30" r="1.6" fill="#FAF5EA"/><circle cx="66" cy="24" r="1.6" fill="#FAF5EA"/></svg>',
-  shop: '<svg viewBox="0 0 96 96" fill="none"><rect x="22" y="40" width="52" height="34" fill="#FAF5EA" stroke="#241B17" stroke-width="2"/><path d="M18 40 L78 40 L72 26 L24 26 Z" fill="#5B2824"/><rect x="40" y="52" width="16" height="22" fill="#5E6B33"/><rect x="60" y="48" width="8" height="8" fill="#E7DEC9"/></svg>'
+  cut: '<img src="brand/hero-slicing.webp" alt="">',
+  evening: '<img src="brand/choice-table-1.webp" alt="">',
+  weigh: '<img src="brand/choice-self.webp" alt="">',
+  aging: '<img src="brand/choice-gift.webp" alt="">',
+  shop: '<img src="brand/shop-interior.webp" alt="">'
 };
 
 var currentStoryIndex = 0;
@@ -2217,7 +2231,7 @@ function activateTab(name) {
   });
   TOP_TABS.forEach(function (id) { document.getElementById(id).hidden = id !== name; });
 }
-function navigateTarget(target, scrollTo, recordHistory) {
+function navigateTarget(target, scrollTo, recordHistory, keepTabFocus) {
   var dept = DEPT_ORDER.find(function (d) { return d.id === target; });
   var product = findProduct(target);
   if (product) dept = DEPT_ORDER.find(function (d) { return d.cat === product.category; });
@@ -2228,8 +2242,10 @@ function navigateTarget(target, scrollTo, recordHistory) {
     var el = product ? document.querySelector('.product-card[data-product-id="' + product.id + '"]') : document.getElementById(target);
     if (el) {
       el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
-      if (el.hasAttribute('tabindex')) el.focus({ preventScroll: true });
-      else if (dept) document.getElementById('catalog-grid').focus({ preventScroll: true });
+      if (!keepTabFocus) {
+        if (el.hasAttribute('tabindex')) el.focus({ preventScroll: true });
+        else if (dept) document.getElementById('catalog-grid').focus({ preventScroll: true });
+      }
     }
   }
 }
@@ -2295,12 +2311,12 @@ function renderScenarios() {
     return '<article class="scenario-card" data-set-id="' + escapeHtml(entry.set.id) + '">' +
       '<div><div class="scenario-label">' + escapeHtml(entry.set.kicker) + '</div>' +
       '<div class="scenario-name">' + escapeHtml(entry.set.title) + '</div>' +
-      '<p style="font-size:0.9375rem;color:var(--graphite-muted);">' + escapeHtml(entry.set.desc) + '</p>' +
+      '<p class="card-desc">' + escapeHtml(entry.set.desc) + '</p>' +
       '<ul class="scenario-list">' + entry.items.map(function (item) {
         return '<li><span>' + escapeHtml(item.product.title) + '<small>' + escapeHtml(item.pack.label) + '</small></span>' +
           '<span class="tabular">' + formatRub(item.pack.price) + '</span></li>';
       }).join('') + '</ul></div>' +
-      '<div class="scenario-total-row"><span style="font-size:0.8125rem;color:var(--graphite-muted);">Стоимость товаров</span>' +
+      '<div class="scenario-total-row"><span>Стоимость товаров</span>' +
       '<strong class="scenario-total tabular">' + formatRub(total) + '</strong></div>' +
       '<button type="button" class="btn-primary" style="width:100%;" data-action="add-set" data-set-id="' + escapeHtml(entry.set.id) + '">Добавить весь набор</button>' +
       '<p class="card-feedback" role="status" aria-live="polite"></p></article>';
@@ -2316,9 +2332,9 @@ document.addEventListener('DOMContentLoaded', function () {
     button.id = 'tab-' + id; button.setAttribute('aria-controls', id);
     var panel = document.getElementById(id);
     panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', button.id); panel.tabIndex = 0;
-    button.addEventListener('click', function () { navigateTarget(id, false, true); });
+    button.addEventListener('click', function () { navigateTarget(id, true, true, true); });
   });
-  document.querySelector('.site-tabs').addEventListener('keydown', function (e) { tabKeys(e, '[role="tab"]', function (b) { navigateTarget(b.dataset.tab, false, true); }); });
+  document.querySelector('.site-tabs').addEventListener('keydown', function (e) { tabKeys(e, '[role="tab"]', function (b) { navigateTarget(b.dataset.tab, true, true, true); }); });
   var deptTabs = document.getElementById('dept-tabs');
   deptTabs.addEventListener('click', function (e) { var b = e.target.closest('[data-dept]'); if (b) chooseDept(b.dataset.dept, true); });
   deptTabs.addEventListener('keydown', function (e) { tabKeys(e, '[role="tab"]', function (b) { chooseDept(b.dataset.dept, true); }); });
@@ -2401,6 +2417,9 @@ document.addEventListener('DOMContentLoaded', function () {
       state.customWeightByProduct[custom.dataset.productId] = custom.value === '' ? null : Number(custom.value);
       var valid = Number.isInteger(state.customWeightByProduct[custom.dataset.productId]) && state.customWeightByProduct[custom.dataset.productId] >= 50 && state.customWeightByProduct[custom.dataset.productId] <= 2000;
       custom.setAttribute('aria-invalid', String(!valid));
+      var note = document.getElementById('cut-note-' + custom.dataset.productId);
+      var message = valid ? 'Подберём отрез по вашему запросу. Точный вес и сумму согласуем перед оплатой.' : 'Укажите целый вес от 50 до 2 000 г.';
+      if (note.textContent !== message) note.textContent = message;
       var add = document.querySelector('[data-action="add-to-cart"][data-product-id="' + custom.dataset.productId + '"]');
       add.disabled = !valid; add.textContent = valid ? 'Добавить в корзину' : 'Укажите желаемый вес';
       updateSingleCardNumbers(custom.dataset.productId); return;
@@ -2448,9 +2467,12 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   document.getElementById('cart-undo-btn').addEventListener('click', function () {
     if (!cartUndo) return;
+    var uid = cartUndo.item.uid;
     var next = state.cart.slice();
     next.splice(Math.min(cartUndo.index, next.length), 0, cartUndo.item);
     state.cart = next; clearCartUndo(); savePersistedState(); updateCartUI();
+    var restored = Array.from(document.querySelectorAll('[data-remove-uid]')).find(function (button) { return button.dataset.removeUid === uid; });
+    if (restored) restored.focus();
   });
 
   // Корзина: открыть/закрыть

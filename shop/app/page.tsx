@@ -22,7 +22,7 @@ function AgingPanel() {
   ];
   return <section className="section"><div className="container">
     <div className="section-head"><h2 className="section-title">Выдержка — это характер</h2><p className="section-subtitle">Больше месяцев — не обязательно лучше для вас. Начните с вкуса, который хочется попробовать.</p></div>
-    <div className="bento-3">{stages.map((stage) => <article className="bento-card aging-card" key={stage.query}><p className="bento-period">{stage.period}</p><h3 className="bento-title">{stage.title}</h3><p>{stage.description}</p><p className="aging-pairing">{stage.pairing}</p><Link href={`/catalog?aging=${stage.query}`} className="bento-btn">Выбрать эту выдержку <span aria-hidden="true">→</span></Link></article>)}</div>
+    <div className="bento-3">{stages.map((stage) => <article className="bento-card aging-card" key={stage.query}><p className="bento-period">{stage.period}</p><h3 className="bento-title">{stage.title}</h3><p>{stage.description}</p><p className="aging-pairing">{stage.pairing}</p><Link href={`/catalog?aging=${stage.query}`} className="bento-btn">Выбрать эту выдержку <span className="arrow" aria-hidden="true"></span></Link></article>)}</div>
     <div className="tyrosine-callout"><strong>Белые кристаллы на срезе</strong><p>При длительном созревании в мякоти могут появляться кристаллы тирозина — аминокислоты. Они связаны с естественными процессами выдержки.</p></div>
   </div></section>;
 }

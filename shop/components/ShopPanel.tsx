@@ -19,8 +19,8 @@ export default function ShopPanel({ showAboutLink = true }: { showAboutLink?: bo
         </dl>
         <p className="shop-visit-note">Перед поездкой уточните наличие нужного товара по телефону.</p>
         <div className="hero-cta-row">
-          <a className="btn-primary" href="https://yandex.ru/maps/-/CXq~AInl" target="_blank" rel="noopener noreferrer">Маршрут в Яндекс Картах <span aria-hidden="true">↗</span></a>
-          {showAboutLink && <Link href="/about" className="btn-secondary">О нас <span aria-hidden="true">→</span></Link>}
+          <a className="btn-primary" href="https://yandex.ru/maps/-/CXq~AInl" target="_blank" rel="noopener noreferrer">Маршрут в Яндекс Картах <span className="arrow-up" aria-hidden="true"></span></a>
+          {showAboutLink && <Link href="/about" className="btn-secondary">О нас <span className="arrow" aria-hidden="true"></span></Link>}
         </div>
       </div>
     </div>

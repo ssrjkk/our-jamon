@@ -1089,9 +1089,9 @@
       "category": "olives",
       "agingMonths": null,
       "description": "Крупные округлые оливки интенсивного зеленого цвета без косточки, мягкие по текстуре, с классическим горьковато-солоноватым вкусом. В качестве аперитива пользуются большой популярностью как в Испании, так и за ее пределами.",
-      "image": "img/nf-00000228.webp",
-      "imageW": 313,
-      "imageH": 405,
+      "image": null,
+      "imageW": null,
+      "imageH": null,
       "kind": "pack",
       "pricePerKg": 1743,
       "pieces": [],
@@ -2365,9 +2365,9 @@
       "category": "cheese",
       "agingMonths": 24,
       "description": "Вся сырная продукция «Сальково» производится из МОЛОКА А2 джерсейских коров. Самое главное – в нём содержится полезный бета-казеин А2. Это означает, что такое молоко легче усваивается и не вызывает аллергических реакций у людей, которые столкнулись с непереносимостью молочного белка — казеина. Приятный аромат луговых трав, специи, прекрасный баланс и долгое, незабываемое послевкусие. Тает во рту и напоминает о лете. Секрет богатого, насыщенного вкуса – натуральное 5% молоко коров Джерсейской породы и натуральные закваски. Только из жирного, 5% молока получаются полутвердые и твердые сыры. Каждая головка сыра изготавливается вручную – важна любая тонкость, от рецептуры и влажности воздуха в помещении до момента переворачивания сырных головок. Твердый крафтовый сыр – гордость нашего хозяйства, ведь для большинства российских сыроварен из-за сложных условий созревания, производство твердых сыров остается пока не доступным.",
-      "image": "img/nf-00000112.webp",
-      "imageW": 412,
-      "imageH": 413,
+      "image": null,
+      "imageW": null,
+      "imageH": null,
       "kind": "pack",
       "pricePerKg": 5867,
       "pieces": [],
@@ -3317,9 +3317,10 @@
       "category": "sliced",
       "agingMonths": 8,
       "description": "",
-      "image": null,
-      "imageW": null,
-      "imageH": null,
+      "image": "img/domhamona-sliced-08.webp",
+      "imageW": 1200,
+      "imageH": 1200,
+      "imageCaption": "Фото производителя.",
       "kind": "pack",
       "pricePerKg": 9500,
       "pieces": [],
@@ -3339,9 +3340,10 @@
       "category": "sliced",
       "agingMonths": null,
       "description": "",
-      "image": null,
-      "imageW": null,
-      "imageH": null,
+      "image": "img/domhamona-solomka.webp",
+      "imageW": 926,
+      "imageH": 926,
+      "imageCaption": "Фото производителя: вариант подачи. Тарелка не входит в заказ.",
       "kind": "pack",
       "pricePerKg": 7333,
       "pieces": [],
@@ -4331,9 +4333,10 @@
       "category": "leg",
       "agingMonths": 12,
       "description": "",
-      "image": null,
-      "imageW": null,
-      "imageH": null
+      "image": "img/domhamona-leg-12.webp",
+      "imageW": 800,
+      "imageH": 800,
+      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
     },
     {
       "id": "nf-00000292",
@@ -4342,9 +4345,10 @@
       "category": "leg",
       "agingMonths": 14,
       "description": "",
-      "image": null,
-      "imageW": null,
-      "imageH": null
+      "image": "img/domhamona-leg-14.webp",
+      "imageW": 800,
+      "imageH": 800,
+      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
     },
     {
       "id": "leg-20",
@@ -4353,9 +4357,10 @@
       "category": "leg",
       "agingMonths": 20,
       "description": "",
-      "image": null,
-      "imageW": null,
-      "imageH": null
+      "image": "img/domhamona-leg-20.webp",
+      "imageW": 800,
+      "imageH": 800,
+      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
     },
     {
       "id": "leg-18",
@@ -4364,9 +4369,10 @@
       "category": "leg",
       "agingMonths": 18,
       "description": "",
-      "image": null,
-      "imageW": null,
-      "imageH": null
+      "image": "img/domhamona-leg-18.webp",
+      "imageW": 800,
+      "imageH": 800,
+      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
     },
     {
       "id": "nf-00000293",
@@ -4375,9 +4381,10 @@
       "category": "leg",
       "agingMonths": 16,
       "description": "",
-      "image": null,
-      "imageW": null,
-      "imageH": null
+      "image": "img/domhamona-leg-16.webp",
+      "imageW": 800,
+      "imageH": 800,
+      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
     },
     {
       "id": "leg-10",
@@ -4386,9 +4393,10 @@
       "category": "leg",
       "agingMonths": 10,
       "description": "",
-      "image": null,
-      "imageW": null,
-      "imageH": null
+      "image": "img/domhamona-leg-10.webp",
+      "imageW": 800,
+      "imageH": 800,
+      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
     },
     {
       "id": "nf-00000290",
@@ -4397,9 +4405,10 @@
       "category": "leg",
       "agingMonths": 8,
       "description": "",
-      "image": null,
-      "imageW": null,
-      "imageH": null
+      "image": "img/domhamona-leg-08.webp",
+      "imageW": 800,
+      "imageH": 800,
+      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
     }
   ]
 }

@@ -18,7 +18,8 @@ const playfair = Playfair_Display({
 });
 
 const geologica = Geologica({
-  subsets: ['latin', 'cyrillic'],
+  // latin-ext обязателен: знак ₽ лежит только в этом срезе гарнитуры.
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
   weight: ['400', '500', '600'],
   variable: '--font-geologica',
   display: 'swap',

@@ -19,11 +19,19 @@ function ageMatches(months: number | null, value: string) {
   return months === Number(value);
 }
 function normalize(value: string) { return value.toLocaleLowerCase('ru').replace(/ё/g, 'е').trim(); }
+function alignDepartment(bar: HTMLDivElement | null, target: HTMLElement | null) {
+  if (!bar || !target) return;
+  const parent = bar.getBoundingClientRect();
+  const button = target.getBoundingClientRect();
+  if (button.left < parent.left) bar.scrollLeft += Math.floor(button.left - parent.left);
+  else if (button.right > parent.right) bar.scrollLeft += Math.ceil(button.right - parent.right);
+}
 
 export default function CatalogClient({ products, serverReservedPieceIds, standalone = false }: { products: Product[]; serverReservedPieceIds: string[]; standalone?: boolean }) {
   const params = useSearchParams();
   const controlId = useId();
   const departmentsRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const q = params.get('q') ?? params.get('query') ?? '';
   const aging = params.get('aging') ?? 'all';
   const requestedCategory = params.get('category') ?? params.get('cat') ?? '';
@@ -81,18 +89,13 @@ export default function CatalogClient({ products, serverReservedPieceIds, standa
   const applicablePreviews = searchedPreviews.filter((preview) => preview.category === category);
   const ageOptions = AGING.filter((option) => [...applicable, ...applicablePreviews].some((entry) => ageMatches(entry.agingMonths, option.value)));
   const filtered = Boolean(q || aging !== 'all');
-  function reset() { update({ q: '', aging: '', category: '' }); }
+  function reset() { update({ q: '', aging: '', category: '' }); searchRef.current?.focus(); }
 
   useEffect(() => {
     let mounted = true;
     const align = () => {
       const bar = departmentsRef.current;
-      const active = bar?.querySelector<HTMLElement>('[aria-pressed="true"]');
-      if (!bar || !active) return;
-      const parent = bar.getBoundingClientRect();
-      const button = active.getBoundingClientRect();
-      if (button.left < parent.left) bar.scrollLeft += button.left - parent.left;
-      else if (button.right > parent.right) bar.scrollLeft += button.right - parent.right;
+      alignDepartment(bar, bar?.querySelector<HTMLElement>('[aria-pressed="true"]') ?? null);
     };
     align();
     void document.fonts.ready.then(() => { if (mounted) align(); });
@@ -110,8 +113,8 @@ export default function CatalogClient({ products, serverReservedPieceIds, standa
         <div className="catalog-search">
           <label className="sr-only" htmlFor={`${controlId}-search`}>Поиск по всей лавке</label>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="6" stroke="currentColor" strokeWidth="1.5" /><path d="m15 15 5 5" stroke="currentColor" strokeWidth="1.5" /></svg>
-          <input id={`${controlId}-search`} type="search" value={q} placeholder="Найти хамон, сыр, оливки…" onChange={(event) => update({ q: event.target.value, aging: '' }, true)} />
-          {q && <button type="button" className="search-clear" aria-label="Очистить поиск" onClick={() => update({ q: '' }, true)}>×</button>}
+          <input ref={searchRef} id={`${controlId}-search`} type="search" value={q} placeholder="Найти хамон, сыр, оливки…" onChange={(event) => update({ q: event.target.value, aging: '' }, true)} />
+          {q && <button type="button" className="search-clear" aria-label="Очистить поиск" onClick={() => { update({ q: '' }, true); searchRef.current?.focus(); }}>×</button>}
         </div>
         <div className="catalog-filters">
           {(ageOptions.length > 1 || aging !== 'all') && <label className="compact-filter">Выдержка<select value={aging} onChange={(event) => update({ aging: event.target.value })}><option value="all">Любая</option>{ageOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}{aging !== 'all' && !ageOptions.some((option) => option.value === aging) && <option value={aging}>{aging} мес.</option>}</select></label>}
@@ -122,7 +125,7 @@ export default function CatalogClient({ products, serverReservedPieceIds, standa
         {departments.map((department) => {
           const count = countFor(department.cat);
           return <button key={department.cat} type="button" aria-pressed={category === department.cat} disabled={Boolean(q) && !count}
-            onClick={() => update({ category: department.cat, aging: '' })}>{CATEGORY_TITLES[department.cat].title}<span className="dept-count">{count}</span></button>;
+            onFocus={(event) => alignDepartment(departmentsRef.current, event.currentTarget)} onClick={() => update({ category: department.cat, aging: '' })}>{CATEGORY_TITLES[department.cat].title}<span className="dept-count">{count}</span></button>;
         })}
       </div>
       {q && <p className="catalog-hint" role="status">По всей лавке найдено: {matches.length + previewMatches.length}. {items.length + currentPreviews.length > 0 ? `Показана категория «${CATEGORY_TITLES[category].title}». Другие совпадения — в категориях выше.` : 'Попробуйте другое название или сбросьте фильтры.'}</p>}
