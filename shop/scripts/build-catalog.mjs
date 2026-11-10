@@ -4,7 +4,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
-import supplierPhotos from './supplier-photos.json' with { type: 'json' };
 
 const rows = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, 'price-0711.rows.json'), 'utf8'));
 
@@ -109,7 +108,6 @@ const items = rows.map((row) => {
   if (price !== null && !Number.isSafeInteger(price)) throw new Error(`Нецелая цена в строке ${row.row}: ${row.price}`);
   const title = typography(row.title);
   const id = row.code ? `nf-${row.code.replace(/^НФ-?/i, '')}` : `${category}-${agingOf(title) ?? slugify(title)}`;
-  const supplierPhoto = supplierPhotos.photos[id];
   return {
     id,
     code: row.code ?? '',
@@ -117,8 +115,7 @@ const items = rows.map((row) => {
     title,
     description: typography(row.note ?? ''),
     price,
-    image: supplierPhoto?.image ?? (KREOLA_PHOTO[row.code] ? `brand/${KREOLA_PHOTO[row.code]}.webp` : row.media && !REJECTED_PRICE_PHOTOS.has(row.code) ? `img/${id}.webp` : null),
-    imageCaption: supplierPhoto?.caption,
+    image: KREOLA_PHOTO[row.code] ? `brand/${KREOLA_PHOTO[row.code]}.webp` : row.media && !REJECTED_PRICE_PHOTOS.has(row.code) ? `img/${id}.webp` : null,
   };
 });
 
@@ -133,8 +130,7 @@ const products = [];
 const previews = [];
 for (const item of items) {
   const base = { id: item.id, code: item.code, title: item.title, category: item.category,
-    agingMonths: agingOf(item.title), description: item.description, image: item.image, imageW: item.imageW ?? null, imageH: item.imageH ?? null,
-    ...(item.imageCaption ? { imageCaption: item.imageCaption } : {}) };
+    agingMonths: agingOf(item.title), description: item.description, image: item.image, imageW: item.imageW ?? null, imageH: item.imageH ?? null };
   if (item.price === null) { previews.push(base); continue; }
   if (item.category === 'piece') {
     products.push({ ...base, kind: 'piece', pricePerKg: item.price, pieces: [], packs: [], bulk: null });

@@ -3317,10 +3317,9 @@
       "category": "sliced",
       "agingMonths": 8,
       "description": "",
-      "image": "img/domhamona-sliced-08.webp",
-      "imageW": 1200,
-      "imageH": 1200,
-      "imageCaption": "Фото производителя.",
+      "image": null,
+      "imageW": null,
+      "imageH": null,
       "kind": "pack",
       "pricePerKg": 9500,
       "pieces": [],
@@ -3340,10 +3339,9 @@
       "category": "sliced",
       "agingMonths": null,
       "description": "",
-      "image": "img/domhamona-solomka.webp",
-      "imageW": 926,
-      "imageH": 926,
-      "imageCaption": "Фото производителя: вариант подачи. Тарелка не входит в заказ.",
+      "image": null,
+      "imageW": null,
+      "imageH": null,
       "kind": "pack",
       "pricePerKg": 7333,
       "pieces": [],
@@ -4333,10 +4331,9 @@
       "category": "leg",
       "agingMonths": 12,
       "description": "",
-      "image": "img/domhamona-leg-12.webp",
-      "imageW": 800,
-      "imageH": 800,
-      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
+      "image": null,
+      "imageW": null,
+      "imageH": null
     },
     {
       "id": "nf-00000292",
@@ -4345,10 +4342,9 @@
       "category": "leg",
       "agingMonths": 14,
       "description": "",
-      "image": "img/domhamona-leg-14.webp",
-      "imageW": 800,
-      "imageH": 800,
-      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
+      "image": null,
+      "imageW": null,
+      "imageH": null
     },
     {
       "id": "leg-20",
@@ -4357,10 +4353,9 @@
       "category": "leg",
       "agingMonths": 20,
       "description": "",
-      "image": "img/domhamona-leg-20.webp",
-      "imageW": 800,
-      "imageH": 800,
-      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
+      "image": null,
+      "imageW": null,
+      "imageH": null
     },
     {
       "id": "leg-18",
@@ -4369,10 +4364,9 @@
       "category": "leg",
       "agingMonths": 18,
       "description": "",
-      "image": "img/domhamona-leg-18.webp",
-      "imageW": 800,
-      "imageH": 800,
-      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
+      "image": null,
+      "imageW": null,
+      "imageH": null
     },
     {
       "id": "nf-00000293",
@@ -4381,10 +4375,9 @@
       "category": "leg",
       "agingMonths": 16,
       "description": "",
-      "image": "img/domhamona-leg-16.webp",
-      "imageW": 800,
-      "imageH": 800,
-      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
+      "image": null,
+      "imageW": null,
+      "imageH": null
     },
     {
       "id": "leg-10",
@@ -4393,10 +4386,9 @@
       "category": "leg",
       "agingMonths": 10,
       "description": "",
-      "image": "img/domhamona-leg-10.webp",
-      "imageW": 800,
-      "imageH": 800,
-      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
+      "image": null,
+      "imageW": null,
+      "imageH": null
     },
     {
       "id": "nf-00000290",
@@ -4405,10 +4397,9 @@
       "category": "leg",
       "agingMonths": 8,
       "description": "",
-      "image": "img/domhamona-leg-08.webp",
-      "imageW": 800,
-      "imageH": 800,
-      "imageCaption": "Фото производителя. Хамонера продаётся отдельно."
+      "image": null,
+      "imageW": null,
+      "imageH": null
     }
   ]
 }

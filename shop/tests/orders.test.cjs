@@ -91,21 +91,15 @@ test('the supplier price list is the only catalog source', () => withSystem(asyn
 test('product photos match verified sources and both asset mirrors', () => withSystem(async s => {
   const { PRODUCTS, PREVIEWS } = s.load('lib/products.ts');
   const rows = JSON.parse(fs.readFileSync(path.join(root, 'scripts/price-0711.rows.json'), 'utf8'));
-  const { photos } = JSON.parse(fs.readFileSync(path.join(root, 'scripts/supplier-photos.json'), 'utf8'));
   const rejected = new Set(['НФ-00000112', 'НФ-00000228']);
   const mediaCodes = new Set(rows.filter(row => row.media && !rejected.has(row.code)).map(row => row.code));
   for (const product of PRODUCTS) {
-    const expected = photos[product.id]?.image ?? (mediaCodes.has(product.code) ? `img/${product.id}.webp` : undefined);
+    const expected = mediaCodes.has(product.code) ? `img/${product.id}.webp` : undefined;
     assert.equal(product.imageUrl, expected ? `/${expected}` : undefined, product.id);
   }
   const entries = [...PRODUCTS, ...PREVIEWS];
-  assert.equal(Object.keys(photos).length, 9);
-  for (const [id, photo] of Object.entries(photos)) {
-    const entry = entries.find(item => item.id === id);
-    assert.equal(entry.imageUrl, `/${photo.image}`, id);
-    assert.equal(entry.imageCaption, photo.caption, id);
-    assert.equal(new URL(photo.page).hostname, 'domhamona.ru');
-    assert.equal(new URL(photo.original).hostname, 'static.tildacdn.com');
+  for (const entry of PREVIEWS.filter(item => item.category !== 'chocolate')) {
+    assert.equal(entry.imageUrl, undefined, entry.id);
   }
   for (const entry of entries.filter(item => item.imageUrl)) {
     const asset = entry.imageUrl.slice(1);

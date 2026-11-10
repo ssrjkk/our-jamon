@@ -1,5 +1,3 @@
-// Гигиена репозитория: закупочные цены, контакты и дневник сессии не должны попадать в git.
-// Из индекса убираем, локальные копии остаются — удаление из репозитория не отменяет работу.
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -8,32 +6,41 @@ const { test } = require('node:test');
 
 const repo = path.join(__dirname, '..', '..');
 const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: repo })
-  .toString('utf8')
-  .split('\0')
-  .filter(Boolean);
-const ignored = fs
-  .readFileSync(path.join(repo, '.gitignore'), 'utf8')
-  .split(/\r?\n/)
-  .map((line) => line.trim())
-  .filter(Boolean);
+  .toString('utf8').split('\0').filter(Boolean);
+const privateFiles = [
+  'Сессия_Наш_Хамон.md', 'брендбук_дом_хамона.pdf', 'hamon shop 1c.pdf',
+  '_brand', 'shop/Наш_Хамон.zip', 'shop/scripts/supplier-photos.json',
+  'shop/data', 'shop/.env',
+];
+const supplierImage = /^(?:shop\/public\/)?img\/domhamona-[^/]+\.webp$/;
 
-const privateFiles = ['Сессия_Наш_Хамон.md', 'брендбук_дом_хамона.pdf', 'shop/data', 'shop/.env'];
-
+// Проверяем индекс, а не диск: игнорируемые локальные файлы не попадут на сервер после клонирования.
 test('приватного нет в индексе git', () => {
-  for (const name of privateFiles) {
-    const leaks = tracked.filter((file) => file === name || file.startsWith(`${name}/`));
-    assert.deepEqual(leaks, [], `${name}: в индексе ${leaks.length} записей — файл отдаётся по public-URL`);
-  }
+  const leaks = tracked.filter((file) => supplierImage.test(file)
+    || privateFiles.some((name) => file === name || file.startsWith(`${name}/`)));
+  assert.deepEqual(leaks, [], 'Приватные материалы попадут в публичную публикацию');
 });
 
-test('приватные пути перечислены в .gitignore', () => {
-  for (const name of ['Сессия_Наш_Хамон.md', 'брендбук_дом_хамона.pdf']) {
-    assert.ok(ignored.includes(name), `${name}: нет в .gitignore — вернётся в первый же коммит`);
-  }
+test('приватные пути защищены правилами gitignore', () => {
+  const probes = [
+    ...privateFiles.filter(name => !['_brand', 'shop/data'].includes(name)),
+    '_brand/source.ai', 'shop/data/orders.sqlite',
+    'img/domhamona-leg-08.webp', 'shop/public/img/domhamona-leg-08.webp',
+  ];
+  const ignored = execFileSync('git', ['check-ignore', '--no-index', '-z', '--stdin'], {
+    cwd: repo, input: probes.join('\0') + '\0',
+  }).toString('utf8').split('\0').filter(Boolean);
+  assert.deepEqual(new Set(ignored), new Set(probes));
 });
 
-test('локальные копии приватных файлов на месте', () => {
-  for (const name of ['Сессия_Наш_Хамон.md', 'брендбук_дом_хамона.pdf', 'shop/data/orders.sqlite']) {
-    assert.ok(fs.existsSync(path.join(repo, name)), `${name}: нет на диске — свип удалит рабочий материал`);
+test('все фото каталога входят в git в обеих витринах', () => {
+  const catalog = JSON.parse(fs.readFileSync(path.join(repo, 'shop/lib/catalog.json'), 'utf8'));
+  const paths = new Set(tracked);
+  for (const entry of [...catalog.products, ...catalog.previews]) {
+    if (!entry.image) continue;
+    assert.ok(!supplierImage.test(entry.image), `${entry.id}: фото поставщика без разрешения`);
+    for (const prefix of ['', 'shop/public/']) {
+      assert.ok(paths.has(prefix + entry.image), `${entry.id}: ${prefix + entry.image} отсутствует в git`);
+    }
   }
 });
