@@ -4,11 +4,14 @@ export function isDemoMode(): boolean {
   return mode === 'demo';
 }
 
-export function requestOriginAllowed(origin: string | null, fallbackOrigin: string): boolean {
+// SHOP_URL задаёт единственный разрешённый адрес витрины. Если он не выставлен, сравниваем
+// источник с Host самого запроса: req.nextUrl.origin в standalone-сервере всегда рисует localhost,
+// и витрина по IP или домену без SHOP_URL отбивала бы кнопку оплаты у реального покупателя.
+export function requestOriginAllowed(origin: string | null, host: string | null, fallbackOrigin: string): boolean {
   if (!origin) return true;
   try {
-    const expected = new URL(process.env.SHOP_URL || fallbackOrigin);
-    return (expected.protocol === 'https:' || expected.protocol === 'http:') && origin === expected.origin;
+    if (process.env.SHOP_URL?.trim()) return origin === new URL(process.env.SHOP_URL).origin;
+    return new URL(origin).host === (host || new URL(fallbackOrigin).host);
   } catch {
     return false;
   }

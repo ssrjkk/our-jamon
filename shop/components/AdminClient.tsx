@@ -32,6 +32,8 @@ export default function AdminClient() {
   const actionPending = useRef(false);
   const sessionPending = useRef(false);
   const requestId = useRef(0);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const wantPasswordFocus = useRef(false);
 
   const forgetSession = useCallback(() => {
     setAuthed(false);
@@ -70,6 +72,14 @@ export default function AdminClient() {
     return () => controller.abort();
   }, [load]);
 
+  // Во время запроса поле ввода отключено, и focus() на нём молча не работает:
+  // переносим возврат фокуса на рендер после снятия sessionBusy.
+  useEffect(() => {
+    if (!wantPasswordFocus.current || sessionBusy) return;
+    wantPasswordFocus.current = false;
+    passwordRef.current?.focus();
+  });
+
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (sessionPending.current || loading) return;
@@ -77,7 +87,7 @@ export default function AdminClient() {
     setPasswordError('');
     if (!password) {
       setPasswordError('Введите пароль администратора.');
-      document.getElementById('admin-pass')?.focus();
+      wantPasswordFocus.current = true;
       return;
     }
     sessionPending.current = true;
@@ -90,7 +100,7 @@ export default function AdminClient() {
       if (!response.ok) {
         if (response.status === 401) {
           setPasswordError(data.error || 'Неверный пароль.');
-          document.getElementById('admin-pass')?.focus();
+          wantPasswordFocus.current = true;
         } else {
           setError(response.status === 503 ? 'Доступ ещё не настроен. Владелец магазина должен настроить надёжный секрет администратора.' : data.error || 'Не удалось войти. Повторите попытку.');
         }
@@ -225,7 +235,7 @@ export default function AdminClient() {
             <form className="checkout-form" onSubmit={login} noValidate aria-busy={sessionBusy}>
               <div className="form-field">
                 <label htmlFor="admin-pass">Пароль администратора</label>
-                <input id="admin-pass" type="password" className="form-input" value={password} disabled={sessionBusy} onChange={(event) => { setPassword(event.target.value); setPasswordError(''); setError(''); }} autoComplete="current-password" maxLength={512} required aria-invalid={Boolean(passwordError)} aria-describedby={passwordError ? 'admin-password-error' : undefined} />
+                <input ref={passwordRef} id="admin-pass" type="password" className="form-input" value={password} disabled={sessionBusy} onChange={(event) => { setPassword(event.target.value); setPasswordError(''); setError(''); }} autoComplete="current-password" maxLength={512} required aria-invalid={Boolean(passwordError)} aria-describedby={passwordError ? 'admin-password-error' : undefined} />
                 {passwordError && <p id="admin-password-error" className="field-error" role="alert">{passwordError}</p>}
               </div>
               <button type="submit" className="btn-primary" disabled={sessionBusy}>{sessionBusy ? 'Входим…' : 'Войти'}</button>

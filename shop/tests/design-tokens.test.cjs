@@ -31,6 +31,22 @@ test('брендовые токены и эффекты совпадают в о
   }
 });
 
+// 404 публикуется отдельным файлом и не проходит через сборки index.html: без этого гейта
+// правка бренда ушла бы из неё незаметно, а Pages отдавал бы серую заглушку GitHub.
+test('страница 404 живёт в тех же токенах, что и витрина', () => {
+  const html = read(path.join(root, '..', '404.html'));
+  const css = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
+  const notFound = rootTokens(css);
+  for (const name of BRAND) {
+    assert.equal(notFound.get(name), tokens['index.html'].get(name), `404.html: ${name} разошёлся с index.html`);
+  }
+  assert.match(css, /\.btn-primary\s*\{[^}]*border-radius:\s*var\(--radius\)/, '404.html: кнопка не берёт радиус из токена');
+  assert.match(css, /:focus-visible\s*\{[^}]*outline:/, '404.html: нет видимого фокуса');
+  assert.doesNotMatch(css.replace(/:root\s*\{[^}]*\}/g, ''), /rgb\(|#[0-9a-f]{3,8}/i, '404.html: цвет задан числом вне :root');
+  assert.doesNotMatch(html, /style="/, '404.html: инлайновые стили вместо классов');
+  assert.match(html, /<meta name="robots" content="noindex">/, '404 индексируется');
+});
+
 test('ширина контейнера одна, а высота шапки берётся из токена, а не из магического числа', () => {
   assert.equal(tokens['index.html'].get('--container'), tokens['globals.css'].get('--container'));
   for (const [name, css] of Object.entries(sheets)) {

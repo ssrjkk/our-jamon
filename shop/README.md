@@ -19,6 +19,8 @@ npm run build
 npm run test:e2e
 ```
 
+`npm run build:standalone` produces the self-hosted bundle: `next build` plus `scripts/pack-standalone.mjs`, which places `.next/static` and `public` next to `.next/standalone/server.js`. Run that directory with `HOSTNAME`, `PORT`, `SHOP_MODE`, `ORDERS_DB_PATH` and the payment/1C variables from Configuration; `node .next/standalone/server.js` alone is not enough because the client assets and the public images live outside the traced server output.
+
 Browser tests use installed Google Chrome and an isolated SQLite database under ignored `test-results/`; they never use the shop's real order files. They cover 360/768/1440 px, checkout, order privacy, weight confirmation, navigation and accessibility, and they check both storefronts: the application plus the static demo, which `npm run test:e2e` serves from the repository root on port 8765. Every expected article, price and count is derived from `lib/catalog.json`, which is built from the supplier price list — the specs contain no hand-written prices.
 
 ## Configuration

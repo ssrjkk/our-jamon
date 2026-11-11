@@ -44,3 +44,27 @@ test('все фото каталога входят в git в обеих вит�
     }
   }
 });
+
+// GitHub Pages отдаёт файлы репозитория как есть: ссылка на отсутствующий файл — это битая
+// картинка на живой витрине, а не 404, который кто-то заметит.
+test('локальные ассеты публичных страниц лежат в git', () => {
+  const paths = new Set(tracked);
+  const pages = ['index.html', '404.html'];
+  const missing = [];
+  for (const page of pages) {
+    const file = path.join(repo, page);
+    assert.ok(fs.existsSync(file), `${page} отсутствует в корне репозитория`);
+    const html = fs.readFileSync(file, 'utf8');
+    const refs = new Set([
+      ...[...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]),
+      ...[...html.matchAll(/url\((['"]?)([^)'"]+)\1\)/g)].map((m) => m[2]),
+    ]);
+    for (const ref of refs) {
+      if (/^(?:#|https?:|tel:|mailto:|data:|javascript:)/i.test(ref) || /^\//.test(ref)) continue;
+      const clean = ref.split(/[?#]/)[0];
+      if (!clean || !/\.[a-z0-9]{2,5}$/i.test(clean)) continue;
+      if (!paths.has(clean)) missing.push(`${page} → ${clean}`);
+    }
+  }
+  assert.deepEqual(missing, [], `ссылаются на файлы вне git: ${missing.join(', ')}`);
+});

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Страница не найдена — Наш Хамон</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="brand/logo-stacked.svg">
+<meta name="theme-color" content="#5B2824">
+<meta name="description" content="Раздел не найден: витрина «Наш Хамон» собрана на одной странице, нужный отдел открывается в меню сверху.">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="brand/fonts/geologica-var-cyrillic.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="brand/fonts/geologica-var-latin.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="brand/fonts/geologica-var-latin-ext.woff2">
+<link rel="stylesheet" href="brand/fonts/fonts.css">
+<style>
+:root {
+  --paper-salt: #FAF5EA;
+  --fat-white: #FFFDF8;
+  --hoof-graphite: #241B17;
+  --graphite-muted: #6E6155;
+  --cured-ruby: #5B2824;
+  --cured-ruby-hover: #431E1B;
+  --brine-olive: #5B2824;
+  --brine-olive-soft: #FAF5EA;
+  --bone-line: #E7DEC9;
+  --surface-tint: #F4EDDE;
+  --error-red: #9E2A2B;
+  --font-serif: 'Playfair Display', 'Geologica', Georgia, serif;
+  --font-sans: 'Geologica', Arial, sans-serif;
+  --container: 1320px;
+  --header-h: 64px;
+  --radius: 10px;
+  --scrim: rgba(36, 27, 23, 0.55);
+  --scrim-story: rgba(36, 27, 23, 0.8);
+  --lift-shadow: 0 10px 28px rgba(36, 27, 23, 0.1);
+  --tap-tint: rgba(91, 40, 36, 0.16);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background-color: var(--paper-salt); color: var(--hoof-graphite); font-family: var(--font-sans); font-size: 16px; line-height: 1.5; -webkit-text-size-adjust: 100%; }
+body { min-height: 100svh; display: flex; flex-direction: column; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--cured-ruby); outline-offset: 3px; }
+.container { width: 100%; max-width: var(--container); margin: 0 auto; padding: 0 16px; }
+.topbar { border-bottom: 1px solid var(--bone-line); padding: 14px 0; }
+.topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand-logo { width: 161px; height: 40px; object-fit: contain; }
+.topbar-phone { min-height: 44px; display: inline-flex; align-items: center; font-size: .875rem; font-weight: 600; text-decoration: none; color: var(--cured-ruby); border: 1px solid var(--bone-line); border-radius: var(--radius); padding: 0 14px; }
+.missing { flex: 1; display: flex; align-items: center; padding: clamp(32px, 7vw, 88px) 0; }
+.missing-inner { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(24px, 4vw, 48px); align-items: center; }
+.missing-code { font-family: var(--font-serif); font-size: clamp(3.5rem, 11vw, 7rem); line-height: 1; letter-spacing: -.03em; color: var(--cured-ruby); }
+.missing-title { font-family: var(--font-serif); font-size: clamp(1.85rem, 3.2vw, 2.75rem); font-weight: 700; line-height: 1.15; letter-spacing: -.025em; color: var(--cured-ruby); text-wrap: balance; margin-top: 10px; }
+.missing-kicker { font-size: 0.75rem; letter-spacing: 0.045em; color: var(--graphite-muted); font-weight: 600; }
+.missing-text { max-width: 52ch; color: var(--graphite-muted); margin-top: 14px; }
+.missing-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 20px; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.875rem; text-decoration: none; border: 1px solid var(--cured-ruby); border-radius: var(--radius); transition: background-color 0.15s ease, transform 0.15s ease; }
+.btn-primary:hover { background-color: var(--cured-ruby-hover); }
+.btn-primary:active { transform: scale(0.97); }
+.btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 14px; border: 1px solid var(--cured-ruby); color: var(--cured-ruby); background-color: var(--paper-salt); font-size: .8125rem; font-weight: 600; border-radius: var(--radius); text-decoration: none; }
+.missing-photo { border: 1px solid var(--bone-line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--lift-shadow); background-color: var(--surface-tint); }
+.missing-photo img { display: block; width: 100%; height: auto; }
+.missing-caption { padding: 12px 16px; font-size: .8125rem; color: var(--graphite-muted); border-top: 1px solid var(--bone-line); }
+.sections-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; padding: 0; list-style: none; }
+.sections-list a { display: inline-flex; min-height: 40px; align-items: center; padding: 0 14px; border: 1px solid var(--bone-line); border-radius: var(--radius); background-color: var(--fat-white); font-size: .8125rem; text-decoration: none; }
+.sections-list a:hover { border-color: var(--cured-ruby); color: var(--cured-ruby); }
+.footer { border-top: 1px solid var(--bone-line); background-color: var(--surface-tint); padding: 22px 0 30px; }
+.footer-inner { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: .875rem; color: var(--graphite-muted); }
+@media (min-width: 900px) { .missing-inner { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } .btn-primary { transition: none; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a href="./" aria-label="Наш Хамон — на главную"><img src="brand/logo-horizontal.svg" alt="Наш Хамон" class="brand-logo" width="161" height="40"></a>
+    <a href="tel:+79068960099" class="topbar-phone">+7 (906) 896-00-99</a>
+  </div>
+</header>
+
+<main id="main-content" class="missing">
+  <div class="container missing-inner">
+    <div>
+      <p class="missing-kicker">404 · такой страницы в лавке нет</p>
+      <h1 class="missing-title">Страница не найдена</h1>
+      <p class="missing-text">Витрина собрана на одной странице: отделы, подборки и доставка открываются вкладками сверху. Выберите отдел здесь или вернитесь на главную.</p>
+      <div class="missing-actions">
+        <a class="btn-primary" href="./#catalog">В каталог и куски</a>
+        <a class="btn-secondary" href="./">На главную</a>
+      </div>
+      <ul class="sections-list">
+        <li><a href="./#scenarios">К столу и в подарок</a></li>
+        <li><a href="./#buyer-choices">Выбор покупателей</a></li>
+        <li><a href="./#shop">Наша лавка</a></li>
+        <li><a href="./#weight-system">Как считаем вес</a></li>
+        <li><a href="./#aging">Гид по выдержке</a></li>
+        <li><a href="./#delivery">Доставка и оплата</a></li>
+      </ul>
+    </div>
+    <figure class="missing-photo">
+      <img src="brand/hero-slicing.webp" alt="Нож снимает ломтик с мраморного куска хамона" width="1314" height="1230" fetchpriority="high" decoding="async">
+      <figcaption class="missing-caption">Сытнинская ул., 4П, рынок «Сытный» · вт–вс, 10:30–20:30</figcaption>
+    </figure>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span>«Наш Хамон» — эксклюзивный дистрибьютор бренда «Дом Хамона» (Коломна) по Санкт-Петербургу и Ленинградской области</span>
+  </div>
+</footer>
+</body>
+</html>

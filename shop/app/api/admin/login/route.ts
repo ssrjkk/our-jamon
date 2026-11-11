@@ -4,7 +4,7 @@ import { requestOriginAllowed } from '@/lib/config';
 
 export async function POST(req: NextRequest) {
   const origin = req.headers.get('origin');
-  if (!requestOriginAllowed(origin, req.nextUrl.origin)) {
+  if (!requestOriginAllowed(origin, req.headers.get('host'), req.nextUrl.origin)) {
     return NextResponse.json({ error: 'Недопустимый источник запроса' }, { status: 403 });
   }
   const secret = adminPassword();
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const origin = req.headers.get('origin');
-  if (!requestOriginAllowed(origin, req.nextUrl.origin)) return NextResponse.json({ error: 'Недопустимый источник запроса' }, { status: 403 });
+  if (!requestOriginAllowed(origin, req.headers.get('host'), req.nextUrl.origin)) return NextResponse.json({ error: 'Недопустимый источник запроса' }, { status: 403 });
   const response = NextResponse.json({ ok: true });
   response.cookies.set(ADMIN_COOKIE, '', { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', maxAge: 0, path: '/' });
   return response;

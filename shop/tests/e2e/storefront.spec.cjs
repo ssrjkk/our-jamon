@@ -308,6 +308,20 @@ test('админ подтверждает вес и согласованную �
   await noOverflow(page);
 });
 
+test('ошибка входа в админку возвращает фокус в поле пароля', async ({ page }) => {
+  // На время запроса поле отключено, поэтому focus() из обработчика молча не работал:
+  // возврат фокуса должен происходить после снятия aria-busy.
+  await page.goto('/admin');
+  await page.getByLabel('Пароль администратора').fill('совсем-неверный-пароль');
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  await expect(page.locator('#admin-password-error')).toHaveText('Неверный пароль');
+  await expect(page.locator('#admin-pass')).toBeFocused();
+  await page.getByLabel('Пароль администратора').fill('');
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  await expect(page.locator('#admin-password-error')).toHaveText('Введите пароль администратора.');
+  await expect(page.locator('#admin-pass')).toBeFocused();
+});
+
 test('позиции прайса без цены отдаются как «уточнить в лавке»', async ({ page }, info) => {
   for (const surface of ['next', 'static']) {
     await openCatalog(page, surface);

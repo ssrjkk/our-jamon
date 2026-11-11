@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: Context) {
 
 export async function PATCH(req: NextRequest, { params }: Context) {
   const origin = req.headers.get('origin');
-  if (!requestOriginAllowed(origin, req.nextUrl.origin)) return NextResponse.json({ error: 'Недопустимый источник запроса.' }, { status: 403 });
+  if (!requestOriginAllowed(origin, req.headers.get('host'), req.nextUrl.origin)) return NextResponse.json({ error: 'Недопустимый источник запроса.' }, { status: 403 });
   if (!await isAdmin()) return NextResponse.json({ error: 'Требуется авторизация администратора.' }, { status: 401 });
   const { id } = await params;
   const body: unknown = await req.json().catch(() => null);
@@ -82,7 +82,7 @@ export async function PATCH(req: NextRequest, { params }: Context) {
 
 export async function POST(req: NextRequest, { params }: Context) {
   const origin = req.headers.get('origin');
-  if (!requestOriginAllowed(origin, req.nextUrl.origin)) return NextResponse.json({ error: 'Недопустимый источник запроса.' }, { status: 403 });
+  if (!requestOriginAllowed(origin, req.headers.get('host'), req.nextUrl.origin)) return NextResponse.json({ error: 'Недопустимый источник запроса.' }, { status: 403 });
   const { id } = await params;
   const body: unknown = await req.json().catch(() => null);
   if (!body || typeof body !== 'object' || !('action' in body)) return NextResponse.json({ error: 'Некорректное действие.' }, { status: 400 });

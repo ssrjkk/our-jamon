@@ -256,6 +256,16 @@ test('public shop origin is accepted when Next internally normalizes the host', 
   assert.equal((await login.POST(s.request({ password }, undefined, { origin: 'https://foreign.example.test' }))).status, 403);
 }));
 
+test('same-origin request is accepted without SHOP_URL even when Next reports localhost', () => withSystem(async s => {
+  process.env.ADMIN_PASSWORD = password;
+  delete process.env.SHOP_URL;
+  const login = s.load('app/api/admin/login/route.ts');
+  const same = { host: '127.0.0.1:3302', origin: 'http://127.0.0.1:3302' };
+  assert.equal((await login.POST(s.request({ password }, 'http://localhost:3302/api/admin/login', same))).status, 200);
+  assert.equal((await login.POST(s.request({ password }, 'http://localhost:3302/api/admin/login', { host: '127.0.0.1:3302', origin: 'http://mallory.example.test:3302' }))).status, 403);
+  assert.equal((await login.POST(s.request({ password }, 'http://localhost:3302/api/admin/login', { origin: 'https://foreign.example.test' }))).status, 403);
+}));
+
 test('every weight position is confirmed atomically before payment starts', () => withSystem(async s => {
   const order = await createOrder(s, [cut, pack]);
   assert.equal(order.status, 'awaiting_confirmation');
