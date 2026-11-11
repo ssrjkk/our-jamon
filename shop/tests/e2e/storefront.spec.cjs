@@ -93,6 +93,166 @@ test.afterAll(() => {
   if (originalHash !== null) expect(crypto.createHash('sha256').update(fs.readFileSync(original)).digest('hex')).toBe(originalHash);
 });
 
+for (const surface of ['next', 'static']) {
+  test(`${surface}: окно связи не навязывается и закрывается клавиатурой и снаружи`, async ({ page }, info) => {
+    await page.goto(surface === 'next' ? '/' : `${staticURL}/`);
+    const trigger = page.getByRole('button', { name: 'Написать нам', exact: true });
+    const panel = page.getByRole('dialog', { name: 'Напишите нам', exact: true });
+    await expect(trigger).toBeVisible();
+    await expect(panel).toBeHidden();
+    const before = await page.evaluate(() => ({ scroll: window.scrollY, overflow: document.body.style.overflow }));
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    await expect(panel).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Закрыть окно связи', exact: true })).toBeFocused();
+    await expect(panel.locator('input,textarea,form')).toHaveCount(0);
+    expect(await panel.getAttribute('aria-modal')).toBeNull();
+    expect(await page.evaluate(() => ({ scroll: window.scrollY, overflow: document.body.style.overflow }))).toEqual(before);
+    await page.keyboard.press('Tab');
+    await expect(panel.getByRole('link', { name: /Telegram/ })).toBeFocused();
+    const ring = await panel.getByRole('link', { name: /Telegram/ }).evaluate(el => {
+      const style = getComputedStyle(el);
+      return { visible: el.matches(':focus-visible'), width: parseFloat(style.outlineWidth), style: style.outlineStyle };
+    });
+    expect(ring.visible).toBe(true);
+    expect(ring.width).toBeGreaterThanOrEqual(2);
+    expect(ring.style).toBe('solid');
+    await page.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
+    await expect(trigger).toBeFocused();
+    await trigger.click();
+    await page.locator('.site-header').click({ position: { x: 2, y: 2 } });
+    await expect(panel).toBeHidden();
+    await trigger.click();
+    await page.evaluate(() => document.fonts.ready);
+    const scan = await new AxeBuilder({ page }).include('.contact-widget').analyze();
+    expect(scan.violations).toEqual([]);
+    await noOverflow(page);
+    await screenshot(page, info, `contact-${surface}`);
+    await page.getByRole('button', { name: 'Закрыть окно связи', exact: true }).click();
+    await expect(panel).toBeHidden();
+    await expect(trigger).toBeFocused();
+    await page.locator('.footer-supplier').scrollIntoViewIfNeeded();
+    await expect(trigger).toBeVisible();
+    await expect(panel).toBeHidden();
+  });
+
+  test(`${surface}: окно связи ведёт в реальные контакты без отправки заявки`, async ({ page, context }) => {
+    await context.route(/^https:\/\/(t\.me|wa\.me)\//, route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Local contact test</title>' }));
+    await page.goto(surface === 'next' ? '/' : `${staticURL}/`);
+    const contacts = await page.locator('.footer-links a').evaluateAll(links => links.map(link => link.getAttribute('href')));
+    await page.getByRole('button', { name: 'Написать нам', exact: true }).click();
+    const panel = page.getByRole('dialog', { name: 'Напишите нам', exact: true });
+    await expect(panel.getByRole('link')).toHaveCount(3);
+    for (const link of await panel.getByRole('link').all()) {
+      const href = await link.getAttribute('href');
+      expect(contacts).toContain(href);
+      if (href.startsWith('mailto:')) {
+        await link.evaluate(el => el.addEventListener('click', event => event.preventDefault(), { once: true }));
+        await link.click();
+        expect(context.pages()).toHaveLength(1);
+      } else {
+        await expect(link).toHaveAttribute('target', '_blank');
+        await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+        const opened = page.waitForEvent('popup');
+        await link.click();
+        const popup = await opened;
+        await popup.waitForLoadState('domcontentloaded');
+        expect(popup.url()).toBe(href);
+        expect(await popup.evaluate(() => window.opener)).toBeNull();
+        await popup.close();
+      }
+    }
+  });
+
+  test(`${surface}: окно связи не перекрывает корзину и помещается на узком и коротком экране`, async ({ page }) => {
+    for (const viewport of [{ width: 320, height: 480 }, { width: 640, height: 320 }]) {
+      await page.setViewportSize(viewport);
+      await page.goto(surface === 'next' ? '/' : `${staticURL}/`);
+      const trigger = page.getByRole('button', { name: 'Написать нам', exact: true });
+      await trigger.click();
+      const panel = page.getByRole('dialog', { name: 'Напишите нам', exact: true });
+      const rect = await panel.boundingBox();
+      const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+      expect(rect.x).toBeGreaterThanOrEqual(12);
+      expect(rect.x + rect.width).toBeLessThanOrEqual(clientWidth - 12 + 1);
+      expect(rect.y).toBeGreaterThanOrEqual(0);
+      expect(rect.y + rect.height).toBeLessThanOrEqual(viewport.height);
+      for (const control of await panel.locator('a,button').all()) {
+        const size = await control.boundingBox();
+        expect(size.height).toBeGreaterThanOrEqual(44);
+        expect(size.width).toBeGreaterThanOrEqual(44);
+      }
+      if (surface === 'static') {
+        const bar = await page.locator('.mobile-bottom-bar').boundingBox();
+        const button = await trigger.boundingBox();
+        expect(button.y + button.height).toBeLessThanOrEqual(bar.y);
+      }
+      const mail = panel.getByRole('link', { name: /Электронная почта/ });
+      await mail.evaluate(el => el.addEventListener('click', event => event.preventDefault(), { once: true }));
+      await mail.click();
+      await page.keyboard.press('Escape');
+      await expect(panel).toBeHidden();
+      await expect(trigger).toBeFocused();
+      await noOverflow(page);
+    }
+  });
+
+  test(`${surface}: окно связи не мешает меню, историям и корзине`, async ({ page }) => {
+    await page.goto(surface === 'next' ? '/' : `${staticURL}/`);
+    const trigger = page.getByRole('button', { name: 'Написать нам', exact: true });
+    const panel = page.getByRole('dialog', { name: 'Напишите нам', exact: true });
+    await trigger.click();
+    await page.getByRole('button', { name: 'Открыть меню', exact: true }).click();
+    await expect(panel).toBeHidden();
+    await expect(trigger).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+    const story = surface === 'static' ? page.locator('[data-story-idx="0"]') : page.getByRole('button', { name: /^Открыть историю:/ }).first();
+    await story.focus();
+    await page.keyboard.press('Enter');
+    await expect(panel).toBeHidden();
+    await expect(trigger).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+    if (surface === 'static') {
+      await page.locator('#header-cart-btn').click();
+      await expect(panel).toBeHidden();
+      await expect(trigger).toBeHidden();
+      await page.keyboard.press('Escape');
+    } else {
+      await page.locator('.cart-trigger').click();
+      await expect(page).toHaveURL(/\/cart$/);
+    }
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+    await expect(panel).toBeVisible();
+    await page.keyboard.press('Escape');
+    await noOverflow(page);
+  });
+
+  test(`${surface}: окно связи работает без JavaScript`, async ({ browser, baseURL, page }) => {
+    const context = await browser.newContext({ baseURL, viewport: page.viewportSize(), javaScriptEnabled: false });
+    try {
+      const preview = await context.newPage();
+      await preview.goto(surface === 'next' ? '/' : `${staticURL}/`);
+      const trigger = preview.getByRole('button', { name: 'Написать нам', exact: true });
+      const panel = preview.getByRole('dialog', { name: 'Напишите нам', exact: true });
+      await expect(panel).toBeHidden();
+      await trigger.click();
+      await expect(panel).toBeVisible();
+      await expect(panel.getByRole('link')).toHaveCount(3);
+      await preview.keyboard.press('Escape');
+      await expect(panel).toBeHidden();
+      await expect(trigger).toBeFocused();
+    } finally {
+      await context.close();
+    }
+  });
+}
+
 test('обе витрины отдают прайс 0711 во всех отделах', async ({ page }, info) => {
   for (const surface of ['next', 'static']) {
     await openCatalog(page, surface);

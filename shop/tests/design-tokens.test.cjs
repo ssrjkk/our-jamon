@@ -47,6 +47,16 @@ test('страница 404 живёт в тех же токенах, что и �
   assert.match(html, /<meta name="robots" content="noindex">/, '404 индексируется');
 });
 
+test('окно связи сохраняет одинаковые контролы и типографику обеих витрин', () => {
+  for (const selector of ['.contact-trigger', '.contact-panel', '.contact-head h2', '.contact-close', '.contact-description', '.contact-panel .contact-link']) {
+    const pattern = new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}');
+    const next = pattern.exec(nextCss)?.[1];
+    const staticStyle = pattern.exec(staticCss)?.[1];
+    assert.ok(next, `${selector}: нет стиля в Next`);
+    assert.equal(staticStyle, next, `${selector}: окно связи разошлось между витринами`);
+  }
+});
+
 test('ширина контейнера одна, а высота шапки берётся из токена, а не из магического числа', () => {
   assert.equal(tokens['index.html'].get('--container'), tokens['globals.css'].get('--container'));
   for (const [name, css] of Object.entries(sheets)) {

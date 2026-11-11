@@ -11,6 +11,7 @@ export function useDialogFocus(open: boolean, ref: RefObject<HTMLElement | null>
   useEffect(() => {
     const dialog = ref.current;
     if (!open || !dialog) return;
+    document.querySelectorAll<HTMLElement>('[popover]:popover-open').forEach((popover) => popover.hidePopover());
     const previousFocus = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
     const background: { element: HTMLElement; inert: boolean }[] = [];

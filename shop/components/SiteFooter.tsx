@@ -38,6 +38,32 @@ export default function SiteFooter() {
         <p>«Наш Хамон — лавка деликатесов» — эксклюзивный дистрибьютор бренда «Дом Хамона» по Санкт-Петербургу и Ленинградской области.</p>
         <p className="footer-slogan">Окорок, соль и время. Ничего лишнего. Сделано в Коломне.</p>
       </div>
+      <div className="contact-widget">
+        <button type="button" className="contact-trigger" popoverTarget="contact-panel" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"><path d="M20 11.5a8 8 0 0 1-8 8H5l-3 3v-11a9 9 0 0 1 18 0Z M7 10h10M7 14h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          Написать нам
+        </button>
+        <section id="contact-panel" className="contact-panel" popover="auto" role="dialog" aria-labelledby="contact-title" aria-describedby="contact-description">
+          <div className="contact-head">
+            <h2 id="contact-title">Напишите нам</h2>
+            <button type="button" className="contact-close" popoverTarget="contact-panel" popoverTargetAction="hide" aria-label="Закрыть окно связи" autoFocus>
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+            </button>
+          </div>
+          <p id="contact-description" className="contact-description">Выберите, где вам удобно написать.</p>
+          <div className="contact-links">
+            <a className="contact-link" href="https://t.me/mvn_ge" target="_blank" rel="noopener noreferrer">
+              <span><strong>Telegram</strong><small>Личный чат</small></span><span className="arrow-up" aria-hidden="true" />
+            </a>
+            <a className="contact-link" href="https://wa.me/79068960099" target="_blank" rel="noopener noreferrer">
+              <span><strong>WhatsApp</strong><small>Чат по номеру лавки</small></span><span className="arrow-up" aria-hidden="true" />
+            </a>
+            <a className="contact-link" href="mailto:619896@mail.ru">
+              <span><strong>Электронная почта</strong><small>619896@mail.ru</small></span><span className="arrow-up" aria-hidden="true" />
+            </a>
+          </div>
+        </section>
+      </div>
     </footer>
   );
 }
