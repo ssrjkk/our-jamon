@@ -41,7 +41,7 @@ function createSystem(options = {}) {
     cache.set(file, module);
     const js = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true, jsx: ts.JsxEmit.ReactJSX } }).outputText;
     const localRequire = id => {
-      if (id === 'next/server') return { NextResponse: Response };
+      if (id === 'next/server') return { NextResponse: Response, connection: async () => {} };
       if (id === 'next/headers') return { cookies: async () => ({ get: name => jar.has(name) ? { value: jar.get(name) } : undefined }) };
       if (id === 'node:sqlite') return { ...sqlite, DatabaseSync: Database };
       const relative = id.startsWith('@/') ? path.join(root, id.slice(2)) : id.startsWith('.') ? path.resolve(path.dirname(file), id) : null;

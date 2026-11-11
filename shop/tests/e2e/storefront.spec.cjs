@@ -1429,6 +1429,24 @@ test('своя 404 остаётся русской, брендированной
   expect(radius, 'угол кнопки на 404 острый').toBeGreaterThan(0.5);
 });
 
+test('next: заголовки безопасности и мета главной не теряются', async ({ request, baseURL }) => {
+  for (const path of ['/', '/api/products', '/net-takoy-stranitsy']) {
+    const res = await request.get(`${baseURL}${path}`);
+    const headers = res.headers();
+    expect(headers['x-powered-by'], `${path}: светит X-Powered-By`).toBeUndefined();
+    expect(headers['x-content-type-options'], `${path}: нет nosniff`).toBe('nosniff');
+    expect(headers['referrer-policy'], `${path}: нет referrer-policy`).toBe('strict-origin-when-cross-origin');
+    expect(headers['x-frame-options'], `${path}: нет защиты от фреймов`).toBe('DENY');
+    expect(headers['permissions-policy'], `${path}: нет permissions-policy`).toContain('camera=()');
+  }
+  const html = await (await request.get(`${baseURL}/`)).text();
+  expect(html).toContain('name="description"');
+  expect(html).toContain('property="og:title"');
+  expect(html).toMatch(/property="og:image" content="https?:\/\//);
+  expect(html).toContain('name="theme-color" content="#5B2824"');
+  expect(html).toContain('<html lang="ru"');
+});
+
 // Контролы измеряются в браузере, а не по тексту CSS: каскад и медиазапросы решают.
 test('главные контролы обеих витрин совпадают по размеру, цвету и фокусу', async ({ page }) => {
   const read = () => page.evaluate(() => {
