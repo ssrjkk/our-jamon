@@ -1,11 +1,44 @@
 const path = require('node:path');
 const fs = require('node:fs');
+const { execFileSync } = require('node:child_process');
 const { defineConfig } = require('@playwright/test');
 const output = path.join(__dirname, 'test-results');
 fs.mkdirSync(output, { recursive: true });
-const baseURL = 'http://127.0.0.1:3302';
-const staticPort = process.env.E2E_STATIC_PORT || '8765';
-const staticURL = 'http://127.0.0.1:' + staticPort;
+
+// На этой машине работают несколько сессий сразу, и любой localhost-порт может оказаться
+// занятым чужим сервером: гейт падал с невнятным EADDRINUSE, когда чужой
+// `python -m http.server` держал 8765. Берём первый свободный порт и выдаём его и
+// серверу, и тестам из одного места — адрес теста не может разойтись с реальным портом.
+function freePort(start) {
+  for (let port = start; port < start + 25; port += 1) {
+    try {
+      execFileSync(process.execPath, ['-e',
+        `const s=require('net').createServer();s.on('error',()=>process.exit(3));s.listen(${port},'127.0.0.1',()=>s.close(()=>process.exit(0)));`,
+      ], { stdio: 'ignore', timeout: 8000 });
+      return port;
+    } catch {
+      // порт занят или недоступен — пробуем следующий
+    }
+  }
+  throw new Error(`Нет свободного порта в диапазоне ${start}–${start + 24}`);
+}
+
+// Конфиг вычисляется не один раз: сначала в раннере, потом в каждом воркере. Без
+// закрепления портов воркер находит поднятые раннером серверы занятыми и уезжает на
+// следующий порт, а тесты стучатся в пустоту (ECONNREFUSED). Поэтому порты выбираются
+// один раз и передаются дальше через окружение.
+const wantedAppPort = Number(process.env.E2E_APP_PORT || 3302);
+const wantedStaticPort = Number(process.env.E2E_STATIC_PORT || 8765);
+if (process.env.E2E_PORTS_PINNED !== '1') {
+  process.env.E2E_APP_PORT = String(freePort(wantedAppPort));
+  process.env.E2E_STATIC_PORT = String(freePort(wantedStaticPort));
+  process.env.E2E_PORTS_PINNED = '1';
+}
+const appPort = Number(process.env.E2E_APP_PORT);
+const staticPort = Number(process.env.E2E_STATIC_PORT);
+const baseURL = `http://127.0.0.1:${appPort}`;
+// Тестам отдаём тот же адрес, что и серверу: две разные переменные расходились молча.
+process.env.E2E_STATIC_URL = `http://127.0.0.1:${staticPort}`;
 const dbPath = path.join(output, `browser-${Date.now()}.sqlite`);
 
 module.exports = defineConfig({
@@ -35,7 +68,7 @@ module.exports = defineConfig({
   ],
   webServer: [
     {
-      command: 'node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 3302',
+      command: `node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port ${appPort}`,
       url: baseURL,
       reuseExistingServer: false,
       timeout: 120000,
@@ -51,7 +84,7 @@ module.exports = defineConfig({
     },
     {
       command: 'node tests/static-server.cjs ' + staticPort,
-      url: `${staticURL}/index.html`,
+      url: `${process.env.E2E_STATIC_URL}/index.html`,
       reuseExistingServer: false,
       timeout: 30000,
     },

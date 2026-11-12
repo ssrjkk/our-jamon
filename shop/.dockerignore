@@ -12,3 +12,4 @@ data
 public/img/domhamona-*.webp
 test-results
 scripts/supplier-photos.json
+.vercel
