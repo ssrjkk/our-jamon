@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useId, useRef, useState } from 'react';
 import type { Product } from '@/lib/types';
-import { averageWeightOf, piecePriceOf, CATEGORY_TITLES } from '@/lib/products';
+import { averageWeightOf, piecePriceOf, calcPricePer100g, CATEGORY_TITLES } from '@/lib/products';
 import { weightPriceOf } from '@/lib/price';
 import { useCart, formatRub, formatWeightLabel } from './CartContext';
 import { ProductArt } from './Art';
@@ -37,8 +37,8 @@ export default function ProductCard({ product, serverReservedPieceIds, detail = 
     ? custom ? `Отрез ${formatWeightLabel(weightG)}` : `${product.category === 'leg' ? 'На кости' : 'Средний кусок'} · ~${formatWeightLabel(weightG)}`
     : bulk ? `На развес ${formatWeightLabel(weightG)}` : pack?.label ?? 'Нет фасовки';
   const caption = isFixed ? 'Фиксированная цена за штуку' : product.kind === 'piece' || bulk ? 'Предварительная сумма' : 'Цена за фасовку';
-  const pricePer100 = product.kind === 'piece' ? product.pricePerKg / 10
-    : bulk ? (product.bulk?.pricePerKg ?? 0) / 10 : pack?.weightG ? pack.price * 100 / pack.weightG : 0;
+  const pricePer100 = product.kind === 'piece' ? calcPricePer100g(product.pricePerKg)
+    : bulk ? calcPricePer100g(product.bulk?.pricePerKg ?? 0) : pack?.weightG ? pack.price * 100 / pack.weightG : 0;
   const Heading = detail ? 'h1' : headingLevel;
 
   function choose(value: string) { setSelection(value); setFeedback(''); }

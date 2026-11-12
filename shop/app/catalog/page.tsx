@@ -8,6 +8,7 @@ import { reservedPieceIds } from '@/lib/orders';
 export const metadata: Metadata = {
   title: 'Каталог хамона и деликатесов',
   description: 'Хамон куском, нарезка, целые ноги, оливки и сыры. Выберите средний кусок или закажите отрез нужного веса в лавке «Наш Хамон».',
+  alternates: { canonical: '/catalog' },
 };
 export const instant = false;
 

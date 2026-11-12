@@ -482,3 +482,15 @@ test('independent processes preserve all orders in SQLite', () => withSystem(asy
   assert.equal(orders.length, 40);
   assert.equal(new Set(orders.map((order) => order.id)).size, 40);
 }));
+
+test('страница товара тянет выгрузку 1С один раз на запрос, а не дважды', () => withSystem(async s => {
+  const calls = live(s);
+  const { loadCatalog } = s.load('lib/products.ts');
+  const before = calls.length;
+  // generateMetadata и тело страницы обращаются к каталогу одновременно.
+  await Promise.all([loadCatalog(), loadCatalog(), loadCatalog()]);
+  assert.equal(calls.length - before, 1, 'совпадающие обращения к каталогу дали несколько звонков в 1С');
+  // Кэша нет: завершённый запрос не переиспользуется, живые цены не устаревают молча.
+  await loadCatalog();
+  assert.equal(calls.length - before, 2, 'второй подряд идущий запрос обязан уйти в 1С заново');
+}));

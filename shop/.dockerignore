@@ -7,3 +7,8 @@ data
 *.log
 *.tsbuildinfo
 Наш_Хамон.zip
+# Файлы, которых нет в git (`.gitignore`), иначе `COPY . .` положил бы их в образ:
+# 9 фото поставщика без его разрешения, снимки баз и отчёты локальных проверок.
+public/img/domhamona-*.webp
+test-results
+scripts/supplier-photos.json

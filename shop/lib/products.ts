@@ -181,6 +181,8 @@ function degrade(reason: string): Catalog {
   return { products: PRODUCTS, previews: PREVIEWS, origin: 'built-in', notice };
 }
 
+let inflight: Promise<Catalog> | null = null;
+
 /**
  * 1С недоступна — витрина обязана остаться рабочей: покупатель видит прайс 0711,
  * собранный скриптом, а не 500 на каждой странице. Откат не молчит: причина уходит
@@ -188,6 +190,17 @@ function degrade(reason: string): Catalog {
  * «живые» цены не подменяются тайком.
  */
 export async function loadCatalog(): Promise<Catalog> {
+  // Одна выгрузка на совпадающие обращения: страница товара зовёт каталог из
+  // generateMetadata и из тела, и в live режиме это два запроса к 1С с таймаутом
+  // 10 с на одну карточку. Промис сбрасывается по завершении, поэтому расхождения
+  // между «закэшировано» и «актуально» не возникает — переиспользуется только
+  // ещё не завершённый звонок.
+  if (inflight) return inflight;
+  inflight = fetchCatalog().finally(() => { inflight = null; });
+  return inflight;
+}
+
+async function fetchCatalog(): Promise<Catalog> {
   const url = process.env.ONEC_API_URL?.trim();
   if (!url) {
     if (isDemoMode()) return { products: PRODUCTS, previews: PREVIEWS, origin: 'built-in', notice: null };

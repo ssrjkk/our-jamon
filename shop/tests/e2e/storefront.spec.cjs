@@ -1553,3 +1553,59 @@ test('главные контролы обеих витрин совпадают
   expect(measured.static.ring.matched, 'static: кольцо фокуса не применилось').toBe(true);
   expect(measured.static.ring, 'кольцо фокуса расходится между витринами').toEqual(measured.next.ring);
 });
+
+// Canonical наследовался от layout.tsx и превращал /catalog и все /product/* в копии
+// главной. Проверяется ответ сервера, а не конфигурация: Next сливает metadata вниз по
+// дереву маршрутов.
+test('canonical каждой страницы указывает на неё саму', async ({ request, baseURL }) => {
+  const canonicalOf = async (path) => {
+    const html = await (await request.get(`${baseURL}${path}`)).text();
+    const href = (html.match(/<link rel="canonical" href="([^"]+)"/) || [])[1];
+    // Next отдаёт корневой адрес без слэша в конце: `https://хост` и `https://хост/` —
+    // одна и та же страница. Сравниваем разрешённые URL, чужой адрес всё равно не пройдёт.
+    return href ? new URL(href, baseURL).href : null;
+  };
+  for (const path of ['/', '/catalog', '/about']) {
+    expect(await canonicalOf(path), `${path}: canonical ушёл на чужой адрес`).toBe(new URL(path, baseURL).href);
+  }
+  const sample = PRICED.find((product) => product.kind === 'piece') ?? PRICED[0];
+  expect(await canonicalOf(`/product/${sample.id}`), 'карточка товара не ссылается на себя')
+    .toBe(new URL(`/product/${sample.id}`, baseURL).href);
+
+  // Приватное не индексируется и не должно притворяться канонической страницей.
+  for (const path of ['/cart', '/admin']) {
+    expect(await canonicalOf(path), `${path}: у noindex-страницы не должно быть canonical`).toBe(null);
+  }
+  // Заглушка 404 тоже не может быть канонической: иначе поиск склеивает все ошибки в одну страницу.
+  expect(await canonicalOf('/net-takoy-stranitsy'), '404 отдаёт canonical').toBe(null);
+});
+
+// sitemap.ts и robots.ts собираются из SITE_URL и отдают живые адреса: проверка по
+// ответу сервера, потому что конфиг и реальная выдача расходятся молча.
+test('карта сайта обещает только открываемые и индексируемые адреса', async ({ request, baseURL }) => {
+  const origin = new URL(baseURL).origin;
+  const xml = await (await request.get(`${baseURL}/sitemap.xml`)).text();
+  const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  expect(urls.length, 'карта сайта пуста').toBeGreaterThan(2);
+
+  const forbidden = urls.filter((url) => /\/(admin|cart|api)\b|\/order\//.test(url));
+  expect(forbidden, 'в карте сайта есть приватные адреса').toEqual([]);
+
+  for (const url of urls.slice(0, 12)) {
+    const response = await request.get(url);
+    expect(response.status(), `${url}: адрес из карты сайта не открывается`).toBe(200);
+  }
+
+  const robots = await (await request.get(`${baseURL}/robots.txt`)).text();
+  expect(robots, 'robots.txt не ссылается на карту этого сайта').toContain(`${origin}`);
+  for (const privatePath of ['/admin', '/cart', '/order/', '/api/']) {
+    expect(robots, `robots.txt не закрывает ${privatePath}`).toContain(`Disallow: ${privatePath}`);
+  }
+});
+
+test('статическая витрина отдаёт один canonical на весь хеш-роутинг', async ({ request }) => {
+  const html = await (await request.get(`${staticURL}/index.html`)).text();
+  const links = html.match(/<link rel="canonical" href="([^"]+)"/g) || [];
+  expect(links.length, 'canonical должен быть ровно один').toBe(1);
+  expect(links[0]).toContain('href="https://');
+});

@@ -49,7 +49,8 @@ export const metadata: Metadata = {
     description: 'Хамон - главный герой. Вкусы собираем вокруг него: для себя, к столу и на подарок.',
     images: ['/brand/shop-interior.webp'],
   },
-  alternates: { canonical: '/' },
+  // Канонический адрес принадлежит каждой странице: Next сливает metadata вниз по
+  // дереву, и корневая запись '/' превращала /catalog и все /product/* в дубли главной.
 };
 
 export const viewport: Viewport = {

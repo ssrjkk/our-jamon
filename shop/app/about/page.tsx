@@ -5,6 +5,7 @@ import ShopPanel from '@/components/ShopPanel';
 export const metadata: Metadata = {
   title: 'О нас',
   description: '«Наш Хамон» — лавка деликатесов на Сытном рынке в Санкт-Петербурге. Хамон куском, в нарезке и целые ноги, оливки, сыры и подставки.',
+  alternates: { canonical: '/about' },
 };
 
 export default function AboutPage() {

@@ -1476,8 +1476,8 @@ function cardHtml(product) {
     var bulk = product.kind !== 'piece' && sel === 'bulk' && product.bulk;
     var avg = product.kind === 'piece' ? averageWeight(product) : 0;
     var metaText = product.agingMonths ? 'Выдержка ' + product.agingMonths + '\u00A0мес.' : categoryTitle(product.category);
-    var pricePer100 = product.kind === 'piece' ? Math.round(product.pricePerKg / 10)
-      : bulk ? Math.round(product.bulk.pricePerKg / 10)
+    var pricePer100 = product.kind === 'piece' ? calcPricePer100g(product.pricePerKg)
+      : bulk ? calcPricePer100g(product.bulk.pricePerKg)
       : active.weightG ? Math.round(active.price * 100 / active.weightG) : 0;
 
     var optionsHtml;
@@ -1523,7 +1523,7 @@ function cardHtml(product) {
         ? '<div class="bulk-slider-box">' +
           '<div style="display:flex;justify-content:space-between;font-size:0.8125rem;">' +
           '<span>Вес порции: <strong class="tabular" id="bulk-weight-label-' + product.id + '">' + formatWeightLabel(active.weightG) + '</strong></span>' +
-          '<span class="tabular">' + formatRub(Math.round(product.bulk.pricePerKg / 10)) + ' / 100\u00A0г</span></div>' +
+          '<span class="tabular">' + formatRub(calcPricePer100g(product.bulk.pricePerKg)) + ' / 100\u00A0г</span></div>' +
           '<input type="range" min="' + product.bulk.minG + '" max="' + product.bulk.maxG + '" step="' + product.bulk.stepG + '"' +
           ' value="' + active.weightG + '" aria-label="Вес порции в граммах"' +
           ' data-action="bulk-range" data-product-id="' + product.id + '">' +

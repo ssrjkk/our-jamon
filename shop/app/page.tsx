@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { connection } from 'next/server';
 import HeroLight from '@/components/HeroLight';
@@ -11,6 +12,8 @@ import CatalogClient from '@/components/CatalogClient';
 import AnimationsLayer from '@/components/Animations';
 import { loadCatalog } from '@/lib/products';
 import { reservedPieceIds } from '@/lib/orders';
+
+export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 export const instant = false;
 

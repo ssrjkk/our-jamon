@@ -10,7 +10,10 @@ import { reservedPieceIds } from '@/lib/orders';
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const product = (await getProducts()).find((entry) => entry.id === id);
-  return product ? { title: product.title, description: product.description } : { title: 'Товар не найден' };
+  // Карточка без товара не должна попадать в индекс как пустая страница с canonical.
+  return product
+    ? { title: product.title, description: product.description, alternates: { canonical: `/product/${product.id}` } }
+    : { title: 'Товар не найден', robots: { index: false, follow: false } };
 }
 export const instant = false;
 
