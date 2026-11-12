@@ -176,3 +176,78 @@ test('₽ за 100 г считается одним хелпером на обе
   assert.deepEqual(outsideHelper, [], 'расчёт за 100 г продублирован в обход calcPricePer100g');
   assert.equal(sites.length, 2, `хелперов за 100 г должно быть по одному на витрину, найдено ${sites.length}`);
 });
+
+/**
+ * Гейт каталога сверяет с git только фото позиций. Остальные локальные ассеты —
+ * логотипы, фото лавки, шрифты, gsap — перечислены прямо в разметке и в css: удаление
+ * файла из своего корня рвёт картинку молча, потому что ни сборка, ни рендер файл не
+ * требуют. Путь резолвится от каталога файла-источника, поэтому url() в
+ * brand/fonts/fonts.css ищется в brand/fonts/, а не в корне.
+ */
+test('ни одна локальная ссылка на ассет не ведёт в пустоту, общие файлы совпадают байт в байт', () => {
+  const repo = path.join(root, '..');
+  const sources = [];
+  const walk = (dir, label, surface) => {
+    for (const entry of fs.readdirSync(path.join(dir, label), { withFileTypes: true })) {
+      const rel = `${label}/${entry.name}`;
+      if (entry.isDirectory()) walk(dir, rel, surface);
+      else if (surface === 'Next' ? /\.(tsx?|css)$/.test(entry.name) : /\.css$/.test(entry.name)) {
+        sources.push({ from: rel, surface });
+      }
+    }
+  };
+  for (const dir of ['app', 'components', 'lib']) walk(root, dir, 'Next');
+  walk(repo, 'brand', 'Pages');
+  for (const file of fs.readdirSync(repo).filter((f) => f.endsWith('.html'))) {
+    sources.push({ from: file, surface: 'Pages' });
+  }
+
+  const LINK = /(?:src|href)=["'`]((?!https?:|\/\/|#|data:)[\w./-]+\.(?:webp|png|jpe?g|svg|gif|avif|ico|css|woff2?|js|json|xml))["'`>]|url\(["']?((?!https?:|\/\/|#|data:)[\w./-]+\.(?:webp|png|jpe?g|svg|gif|avif|css|woff2?))["']?\)/g;
+  const links = new Map();
+  for (const { from, surface } of sources) {
+    const text = fs.readFileSync(path.join(surface === 'Next' ? root : repo, from), 'utf8');
+    for (const match of text.matchAll(LINK)) {
+      const url = (match[1] || match[2]).split('?')[0].split('#')[0];
+      // У Next относительных путей в коде нет; если появятся — резолвим их от public,
+      // как это делает браузер на главном роуте. Абсолютный путь всегда от корня витрины.
+      const resolved = url.startsWith('/')
+        ? url.slice(1)
+        : path.posix.normalize(`${path.posix.dirname(from)}/${url}`);
+      const key = `${surface}:${resolved}`;
+      if (!links.has(key)) links.set(key, { resolved, surface, from: new Set() });
+      links.get(key).from.add(from);
+    }
+  }
+  assert.ok(links.size >= 20, `локальных ссылок на ассеты стало ${links.size} — гейт теряет опору`);
+
+  // Списки берутся из HEAD, а не из индекса: запущенное, но не закоммиченное удаление
+  // не должно исчезать из проверки ровно в момент максимального риска.
+  const trackedBySurface = {
+    Pages: new Set(git(['-c', 'core.quotePath=false', 'ls-tree', '-r', '--name-only', 'HEAD'], repo)),
+    Next: new Set(git(['-c', 'core.quotePath=false', 'ls-tree', '-r', '--name-only', 'HEAD', '--', 'public'], root)
+      .map((f) => f.replace(/^public\//, ''))),
+  };
+  const broken = [];
+  for (const { resolved, surface, from } of links.values()) {
+    if (!trackedBySurface[surface].has(resolved)) broken.push(`${surface} ${resolved} <= ${[...from].join(' ')}`);
+  }
+  assert.deepEqual(broken, [], 'витрина ссылается на ассет, которого нет в её git-корне — покупатель получит 404 вместо картинки');
+
+  // Общие для двух корней ассеты должны совпадать: правка логотипа в одном корне
+  // меняет картинку только у одной половины покупателей.
+  const shared = new Map();
+  for (const { resolved, surface } of links.values()) {
+    shared.set(resolved, new Set([...(shared.get(resolved) || []), surface]));
+  }
+  const digest = (abs) => crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+  const bothRoots = [...shared].filter(([, list]) => list.size > 1).map(([url]) => url);
+  assert.ok(bothRoots.length >= 5, `ассетов, лежащих в двух корнях, осталось ${bothRoots.length} — сверять нечего`);
+  const drifted = [];
+  for (const url of bothRoots) {
+    const pagesFile = path.join(repo, url);
+    const shopFile = path.join(root, 'public', url);
+    if (!fs.existsSync(pagesFile) || !fs.existsSync(shopFile)) continue;
+    if (digest(pagesFile) !== digest(shopFile)) drifted.push(url);
+  }
+  assert.deepEqual(drifted, [], 'один и тот же ассет в двух корнях разный: витрины рисуют разные картинки');
+});

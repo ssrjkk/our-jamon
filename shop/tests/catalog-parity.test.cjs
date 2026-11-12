@@ -13,6 +13,11 @@ const { root } = require('./helpers.cjs');
 const catalog = require('../lib/catalog.json');
 
 const staticHtml = fs.readFileSync(path.join(root, '..', 'index.html'), 'utf8');
+// У Pages-витрины не один публичный корень: вместе с главной отдаётся 404.html, и он
+// печатает телефон, адрес и часы работы. Списки файлов берём из каталога, чтобы
+// следующая страница не появилась вне поля зрения гейта.
+const staticPages = fs.readdirSync(path.join(root, '..')).filter((f) => f.endsWith('.html'))
+  .map((f) => fs.readFileSync(path.join(root, '..', f), 'utf8')).join('\n');
 
 function staticArray(name) {
   const start = staticHtml.indexOf(`var ${name} =`);
@@ -110,7 +115,7 @@ for (const dir of ['app', 'components', 'lib']) {
     for (const hit of source.matchAll(CONTACT_RE)) nextContacts.add(hit[0]);
   }
 }
-const staticContacts = new Set(staticHtml.match(CONTACT_RE) || []);
+const staticContacts = new Set(staticPages.match(CONTACT_RE) || []);
 
 test('обе витрины зовут по одним и тем же контактам', () => {
   assert.ok(nextContacts.size >= 3, `в Next осталось ${nextContacts.size} контактов — сверять нечего`);
@@ -130,22 +135,22 @@ test('группы каталога идут в одном порядке и с 
     `группы разошлись: статика ${names(deptOrder)}, прайс ${names(catalog.categories)}`);
 });
 
-// Адрес лавки и часы печатаются в обеих витринах словами, а не из одного слоя: в
-// статике пять мест, в Next восемь. Формулировки намеренно разные («Сытнинская ул.,
-// 4П» и «Сытнинская, 4П»), поэтому сверяем не строки, а то, что реально важно
-// покупателю: к какому дому он приедет и во сколько лавка закроется. Разойдутся —
-// покупатель с одной из ссылок приедет к другому дому или к закрытой двери.
+// Адрес лавки и часы печатаются в обеих витринах словами, а не из одного слоя: на
+// Pages шесть мест (пять на главной и одно на 404), в Next восемь. Формулировки
+// намеренно разные («Сытнинская ул., 4П» и «Сытнинская, 4П»), поэтому сверяем не
+// строки, а то, что реально важно покупателю: к какому дому он приедет и во сколько
+// лавка закроется. Разойдутся — приедет к другому дому или к закрытой двери.
 const hits = (text, re, group = 0) => [...text.matchAll(re)].map((m) => m[group].replace(/\s+/g, ''));
 
 test('лавка ждёт по одному адресу и в одни часы на обеих витринах', () => {
   const house = (text) => hits(text, /Сытнинская[\s\S]{0,30}?(\d+\s*[А-Яа-яЁё])/g, 1);
   const hours = (text) => hits(text, /\d{1,2}:\d{2}\s*[–—-]\s*\d{1,2}:\d{2}/g);
-  const staticHouse = house(staticHtml), nextHouse = house(nextCorpus);
+  const staticHouse = house(staticPages), nextHouse = house(nextCorpus);
   assert.ok(staticHouse.length >= 3 && nextHouse.length >= 3,
     `упоминаний адреса стало слишком мало для сверки: статика ${staticHouse.length}, Next ${nextHouse.length}`);
   assert.deepEqual([...new Set([...staticHouse, ...nextHouse])], [staticHouse[0]],
     `дом самовывоза разный: статика ${JSON.stringify(staticHouse)}, Next ${JSON.stringify(nextHouse)}`);
-  const allHours = [...hours(staticHtml), ...hours(nextCorpus)];
+  const allHours = [...hours(staticPages), ...hours(nextCorpus)];
   assert.ok(allHours.length >= 4, `часов работы упомянуто ${allHours.length} раз — сверять нечего`);
   assert.deepEqual([...new Set(allHours)], [allHours[0]], `часы работы разные: ${JSON.stringify(allHours)}`);
 });
@@ -159,8 +164,36 @@ const telMismatch = (text) => [...text.matchAll(TEL_RE)]
 
 test('на обеих витринах показывают то же число, которое набирает ссылка', () => {
   const counted = (text) => [...text.matchAll(/tel:\+\d+/g)].length;
-  assert.ok(counted(staticHtml) >= 5 && counted(nextCorpus) >= 5,
-    `tel-ссылок стало слишком мало для сверки: статика ${counted(staticHtml)}, Next ${counted(nextCorpus)}`);
-  assert.deepEqual([...telMismatch(staticHtml), ...telMismatch(nextCorpus)], [],
+  assert.ok(counted(staticPages) >= 5 && counted(nextCorpus) >= 5,
+    `tel-ссылок стало слишком мало для сверки: статика ${counted(staticPages)}, Next ${counted(nextCorpus)}`);
+  assert.deepEqual([...telMismatch(staticPages), ...telMismatch(nextCorpus)], [],
     'витрина печатает один номер, а по клику набирает другой');
+});
+
+// Кольца историй — последний дубль, который не выводится ни из прайса, ни из каталога:
+// состав ленты собран руками на обеих витринах. Порядок id задаёт порядок показа, а
+// картинка кольца ищется по тому же id, поэтому лишнее или переименованное кольцо
+// рвёт ленту молча: без картинки покупатель видит пустую рамку.
+const storySource = fs.readFileSync(path.join(root, 'components', 'Stories.tsx'), 'utf8');
+const artSource = fs.readFileSync(path.join(root, 'components', 'Art.tsx'), 'utf8');
+const nextStoryIds = [...storySource.matchAll(/\{ id: '(\w+)', label: /g)].map((m) => m[1]);
+const nextArt = new Map([...artSource.matchAll(/^ {2}(\w+): <img src="([^"]+)"/gm)].map((m) => [m[1], m[2]]));
+const staticStories = staticArray('STORIES');
+const artLiteral = /var STORY_ART = (\{[^}]+\})/.exec(staticHtml);
+assert.ok(artLiteral, 'в index.html больше нет объекта STORY_ART — гейт потерял опору');
+const staticArt = new Map(Object.entries(vm.runInNewContext(`(${artLiteral[1]})`, Object.create(null)))
+  .map(([id, markup]) => [id, /src="([^"]+)"/.exec(markup)[1]]));
+
+test('лента историй показывает одни кольца и те же картинки на обеих витринах', () => {
+  assert.ok(nextStoryIds.length >= 5, `колец в Next стало ${nextStoryIds.length} — сверять нечего`);
+  // Массив из vm — чужая realm: deepEqual отвергает его даже при совпадении элементов,
+  // поэтому порядок колец сверяется строками, как и остальной каталог в этом гейте.
+  assert.equal(JSON.stringify(staticStories.map((s) => s.id)), JSON.stringify(nextStoryIds),
+    'витрины показывают разные кольца в разном порядке');
+  assert.deepEqual(nextStoryIds.filter((id) => !nextArt.has(id)), [],
+    'у кольца ленты нет картинка в Next');
+  assert.deepEqual(nextStoryIds.filter((id) => !staticArt.has(id)), [],
+    'у кольца ленты нет картинка в статике');
+  const picture = nextStoryIds.filter((id) => nextArt.get(id) !== `/${staticArt.get(id)}`);
+  assert.deepEqual(picture, [], `кольцо «${picture.join('», «')}» рисуется разными фото на двух витринах`);
 });
