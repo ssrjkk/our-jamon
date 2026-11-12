@@ -923,7 +923,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
           <label id="deliv-label">Способ доставки из Санкт-Петербурга</label>
           <div class="delivery-radio-grid" role="radiogroup" aria-labelledby="deliv-label">
             <button type="button" class="delivery-option-btn" data-deliv-id="cdek" role="radio" aria-checked="true">
-              <strong>СДЭК (ПВЗ)</strong>
+              <strong>СДЭК · пункт выдачи</strong>
               <span class="deliv-cost">Стоимость согласуется</span>
             </button>
             <button type="button" class="delivery-option-btn" data-deliv-id="yandex" role="radio" aria-checked="false">
@@ -931,11 +931,11 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
               <span class="deliv-cost">Стоимость согласуется</span>
             </button>
             <button type="button" class="delivery-option-btn" data-deliv-id="drivee" role="radio" aria-checked="false">
-              <strong>Drivee Курьер</strong>
+              <strong>Drivee · курьер</strong>
               <span class="deliv-cost">Стоимость согласуется</span>
             </button>
             <button type="button" class="delivery-option-btn" data-deliv-id="pickup" data-deliv-cost="0" role="radio" aria-checked="false">
-              <strong>Самовывоз СПб</strong>
+              <strong>Самовывоз</strong>
               <span class="deliv-cost tabular">0&nbsp;₽</span>
             </button>
           </div>
@@ -1225,7 +1225,7 @@ var SETS = [
   { id: "evening", kicker: "К столу", title: "Вкусный вечер", desc: "Нарезка «14», крупные Gordal без косточки и хлебные палочки на оливковом масле.", components: [{"productId":"nf-00000007","packIdx":0},{"productId":"nf-00000229","packIdx":0},{"productId":"nf-00000241","packIdx":0}] },
   { id: "gift", kicker: "На подарок", title: "Хорошая компания", desc: "Выдержка «24», сыр «Сальково» 24 месяцев и вяленые томаты с чесноком и базиликом.", components: [{"productId":"nf-00000010","packIdx":0},{"productId":"nf-00000112","packIdx":0},{"productId":"nf-00000235","packIdx":0}] }
 ];
-var DELIVERY_NAMES = { cdek: 'СДЭК (ПВЗ)', yandex: 'Яндекс Доставка', drivee: 'Drivee Курьер', pickup: 'Самовывоз' };
+var DELIVERY_NAMES = { cdek: 'СДЭК · пункт выдачи', yandex: 'Яндекс Доставка', drivee: 'Drivee · курьер', pickup: 'Самовывоз' };
 // Тот же лимит, что и в боевом магазине (shop/components/CartContext.tsx): 20 одинаковых упаковок в заказе.
 var MAX_SAME_PACK = 20;
 

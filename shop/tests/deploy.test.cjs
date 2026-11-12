@@ -6,17 +6,24 @@ const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { root } = require('./helpers.cjs');
 
-const git = (args, cwd) => execFileSync('git', args, { cwd: cwd || root, encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+const git = (args, cwd) => execFileSync('git', args, { cwd: cwd || root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim().split('\n').filter(Boolean);
 
 /**
  * `-o --ignored` отдаёт только игнорируемые файлы, а `-o` без `--ignored` — только
  * неигнорируемые. По отдельности каждый из вариантов не видит часть класса «файл лежит
  * рядом, его нет в git», а именно этот класс уезжает в docker-контекст и standalone.
+ *
+ * Игнорируемое перечисляется с `--directory`: без него git разворачивает `.next/` и
+ * `node_modules/` попосточно, список переваливает за 1 МБ, и гейт падает с ENOBUFS
+ * просто потому, что сборка подросла. Свёртка ничего не теряет: `.dockerignore` тоже
+ * накрывает путь префиксом, а каталог сворачивается лишь тогда, когда в нём нет ни
+ * одного отслеживаемого файла — там и прятаться нечему частичным исключением.
  */
-const filesMimoGit = (pathspecs, cwd) => [...new Set([
-  ...git(['-c', 'core.quotePath=false', 'ls-files', '--others', '--exclude-standard', '--', ...pathspecs], cwd),
-  ...git(['-c', 'core.quotePath=false', 'ls-files', '--others', '--ignored', '--exclude-standard', '--', ...pathspecs], cwd),
-])];
+const filesMimoGit = (pathspecs, cwd) => {
+  const plain = git(['-c', 'core.quotePath=false', 'ls-files', '--others', '--exclude-standard', '--', ...pathspecs], cwd);
+  const ignored = git(['-c', 'core.quotePath=false', 'ls-files', '--others', '--ignored', '--directory', '--exclude-standard', '--', ...pathspecs], cwd);
+  return { all: [...new Set([...plain, ...ignored])], ignored };
+};
 
 /**
  * Docker и standalone копируют рабочий каталог, а не git: всё, что лежит рядом и
@@ -24,7 +31,7 @@ const filesMimoGit = (pathspecs, cwd) => [...new Set([
  * надёжный инвариант — внутри публичного корня нечего прятать.
  */
 test('в публичном корне нет ни одного файла мимо git', () => {
-  const stray = filesMimoGit(['public']);
+  const stray = filesMimoGit(['public']).all;
   assert.deepEqual(stray, [], 'в public/ лежат файлы, которых нет в git — они попадут в docker-образ и standalone-бандл');
   const tracked = git(['ls-files', '--', 'public']);
   assert.ok(tracked.length >= 120, `у гейта пропала опора: отслеживаемых ассетов ${tracked.length}`);
@@ -61,11 +68,16 @@ test('.dockerignore накрывает локальные данные, секр
  * .dockerignore, кроме файлов, которые Next сам генерирует при сборке.
  */
 test('весь рабочий каталог мимо git накрыт .dockerignore', () => {
-  const stray = filesMimoGit(['.']);
+  const { all: stray, ignored } = filesMimoGit(['.']);
   const generatedByBuild = new Set(['next-env.d.ts']);
   const uncovered = stray.filter((file) => !generatedByBuild.has(file) && !dockerIgnored(file));
   assert.deepEqual(uncovered, [], `${uncovered.length} файлов нет в git и нет в .dockerignore — они попадут в docker-контекст: ${uncovered.slice(0, 8).join(', ')}`);
-  assert.ok(stray.length >= 1000, `у гейта пропала опора: файлов мимо git ${stray.length}`);
+  // Опора гейта — не длина списка (она зависела от того, сколько мусора накопила
+  // сборка, и рушилась по maxBuffer), а то, что перечисление реально видит
+  // обязательные локальные каталоги: без них проверка выродилась бы в пустоту.
+  for (const must of ['node_modules/', 'data/']) {
+    assert.ok(ignored.includes(must), `у гейта пропала опора: перечисление мимо git не видит ${must}`);
+  }
 });
 
 /**
