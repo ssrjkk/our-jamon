@@ -9,7 +9,7 @@ import SiteTabs from '@/components/SiteTabs';
 import ScaleTerminal from '@/components/ScaleTerminal';
 import CatalogClient from '@/components/CatalogClient';
 import AnimationsLayer from '@/components/Animations';
-import { getProducts } from '@/lib/products';
+import { loadCatalog } from '@/lib/products';
 import { reservedPieceIds } from '@/lib/orders';
 
 export const instant = false;
@@ -39,12 +39,13 @@ function DeliveryPanel() {
 
 export default async function HomePage() {
   await connection();
-  const products = await getProducts();
+  const catalog = await loadCatalog();
+  const products = catalog.products;
   const reserved = Array.from(await reservedPieceIds());
   return <main id="main-content">
     <HeroLight />
     <SiteTabs panels={{
-      catalog: <><HomeStories products={products} /><CatalogClient products={products} serverReservedPieceIds={reserved} /></>,
+      catalog: <><HomeStories products={products} /><CatalogClient products={products} previews={catalog.previews} serverReservedPieceIds={reserved} /></>,
       shop: <ShopPanel />,
       'buyer-choices': <BuyerChoices />,
       scenarios: <Scenarios products={products} />,

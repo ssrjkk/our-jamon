@@ -38,6 +38,15 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 const STORAGE_KEY = 'nh_cart_v2';
 
+/**
+ * crypto.randomUUID() существует только в защищённом контексте, а магазин из README
+ * стартует и на http://IP:3000: там «В корзину» падал с TypeError на каждой кнопке.
+ */
+export function newLineUid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function loadLines(): { lines: CartLine[]; notice: string } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -83,6 +92,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     catch { setNotice('Браузер не разрешает сохранять корзину. Не закрывайте вкладку до оформления.'); }
   }, [lines, ready]);
 
+  // Соседняя вкладка пишет в то же хранилище, и без этого слушателя последняя
+  // сохранённая версия молча побеждала: корзина из другой вкладки пропадала.
+  // event.key === null — это очистка всего хранилища, корзина обнуляется.
+  useEffect(() => {
+    if (!ready) return;
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== STORAGE_KEY) return;
+      const saved = loadLines();
+      commit(saved.lines);
+      if (saved.notice) setNotice(saved.notice);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [ready, commit]);
+
   const addLines = useCallback((incoming: Omit<CartLine, 'uid'>[]): boolean => {
     const next = [...current.current];
     for (const line of incoming) {
@@ -90,7 +114,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const index = line.kind === 'pack' ? next.findIndex((item) => item.kind === 'pack' && item.productId === line.productId && (item.packIdx ?? 0) === (line.packIdx ?? 0)) : -1;
       if (line.qty < 1 || line.qty > 20 || index !== -1 && next[index].qty + line.qty > 20) { setNotice('Можно добавить не более 20 одинаковых упаковок.'); return false; }
       if (index !== -1) next[index] = { ...next[index], qty: next[index].qty + line.qty };
-      else next.push({ ...line, uid: crypto.randomUUID() });
+      else next.push({ ...line, uid: newLineUid() });
     }
     if (next.length > 100) { setNotice('В одном заказе может быть не более 100 позиций.'); return false; }
     setNotice('');
@@ -143,4 +167,16 @@ export function formatRub(value: number): string {
 
 export function formatWeightLabel(weightG: number): string {
   return weightG >= 1000 ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 3 }).format(weightG / 1000)}\u00a0кг` : `${weightG}\u00a0г`;
+}
+
+/**
+ * Строка веса и количества под позицией корзины. Фасовки без граммов (оливки и масло
+ * в прайсе заданы объёмом, weightG = 0) не должны печатать «0 г за шт.» — для них
+ * остаётся только количество, а объём уже виден в подписи фасовки.
+ */
+export function formatUnitSummary(item: { weightG: number; qty: number }): string {
+  const parts = [];
+  if (item.weightG > 0) parts.push(`${formatWeightLabel(item.weightG)} за шт.`);
+  if (item.qty > 1) parts.push(`${item.qty} шт.`);
+  return parts.join(' · ');
 }

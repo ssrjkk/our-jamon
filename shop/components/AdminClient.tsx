@@ -27,6 +27,9 @@ export default function AdminClient() {
   const [fieldErrors, setFieldErrors] = useState<OrderFields>({});
   const [feedback, setFeedback] = useState<Record<string, Feedback>>({});
   const [loading, setLoading] = useState(true);
+  // Витрина может жить на встроенном прайсе, пока 1С молчит. Покупателю об этом
+  // не пишем, но лавка обязана видеть, что цены сегодня не из живой выгрузки.
+  const [catalogWarning, setCatalogWarning] = useState('');
   const [sessionBusy, setSessionBusy] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const actionPending = useRef(false);
@@ -42,6 +45,7 @@ export default function AdminClient() {
     setDeliveryCosts({});
     setFieldErrors({});
     setFeedback({});
+    setCatalogWarning('');
     setPassword('');
   }, []);
 
@@ -53,10 +57,11 @@ export default function AdminClient() {
       const response = await fetch('/api/orders', { cache: 'no-store', signal });
       if (signal?.aborted || request !== requestId.current) return;
       if (response.status === 401) { forgetSession(); return; }
-      const data: { orders?: Order[]; error?: string } = await response.json();
+      const data: { orders?: Order[]; catalog?: { notice?: string | null } | null; error?: string } = await response.json();
       if (signal?.aborted || request !== requestId.current) return;
       if (!response.ok || !Array.isArray(data.orders)) throw new Error(data.error || 'Не удалось загрузить заказы. Повторите попытку.');
       setOrders(data.orders);
+      setCatalogWarning(data.catalog?.notice ?? '');
       setAuthed(true);
     } catch {
       if (signal?.aborted || request !== requestId.current) return;
@@ -257,6 +262,7 @@ export default function AdminClient() {
         </div>
       </header>
       {error && <p className="form-status-box error" role="alert">{error}</p>}
+      {catalogWarning && <p className="form-status-box error" role="status">{catalogWarning}</p>}
       {loading && <p className="checkout-hint" role="status">Загружаем актуальные заказы…</p>}
       {!loading && !error && orders.length === 0 && <div className="cart-empty-state"><h2 className="checkout-title">Заказов пока нет</h2><p>Новые заказы появятся здесь после оформления. Обновите список, чтобы проверить поступления.</p></div>}
       <div className="admin-orders">
@@ -294,7 +300,7 @@ export default function AdminClient() {
                           <div className="cart-item-details">
                             <strong className="cart-item-title">{item.title}</strong>
                             <span className="cart-item-sub">{item.label} · {item.qty} шт.</span>
-                            <p className="cart-item-note tabular">{formatWeightLabel(item.weightG)} за шт.{item.qty > 1 ? ` · всего ${formatWeightLabel(item.weightG * item.qty)}` : ''}</p>
+                            {item.weightG > 0 && <p className="cart-item-note tabular">{formatWeightLabel(item.weightG)} за шт.{item.qty > 1 ? ` · всего ${formatWeightLabel(item.weightG * item.qty)}` : ''}</p>}
                             <p className="cart-item-note">{item.requiresWeightCheck ? item.weightConfirmed ? 'Вес подтверждён.' : 'Нужен фактический вес.' : 'Фиксированная фасовка.'} {item.pricePerKg === null ? 'Цена за штуку фиксирована; изменение веса её не меняет.' : `${formatRub(item.pricePerKg)} / кг.`}</p>
                             {confirming && item.requiresWeightCheck && <div className="form-field">
                               <label htmlFor={inputId}>Фактический вес: {item.title}, г</label>

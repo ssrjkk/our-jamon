@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createSystem } = require('./helpers.cjs');
+const { createSystem, root, priceWeightRounds } = require('./helpers.cjs');
 
 async function withSystem(action, options) {
   const system = createSystem(options);
@@ -101,3 +101,62 @@ test('секреты сравниваются без раннего выхода
   assert.equal(equalSecrets('', ''), true);
   assert.equal(orderCookieName('NH-ABC123'), 'nh_order_NH-ABC123');
 }));
+
+// Клиент считал (w/1000)*rate, сервер — w*rate/1000: на 174 из 19 510 достижимых весов
+// карточка показывала на 1 ₽ меньше заказа. Гейт перебирает все веса всех товаров,
+// которые вообще можно оформить как отрез, и сверяет сумму сервера с суммой карточки.
+test('отрез: сервер и карточка дают одну сумму на всех 19 510 достижимых весах', () => withSystem(async s => {
+  const { PRODUCTS, piecePriceOf } = s.load('lib/products.ts');
+  const { resolveCart } = s.load('lib/orders.ts');
+  const cuts = PRODUCTS.filter((product) => product.kind === 'piece' && product.category === 'piece');
+  assert.ok(cuts.length >= 8, `товаров с отрезом должно быть не меньше 8, найдено ${cuts.length}`);
+  let checked = 0;
+  for (const product of cuts) {
+    for (let weightG = 50; weightG <= 2000; weightG += 1) {
+      const resolved = resolveCart([{ productId: product.id, kind: 'custom', weightG, qty: 1 }], new Set(), PRODUCTS);
+      assert.equal(resolved.ok, true, `${product.id}: сервер отверг ${weightG} г`);
+      const cardPrice = piecePriceOf(product, weightG);
+      assert.equal(resolved.items[0].price, cardPrice, `${product.id} ${weightG} г: заказ ${resolved.items[0].price} ₽, карточка ${cardPrice} ₽`);
+      checked += 1;
+    }
+  }
+  assert.equal(checked, cuts.length * 1951);
+}));
+
+// Вторая реализация округления обязана оставаться невозможной: иначе дрейф
+// вернётся в любом файле, который никто не сверял с сервером.
+test('округление цены веса живёт только в lib/price.ts', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const skip = new Set(['node_modules', '.next', 'test-results', 'data']);
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) { if (!skip.has(entry.name)) walk(path.join(dir, entry.name)); }
+      else if (/\.(ts|tsx)$/.test(entry.name)) files.push(path.join(dir, entry.name));
+    }
+  };
+  for (const dir of ['app', 'components', 'lib']) walk(path.join(root, dir));
+  const offenders = files.filter((file) => path.basename(file) !== 'price.ts')
+    .flatMap((file) => priceWeightRounds(fs.readFileSync(file, 'utf8')).map((argument) => `${path.relative(root, file)}: Math.round(${argument})`));
+  assert.deepEqual(offenders, [], 'цена по весу считается в обход lib/price.ts');
+  const staticHtml = fs.readFileSync(path.join(root, '..', 'index.html'), 'utf8');
+  assert.match(staticHtml, /function calcPiecePrice\(weightG, pricePerKg\) \{ return Math\.round\(weightG \* pricePerKg \/ 1000\); \}/,
+    'статическая витрина считает отрез по другой формуле');
+  assert.deepEqual(priceWeightRounds(staticHtml).filter((argument) => argument !== 'weightG * pricePerKg / 1000'),
+    [], 'в статической витрине появилась вторая формула цены веса');
+});
+
+// Без этого теста прошлый гейт молчал бы на любой записи формулы: он искал только одну.
+test('детектор находит все исторические записи второй формулы', () => {
+  const historical = [
+    'price = Math.round(weightG * rate / 1000);',
+    'const price = Math.round(weightG / 1000 * rate);',
+    'return Math.round((weightG / 1000) * product.pricePerKg);',
+    'item.price = Math.round(weight * item.pricePerKg / 1000);',
+    'price = Math.round(bulkWeight * (product.bulk?.pricePerKg ?? 0) / 1000);',
+  ];
+  for (const line of historical) assert.deepEqual(priceWeightRounds(line).length, 1, `детектор пропустил: ${line}`);
+  assert.deepEqual(priceWeightRounds('assert.equal(calcPricePer100g(6750), Math.round(pricePerKg / 10));'), [], 'детектор ловит расчёт за 100 г');
+  assert.deepEqual(priceWeightRounds('return Math.round(weightG * pricePerKg / 1000);'), ['weightG * pricePerKg / 1000'], 'каноническая запись должна находиться');
+});

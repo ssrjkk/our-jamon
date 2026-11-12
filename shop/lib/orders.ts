@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { CartItemInput, CartItemResolved, Order, OrderStatus, Product } from './types';
 import { PRODUCTS, averageWeightOf, piecePriceOf } from './products';
+import { weightPriceOf } from './price';
 
 export class OrderConflict extends Error {}
 
@@ -193,7 +194,7 @@ export function resolveCart(inputs: unknown, reserved: Set<string>, catalog: Pro
         if (!bulk || !Number.isSafeInteger(weight) || weight! < bulk.minG || weight! > bulk.maxG || (weight! - bulk.minG) % bulk.stepG !== 0) return invalid('Выберите вес порции в пределах ползунка.');
         weightG = weight!;
         rate = bulk.pricePerKg;
-        price = Math.round(weightG * rate / 1000);
+        price = weightPriceOf(weightG, rate);
         label = `На развес ${formatWeight(weightG)}`;
       } else if (product.kind === 'piece' && input.kind === 'piece') {
         const piece = product.pieces.find((candidate) => candidate.id1c === input.pieceId1c);
@@ -215,7 +216,7 @@ export function resolveCart(inputs: unknown, reserved: Set<string>, catalog: Pro
         if (!Number.isSafeInteger(input.weightG) || input.weightG! < 50 || input.weightG! > 2000) return invalid('Для отреза укажите вес от 50 до 2 000 г.');
         weightG = input.weightG!;
         rate = product.pricePerKg;
-        price = Math.round(weightG * rate / 1000);
+        price = weightPriceOf(weightG, rate);
         label = `Отрез под заказ ~${formatWeight(weightG)}`;
       } else {
         return invalid('Этот вариант покупки недоступен для выбранного товара.');

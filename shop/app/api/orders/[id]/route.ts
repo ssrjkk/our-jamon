@@ -3,6 +3,7 @@ import { getOrder, mutateOrder, formatWeight, OrderConflict } from '@/lib/orders
 import { getAuthorizedOrder } from '@/lib/order-access';
 import { CheckoutError, initializeOrderPayment } from '@/lib/checkout';
 import { deliveryCostFor } from '@/lib/delivery';
+import { weightPriceOf } from '@/lib/price';
 import { isDemoMode, requestOriginAllowed } from '@/lib/config';
 import { syncOrderToOneC } from '@/lib/onec';
 import { isAdmin } from '@/lib/admin';
@@ -40,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: Context) {
           if (typeof weight !== 'number' || !Number.isSafeInteger(weight) || weight <= 0 || weight > 30000) throw new CheckoutError('Для каждой весовой позиции укажите целый вес от 1 до 30 000 г.');
           item.weightG = weight;
           item.label = item.label.replace(/~?[\d.,]+[\u00a0 ](?:кг|г)/, formatWeight(weight));
-          if (item.pricePerKg !== null) item.price = Math.round(weight * item.pricePerKg / 1000);
+          if (item.pricePerKg !== null) item.price = weightPriceOf(weight, item.pricePerKg);
           if (!Number.isSafeInteger(item.price) || item.price <= 0) throw new CheckoutError('Не удалось рассчитать цену позиции.');
           item.weightConfirmed = true;
         }

@@ -57,6 +57,15 @@ const PACK = 'nf-00000229';
 const EXTRA = 'nf-00000182';
 const PENDING_CAT = 'chocolate';
 const MAX_SAME_PACK = 20;
+// Фасовка, у которой в прайсе задан объём вместо веса (weightG = 0): витрина
+// обязана показывать подпись фасовки, а не «0 г за шт.».
+const VOLUME = (() => {
+  for (const product of PRICED) {
+    const index = product.packs.findIndex((pack) => pack.weightG === 0);
+    if (index !== -1) return { product, index, pack: product.packs[index] };
+  }
+  throw new Error('в каталоге не осталось фасовки без граммов — у гейта пропала опора');
+})();
 
 async function screenshot(page, info, name) {
   await page.screenshot({ path: path.join(shots, `${name}-${info.project.name}.png`), fullPage: false });
@@ -430,6 +439,59 @@ test('оформление проверяет поля и выполняет д�
   await expect(page.getByRole('heading', { name: 'Демо-оплата подтверждена', exact: true })).toBeVisible();
   await expect(page.locator('[data-cart-badge]')).toHaveText('0');
   await noOverflow(page);
+});
+
+test('объёмная фасовка без граммов: ноль не печатается в корзине, заказе и админке', async ({ page, request }, info) => {
+  await page.goto(`/product/${VOLUME.product.id}`);
+  await page.getByRole('button', { name: /В корзину/ }).click();
+  await page.goto('/cart');
+  const row = page.locator('.cart-item-row').first();
+  await expect(page.locator('.cart-item-row')).toHaveCount(1);
+  await expect(row).toContainText(VOLUME.pack.label);
+  expect(await row.innerText()).not.toMatch(/0[\u00a0 ]г/);
+
+  const order = await createOrder(request, [{ productId: VOLUME.product.id, kind: 'pack', packIdx: VOLUME.index, qty: 2 }]);
+  await page.goto(`/order/${order.orderId}?token=${order.accessToken}`);
+  await expect(page.locator('.cart-item-row')).toHaveCount(1);
+  await expect(page.locator('.cart-item-row').first()).toContainText('2 шт.');
+  expect(await page.locator('.cart-items').innerText()).not.toMatch(/0[\u00a0 ]г/);
+
+  await page.goto('/admin');
+  await page.getByLabel('Пароль администратора').fill('test-only-admin-passphrase');
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  const card = page.locator('.admin-order-card').filter({ hasText: order.orderId });
+  await expect(card).toBeVisible();
+  expect(await card.innerText()).not.toMatch(/0[\u00a0 ]г/);
+  await screenshot(page, info, 'cart-volume-pack');
+
+  await page.goto(`${staticURL}/#dept-${VOLUME.product.category}`);
+  await page.locator(`[data-action="add-to-cart"][data-product-id="${VOLUME.product.id}"]`).click();
+  await page.locator('#header-cart-btn').click();
+  await expect(page.locator('.cart-item-row')).toHaveCount(1);
+  expect(await page.locator('.cart-item-row').first().innerText()).not.toMatch(/0[\u00a0 ]г/);
+});
+
+test('корзина второй вкладки дополняется и очищается без перезагрузки', async ({ page }, info) => {
+  await page.goto('/cart');
+  await expect(page.locator('[data-cart-badge]')).toHaveText('0');
+  // Вторая вкладка открывается до добавления: проверяется именно слушатель storage,
+  // а не обычная загрузка страницы с уже сохранённой корзиной.
+  const second = await page.context().newPage();
+  await second.goto('/cart');
+  await expect(second.locator('[data-cart-badge]')).toHaveText('0');
+
+  await page.goto(`/product/${PACK}`);
+  await page.getByRole('button', { name: /В корзину/ }).click();
+  await expect(page.locator('[data-cart-badge]')).toHaveText('1');
+  await expect(second.locator('[data-cart-badge]')).toHaveText('1');
+  await expect(second.locator('.cart-item-row')).toHaveCount(1);
+  await expect(second.locator('.cart-item-row').first()).toContainText(packOf(PACK).label);
+
+  await second.locator('.cart-item-row .cart-remove-btn').click();
+  await expect(page.locator('[data-cart-badge]')).toHaveText('0');
+  await expect(page.locator('.cart-item-row')).toHaveCount(0);
+  await screenshot(page, info, 'cart-second-tab');
+  await second.close();
 });
 
 test('админ подтверждает вес и согласованную доставку; чужой заказ закрыт', async ({ page, request, browser, baseURL }, info) => {

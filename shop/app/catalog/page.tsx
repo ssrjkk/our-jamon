@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { connection } from 'next/server';
 import CatalogClient from '@/components/CatalogClient';
 import AnimationsLayer from '@/components/Animations';
-import { getProducts } from '@/lib/products';
+import { loadCatalog } from '@/lib/products';
 import { reservedPieceIds } from '@/lib/orders';
 
 export const metadata: Metadata = {
@@ -13,7 +13,7 @@ export const instant = false;
 
 export default async function CatalogPage() {
   await connection();
-  const products = await getProducts();
+  const catalog = await loadCatalog();
   const reserved = Array.from(await reservedPieceIds());
-  return <main id="main-content"><CatalogClient products={products} serverReservedPieceIds={reserved} standalone /><AnimationsLayer /></main>;
+  return <main id="main-content"><CatalogClient products={catalog.products} previews={catalog.previews} serverReservedPieceIds={reserved} standalone /><AnimationsLayer /></main>;
 }

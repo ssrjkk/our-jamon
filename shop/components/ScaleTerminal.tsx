@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Product } from '@/lib/types';
 import { useCart, formatRub, formatWeightLabel } from './CartContext';
+import { weightPriceOf } from '@/lib/price';
 import { flyTokenToCart } from './Animations';
 
 export default function ScaleTerminal({ products, requestedWeightG }: { products: Product[]; requestedWeightG?: number }) {
@@ -39,7 +40,7 @@ export default function ScaleTerminal({ products, requestedWeightG }: { products
   const step = bulk?.stepG ?? 1;
   const valid = Number.isSafeInteger(weightG) && weightG >= min && weightG <= max && (weightG - min) % step === 0;
   const rate = bulk?.pricePerKg ?? product?.pricePerKg ?? 0;
-  const price = Math.round(weightG / 1000 * rate);
+  const price = weightPriceOf(weightG, rate);
 
   function choose(next: Product) {
     setProductId(next.id);

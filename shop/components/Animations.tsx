@@ -3,10 +3,9 @@
 import { useEffect } from 'react';
 
 // =========================================================================
-// Фирменные микро-анимации: полёт иконки в корзину и упругие оливки.
-// Триггеры из любого клиентского компонента:
+// Фирменные микро-анимации: полёт иконки в корзину.
+// Триггер из любого клиентского компонента:
 //   flyTokenToCart(rect, 'olive' | 'ham')  - дуга в иконку корзины
-//   bounceOlives(stage)                    - оливки скачут внутри карточки
 // =========================================================================
 
 export function flyTokenToCart(startRect: DOMRect, tokenType: 'olive' | 'ham') {
@@ -64,32 +63,4 @@ export default function AnimationsLayer() {
   }, []);
 
   return null;
-}
-
-// Прыгающие оливки внутри карточки
-export function bounceOlives(stage: HTMLElement | null) {
-  if (!stage || typeof window === 'undefined') return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  import('gsap').then(({ gsap }) => {
-    const rect = stage.getBoundingClientRect();
-    const floorY = rect.height - 28;
-    for (let i = 0; i < 4; i++) {
-      const olive = document.createElement('div');
-      olive.style.cssText = 'position:absolute;width:26px;height:26px;left:0;top:0;';
-      olive.innerHTML = '<svg viewBox="0 0 28 28" width="26" height="26" fill="none"><ellipse cx="14" cy="14" rx="11" ry="9.5" fill="#4E5E32" stroke="#181615" stroke-width="1.2"/><ellipse cx="18" cy="13" rx="3.2" ry="4.2" fill="#7A1C1C"/><path d="M8 10 Q11 7 15 8" stroke="#F6F5F0" stroke-width="1.4" stroke-linecap="round" opacity="0.75" fill="none"/></svg>';
-      stage.appendChild(olive);
-      const startX = 28 + i * ((rect.width - 70) / 3);
-      const angle = (i % 2 === 0 ? 1 : -1) * (12 + i * 5);
-      gsap.set(olive, { x: startX, y: -28, rotation: -angle });
-      const tl = gsap.timeline({ delay: i * 0.075, onComplete: () => olive.remove() });
-      tl.to(olive, { y: floorY, scaleY: 1.1, scaleX: 0.92, rotation: 0, duration: 0.24, ease: 'power2.in' })
-        .to(olive, { scaleY: 0.8, scaleX: 1.15, duration: 0.06 })
-        .to(olive, { y: floorY - 56, scaleY: 1.06, scaleX: 0.95, rotation: angle, duration: 0.2, ease: 'power2.out' })
-        .to(olive, { y: floorY, scaleY: 1.08, scaleX: 0.94, duration: 0.2, ease: 'power2.in' })
-        .to(olive, { scaleY: 0.84, scaleX: 1.12, duration: 0.05 })
-        .to(olive, { y: floorY - 24, scaleY: 1.02, scaleX: 0.98, rotation: -angle * 0.5, duration: 0.14, ease: 'power2.out' })
-        .to(olive, { y: floorY, scaleY: 1, scaleX: 1, rotation: 0, duration: 0.14, ease: 'power2.in' })
-        .to(olive, { opacity: 0, duration: 0.15, delay: 0.05 });
-    }
-  });
 }

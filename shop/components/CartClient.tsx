@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { CartItemInput, CartQuote, DeliveryOption, Messenger } from '@/lib/types';
-import { useCart, formatRub, formatWeightLabel } from './CartContext';
+import { useCart, formatRub, formatUnitSummary } from './CartContext';
 
 type Props = { deliveryOptions: DeliveryOption[]; freeFrom: number | null; demo: boolean };
 type Field = 'name' | 'phone' | 'address' | 'consent';
@@ -212,12 +212,13 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
         <div className="cart-items">
           {lines.map((line, index) => {
             const item = quote?.items[index];
+            const unitLine = item ? formatUnitSummary(item) : '';
             return (
               <article key={line.uid} id={`cart-line-${line.uid}`} className="cart-item-row">
                 <div className="cart-item-details">
                   <strong className="cart-item-title">{item?.title ?? line.title}</strong>
                   <span className="cart-item-sub">{item?.label ?? line.label}</span>
-                  {item && <span className="cart-item-sub">{formatWeightLabel(item.weightG)} за шт. · {item.qty} шт.</span>}
+                  {unitLine && <span className="cart-item-sub">{unitLine}</span>}
                   <p className="cart-item-note">
                     {item ? item.requiresWeightCheck
                       ? item.pricePerKg === null ? 'Проверим вес; цена за штуку фиксирована.' : `Вес проверим; расчёт по ${formatRub(item.pricePerKg)} / кг.`

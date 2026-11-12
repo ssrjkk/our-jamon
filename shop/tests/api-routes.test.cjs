@@ -33,11 +33,12 @@ test('POST /api/cart: неизвестный товар — 409 с причин�
   assert.ok(res.body.error);
 }));
 
-test('POST /api/cart: живой каталог не настроен — 503, не выдуманный расчёт', () => withSystem(async s => {
+test('POST /api/cart: живой режим без 1С считает по прайсу 0711, а не отдаёт 503', () => withSystem(async s => {
   const { POST } = s.load('app/api/cart/route.ts');
+  const { PRODUCTS } = s.load('lib/products.ts');
   const res = await POST(s.request({ items: [pack], deliveryId: 'pickup' }));
-  assert.equal(res.status, 503);
-  assert.ok(res.body.error);
+  assert.equal(res.status, 200, 'витрина без 1С не должна отказывать покупателю');
+  assert.equal(res.body.quote.itemsSum, PRODUCTS.find((product) => product.id === pack.productId).packs[0].price);
 }, { env: { SHOP_MODE: 'live' } }));
 
 test('GET /api/products: демо-каталог, резервы кусков видны, no-store', () => withSystem(async s => {
@@ -62,9 +63,28 @@ test('GET /api/products: демо-каталог, резервы кусков в
   assert.deepEqual((await GET()).body.reservedPieceIds, []);
 }));
 
-test('GET /api/products: живой каталог не настроен — 503, прайс не подменяется молча', () => withSystem(async s => {
+test('GET /api/products: живой режим без 1С отдаёт прайс 0711 и не объясняет причину публично', () => withSystem(async s => {
   const { GET } = s.load('app/api/products/route.ts');
+  const { PRODUCTS } = s.load('lib/products.ts');
   const res = await GET();
-  assert.equal(res.status, 503);
-  assert.ok(res.body.error);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.demo, false);
+  assert.equal(res.body.products.length, PRODUCTS.length);
+  assert.equal(res.body.catalog, undefined, 'причина отката каталога — внутренность лавки, а не публичный ответ');
 }, { env: { SHOP_MODE: 'live' } }));
+
+test('GET /api/orders: админ видит, чем именно наполнен каталог', () => withSystem(async s => {
+  process.env.ADMIN_PASSWORD = 'test-only-admin-passphrase';
+  const orders = s.load('app/api/orders/route.ts');
+  const login = s.load('app/api/admin/login/route.ts');
+  s.applyCookies(await login.POST(s.request({ password: 'test-only-admin-passphrase' })));
+  assert.equal((await orders.GET()).body.catalog, null, 'в демо никаких проблем с 1С выдумывать нельзя');
+
+  process.env.SHOP_MODE = 'live';
+  const products = s.load('lib/products.ts');
+  await products.loadCatalog();
+  const health = (await orders.GET()).body.catalog;
+  assert.equal(health.origin, 'built-in');
+  assert.match(health.notice, /ONEC_API_URL/, 'админу не показали, почему цены не из 1С');
+  assert.ok(Date.parse(health.checkedAt) > 0, 'время проверки каталога не показано');
+}));

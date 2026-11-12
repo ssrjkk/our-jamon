@@ -1,4 +1,5 @@
 import { Product, Category } from './types';
+import { weightPriceOf } from './price';
 import catalog from './catalog.json';
 import { isDemoMode } from './config';
 
@@ -101,7 +102,7 @@ export function averageWeightOf(product: Product): number {
 
 export function piecePriceOf(product: Product, weightG: number, fixedPrice?: number): number {
   if (typeof fixedPrice === 'number') return fixedPrice;
-  return Math.round((weightG / 1000) * product.pricePerKg);
+  return weightPriceOf(weightG, product.pricePerKg);
 }
 
 export function calcPricePer100g(pricePerKg: number): number {
@@ -144,17 +145,70 @@ function validCatalog(value: unknown): value is Product[] {
 if (!validCatalog(PRODUCTS)) throw new Error('lib/catalog.json does not match the catalog contract');
 
 export async function getProducts(): Promise<Product[]> {
-  if (isDemoMode()) return PRODUCTS;
-  const url = process.env.ONEC_API_URL;
-  if (!url) throw new Error('Live catalog is not configured');
-  const response = await fetch(url, {
-    headers: process.env.ONEC_TOKEN ? { Authorization: `Bearer ${process.env.ONEC_TOKEN}` } : {},
-    cache: 'no-store',
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!response.ok) throw new Error(`Catalog service responded ${response.status}`);
-  const data: unknown = await response.json();
-  const list = Array.isArray(data) ? data : data && typeof data === 'object' && 'products' in data ? data.products : undefined;
-  if (!validCatalog(list)) throw new Error('Catalog service returned invalid product data');
-  return list;
+  return (await loadCatalog()).products;
+}
+
+export type CatalogOrigin = 'onec' | 'built-in';
+
+export interface CatalogHealth { origin: CatalogOrigin; notice: string | null; checkedAt: string }
+
+// Единственный способ для админки узнать, чем на самом деле наполнен каталог, не дёргая
+// 1С повторно: подписываемся на исход последнего реального запроса витрины.
+let lastLive: CatalogHealth | null = null;
+
+function remember(state: { origin: CatalogOrigin; notice: string | null }): void {
+  lastLive = { ...state, checkedAt: new Date().toISOString() };
+}
+
+/** null, пока ни один запрос к 1С не состоялся (демо-режим или интеграция не настроена). */
+export function catalogHealth(): CatalogHealth | null {
+  return lastLive;
+}
+
+export interface Catalog {
+  products: Product[];
+  /** Позиции «уточнить в лавке» есть только во встроенном прайсе: в 1С они не описаны. */
+  previews: CatalogPreview[];
+  origin: CatalogOrigin;
+  /** Пусто, когда каталог отдан тем же источником, что и заявлен: маскировать нечего. */
+  notice: string | null;
+}
+
+function degrade(reason: string): Catalog {
+  const notice = `${reason}. Показан встроенный прайс 0711.`;
+  console.error(`[catalog] ${notice}`);
+  remember({ origin: 'built-in', notice });
+  return { products: PRODUCTS, previews: PREVIEWS, origin: 'built-in', notice };
+}
+
+/**
+ * 1С недоступна — витрина обязана остаться рабочей: покупатель видит прайс 0711,
+ * собранный скриптом, а не 500 на каждой странице. Откат не молчит: причина уходит
+ * в серверный журнал и в catalogHealth(), которую показывает админка, поэтому
+ * «живые» цены не подменяются тайком.
+ */
+export async function loadCatalog(): Promise<Catalog> {
+  const url = process.env.ONEC_API_URL?.trim();
+  if (!url) {
+    if (isDemoMode()) return { products: PRODUCTS, previews: PREVIEWS, origin: 'built-in', notice: null };
+    // Живой режим без адреса 1С — это недонастроенная публикация, а не демо-прайс.
+    return degrade('Интеграция 1С не настроена (ONEC_API_URL пуст)');
+  }
+  try {
+    const response = await fetch(url, {
+      headers: process.env.ONEC_TOKEN ? { Authorization: `Bearer ${process.env.ONEC_TOKEN}` } : {},
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error(`Catalog service responded ${response.status}`);
+    const data: unknown = await response.json();
+    const list = Array.isArray(data) ? data : data && typeof data === 'object' && 'products' in data ? (data as { products: unknown }).products : undefined;
+    if (!validCatalog(list)) throw new Error('Catalog service returned invalid product data');
+    // Пустая выгрузка — это сброшенная интеграция, а не лавка без товаров.
+    if (!list.length) throw new Error('Catalog service returned an empty product list');
+    remember({ origin: 'onec', notice: null });
+    return { products: list, previews: [], origin: 'onec', notice: null };
+  } catch (error) {
+    return degrade(`Каталог 1С не принят (${error instanceof Error ? error.message : String(error)})`);
+  }
 }

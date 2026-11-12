@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useId, useRef, useState } from 'react';
 import type { Product } from '@/lib/types';
 import { averageWeightOf, piecePriceOf, CATEGORY_TITLES } from '@/lib/products';
+import { weightPriceOf } from '@/lib/price';
 import { useCart, formatRub, formatWeightLabel } from './CartContext';
 import { ProductArt } from './Art';
 import { flyTokenToCart } from './Animations';
@@ -30,7 +31,7 @@ export default function ProductCard({ product, serverReservedPieceIds, detail = 
   const custom = product.kind === 'piece' && product.category === 'piece' && selection === 'custom';
   const bulk = product.kind !== 'piece' && selection === 'bulk' && Boolean(product.bulk);
   const weightG = product.kind === 'piece' ? custom ? customWeight : avgWeight : bulk ? bulkWeight : pack?.weightG ?? 0;
-  const price = product.kind === 'piece' ? piecePriceOf(product, weightG || 0, fixedPrice) : bulk ? Math.round(bulkWeight * (product.bulk?.pricePerKg ?? 0) / 1000) : pack?.price ?? 0;
+  const price = product.kind === 'piece' ? piecePriceOf(product, weightG || 0, fixedPrice) : bulk ? weightPriceOf(bulkWeight, product.bulk?.pricePerKg ?? 0) : pack?.price ?? 0;
   const canAdd = product.kind === 'piece' ? (custom ? validCustom : hasPiece && avgWeight > 0) : bulk ? Boolean(product.bulk) : Boolean(pack);
   const label = product.kind === 'piece'
     ? custom ? `Отрез ${formatWeightLabel(weightG)}` : `${product.category === 'leg' ? 'На кости' : 'Средний кусок'} · ~${formatWeightLabel(weightG)}`

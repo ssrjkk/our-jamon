@@ -85,7 +85,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
                 <div className="cart-item-details">
                   <strong className="cart-item-title">{item.title}</strong>
                   <span className="cart-item-sub">{item.label}</span>
-                  <p className="cart-item-note tabular">{item.qty} шт. · {grams(item.weightG)} за шт.{item.qty > 1 ? ` · всего ${grams(item.weightG * item.qty)}` : ''}</p>
+                  <p className="cart-item-note tabular">{item.qty} шт.{item.weightG > 0 ? ` · ${grams(item.weightG)} за шт.${item.qty > 1 ? ` · всего ${grams(item.weightG * item.qty)}` : ''}` : ''}</p>
                   <p className="cart-item-note">{item.requiresWeightCheck
                     ? item.weightConfirmed ? 'Фактический вес подтверждён.' : 'Предварительный вес: проверим перед оплатой.'
                     : 'Фиксированная фасовка.'} {item.pricePerKg === null ? `Фиксированная цена за штуку: ${rub(item.price)}.` : `Цена по весу: ${rub(item.pricePerKg)} / кг.`}</p>

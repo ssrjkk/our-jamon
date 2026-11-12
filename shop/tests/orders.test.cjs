@@ -363,18 +363,56 @@ test('bank notifications verify payment ID, amount, boolean status and monotonic
   assert.equal(JSON.parse(calls.filter((c) => c.url.endsWith('/orders')).at(-1).options.body).status, 'paid');
 }));
 
-test('empty or unavailable live catalog cannot silently become price-list inventory', () => withSystem(async s => {
+test('недоступная или пустая выгрузка 1С держит витрину на прайсе 0711 и не молчит', () => withSystem(async s => {
   live(s);
+  const { PRODUCTS, PREVIEWS, loadCatalog, getProducts, catalogHealth } = s.load('lib/products.ts');
   global.fetch = async () => ({ ok: true, json: async () => ({ products: [] }) });
-  assert.deepEqual(await s.load('lib/products.ts').getProducts(), []);
+  assert.deepEqual(await getProducts(), PRODUCTS, 'пустая выгрузка обязана вернуть прайс 0711, а не пустой каталог');
+  const empty = await loadCatalog();
+  assert.equal(empty.origin, 'built-in');
+  assert.match(empty.notice, /empty product list/, `причина отката не названа: ${empty.notice}`);
+  assert.equal(empty.previews.length, PREVIEWS.length, 'откат на прайс обязан показать и позиции без цены');
   global.fetch = async () => ({ ok: false, status: 503 });
-  await assert.rejects(s.load('lib/products.ts').getProducts());
-  await assert.rejects(s.load('lib/checkout.ts').quoteCart([pack], 'pickup'), (error) => error.status === 503);
+  assert.deepEqual(await getProducts(), PRODUCTS);
+  const quote = await s.load('lib/checkout.ts').quoteCart([pack], 'pickup');
+  assert.equal(quote.itemsSum, 450, 'заказ после отката посчитан не по прайсу 0711');
+  assert.ok(catalogHealth().notice.includes('503'), `503 не попала в здоровье каталога: ${catalogHealth().notice}`);
+  assert.equal(catalogHealth().origin, 'built-in');
 }));
+
+test('в демо витрина остаётся прайсом 0711 вместе с позициями без цены', () => withSystem(async s => {
+  const { PRODUCTS, PREVIEWS, loadCatalog } = s.load('lib/products.ts');
+  assert.ok(PREVIEWS.length > 0, 'в прайсе не осталось позиций «уточнить в лавке» — у гейта пропала опора');
+  const catalog = await loadCatalog();
+  assert.equal(catalog.origin, 'built-in');
+  assert.equal(catalog.notice, null, 'демо-режим не должен выглядеть как откат');
+  assert.deepEqual(catalog.products, PRODUCTS);
+  assert.deepEqual(catalog.previews, PREVIEWS);
+}));
+
+test('позиции без цены не подмешиваются к живой выгрузке 1С', () => withSystem(async s => {
+  live(s);
+  const { PRODUCTS, loadCatalog } = s.load('lib/products.ts');
+  global.fetch = async () => ({ ok: true, json: async () => ({ products: PRODUCTS }) });
+  const fromOneC = await loadCatalog();
+  assert.equal(fromOneC.origin, 'onec');
+  assert.equal(fromOneC.notice, null, 'живая выгрузка не должна выглядеть откатом');
+  assert.deepEqual(fromOneC.previews, [], '1С отдал прайс, а витрина добавила к нему позиции без цены');
+}));
+
+test('позиции без цены приходят в каталог только с сервера, а не прямо из прайса', () => {
+  const client = fs.readFileSync(path.join(root, 'components/CatalogClient.tsx'), 'utf8');
+  assert.doesNotMatch(client, /\bPREVIEWS\b/, 'прямой импорт прайса вернул бы позиции без цены в живой выгрузке 1С');
+  for (const page of ['app/page.tsx', 'app/catalog/page.tsx']) {
+    const source = fs.readFileSync(path.join(root, page), 'utf8');
+    assert.match(source, /loadCatalog\(/, `${page}: каталог снова берётся без решения о запасном прайсе`);
+    assert.match(source, /previews=\{catalog\.previews\}/, `${page}: CatalogClient вызван без позиций без цены`);
+  }
+});
 
 test('a live catalog that breaks the contract is refused, not half-trusted', () => withSystem(async s => {
   live(s);
-  const { PRODUCTS } = s.load('lib/products.ts');
+  const { PRODUCTS, loadCatalog } = s.load('lib/products.ts');
   const zeroPrice = structuredClone(PRODUCTS);
   zeroPrice.find((p) => p.id === 'nf-00000229').packs[0].price = 0;
   const duplicatedPiece = structuredClone(PRODUCTS);
@@ -384,7 +422,9 @@ test('a live catalog that breaks the contract is refused, not half-trusted', () 
   renamed[0].id = renamed[1].id;
   for (const products of [zeroPrice, duplicatedPiece, renamed]) {
     global.fetch = async () => ({ ok: true, json: async () => ({ products }) });
-    await assert.rejects(s.load('lib/products.ts').getProducts());
+    const catalog = await loadCatalog();
+    assert.deepEqual(catalog.products, PRODUCTS, 'битую выгрузку подменили не прайсом 0711');
+    assert.match(catalog.notice, /invalid product data/, 'битая выгрузка прошла без предупреждения');
   }
 }));
 

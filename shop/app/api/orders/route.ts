@@ -3,6 +3,7 @@ import { Order } from '@/lib/types';
 import { saveOrder, readOrders, generateOrderId, newAccessToken, OrderConflict } from '@/lib/orders';
 import { CheckoutError, initializeOrderPayment, quoteCart } from '@/lib/checkout';
 import { orderCookieName } from '@/lib/order-access';
+import { catalogHealth } from '@/lib/products';
 import { syncOrderToOneC } from '@/lib/onec';
 import { isAdmin } from '@/lib/admin';
 
@@ -52,5 +53,5 @@ export async function GET() {
     return NextResponse.json({ error: 'Требуется авторизация администратора' }, { status: 401 });
   }
   const orders = await readOrders();
-  return NextResponse.json({ orders });
+  return NextResponse.json({ orders, catalog: catalogHealth() });
 }

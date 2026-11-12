@@ -67,4 +67,27 @@ function createSystem(options = {}) {
   };
 }
 
-module.exports = { createSystem, root };
+/**
+ * Аргументы Math.round(...), где вес делится на 1000: ровно те записи, которыми
+ * карточка расходилась с сервером. Скобки считаются по балансу, поэтому детектор
+ * не зависит от того, в каком порядке стоят множитель и делитель.
+ */
+function priceWeightRounds(source) {
+  const found = [];
+  const open = 'Math.round('.length;
+  for (let index = source.indexOf('Math.round('); index !== -1; index = source.indexOf('Math.round(', index + 1)) {
+    let cursor = index + open;
+    let depth = 1;
+    while (cursor < source.length && depth > 0) {
+      if (source[cursor] === '(') depth += 1;
+      else if (source[cursor] === ')') depth -= 1;
+      if (depth === 0) break;
+      cursor += 1;
+    }
+    const argument = source.slice(index + open, cursor);
+    if (/\b1000\b/.test(argument) && /weight/i.test(argument)) found.push(argument);
+  }
+  return found;
+}
+
+module.exports = { createSystem, root, priceWeightRounds };

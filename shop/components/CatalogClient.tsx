@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Product } from '@/lib/types';
-import { CATEGORY_TITLES, DEPT_ORDER, PREVIEWS, type CatalogPreview } from '@/lib/products';
+import { CATEGORY_TITLES, DEPT_ORDER, type CatalogPreview } from '@/lib/products';
 import ProductCard from './ProductCard';
 import { ProductArt } from './Art';
 
@@ -27,7 +27,7 @@ function alignDepartment(bar: HTMLDivElement | null, target: HTMLElement | null)
   else if (button.right > parent.right) bar.scrollLeft += Math.ceil(button.right - parent.right);
 }
 
-export default function CatalogClient({ products, serverReservedPieceIds, standalone = false }: { products: Product[]; serverReservedPieceIds: string[]; standalone?: boolean }) {
+export default function CatalogClient({ products, previews, serverReservedPieceIds, standalone = false }: { products: Product[]; previews: CatalogPreview[]; serverReservedPieceIds: string[]; standalone?: boolean }) {
   const params = useSearchParams();
   const controlId = useId();
   const departmentsRef = useRef<HTMLDivElement>(null);
@@ -73,13 +73,13 @@ export default function CatalogClient({ products, serverReservedPieceIds, standa
     return words.every((word) => haystack.includes(word));
   }), [products, words]);
   const matches = searched.filter((product) => ageMatches(product.agingMonths, aging));
-  const searchedPreviews = useMemo(() => PREVIEWS.filter((preview) => {
+  const searchedPreviews = useMemo(() => previews.filter((preview) => {
     const haystack = normalize(`${preview.title} ${preview.description} ${CATEGORY_TITLES[preview.category].title} ${preview.agingMonths ?? ''}`);
     return words.every((word) => haystack.includes(word));
-  }), [words]);
+  }), [previews, words]);
   const previewMatches = searchedPreviews.filter((preview) => ageMatches(preview.agingMonths, aging));
   const countFor = (cat: string) => matches.filter((product) => product.category === cat).length + previewMatches.filter((preview) => preview.category === cat).length;
-  const departments = DEPT_ORDER.filter((department) => products.some((product) => product.category === department.cat) || PREVIEWS.some((preview) => preview.category === department.cat));
+  const departments = DEPT_ORDER.filter((department) => products.some((product) => product.category === department.cat) || previews.some((preview) => preview.category === department.cat));
   const firstMatch = departments.find((department) => countFor(department.cat) > 0);
   const requested = departments.find((department) => department.cat === requestedCategory);
   const category = (requested && (!q || countFor(requested.cat) > 0) ? requested : firstMatch ?? requested ?? departments[0])?.cat ?? 'piece';
@@ -107,7 +107,7 @@ export default function CatalogClient({ products, serverReservedPieceIds, standa
     <section className={'container catalog-section' + (standalone ? ' standalone' : '')} aria-labelledby={`${controlId}-title`}>
       <div className="catalog-heading">
         <div><Heading className="section-title" id={`${controlId}-title`}>Выбирайте со вкусом</Heading><p className="section-subtitle">Хамон и его хорошая компания. Вся лавка — в одном каталоге.</p></div>
-        <span className="catalog-stock tabular">С ценой: {products.length} · Уточняются: {PREVIEWS.length}</span>
+        <span className="catalog-stock tabular">С ценой: {products.length} · Уточняются: {previews.length}</span>
       </div>
       <div className="catalog-controls">
         <div className="catalog-search">

@@ -1232,7 +1232,7 @@ var MAX_SAME_PACK = 20;
 // =========================================================================
 // 2. МАТЕМАТИКА ЦЕН И ФОРМАТИРОВАНИЕ
 // =========================================================================
-function calcPiecePrice(weightG, pricePerKg) { return Math.round((weightG / 1000) * pricePerKg); }
+function calcPiecePrice(weightG, pricePerKg) { return Math.round(weightG * pricePerKg / 1000); }
 function calcPricePer100g(pricePerKg) { return Math.round(pricePerKg / 10); }
 function formatRub(num) {
   return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0') + '\u00A0₽';
