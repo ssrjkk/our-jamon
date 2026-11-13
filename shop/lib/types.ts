@@ -89,6 +89,9 @@ export interface Order {
   status: OrderStatus;
   paymentUrl?: string;
   paymentId?: string;
+  paymentIds?: string[];
+  paidPaymentId?: string;
+  refundPaymentIds?: string[];
   paymentError?: boolean;
   paymentInitAt?: string;
   onecSyncedAt?: string;

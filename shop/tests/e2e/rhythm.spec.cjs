@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const catalog = require('../../lib/catalog.json');
-const { createOrder, loginAdmin } = require('./helpers.cjs');
+const { createOrder, loginAdmin, готовККлику } = require('./helpers.cjs');
 
 // Сброс `* { margin: 0 }` оставляет блочным контейнерам единственный способ развести
 // детей — gap или отступ. Там, где контейнер появился позже таблицы стилей (панель лавки,
@@ -88,6 +88,11 @@ test('ни один блочный контейнер не склеивает с
 
   for (const tab of TABS) {
     await page.goto(`/#${tab}`);
+    // Первая вкладка активна уже в серверном HTML, поэтому она проходит и без гидратации.
+    // Вторая — нет: full-прогон 2026-11-14 поймал `#scenarios` со `hidden` на 10-секундном
+    // лимите expect, пока next dev досборкой и React не дошли до слушателя hashchange.
+    // Ждём сам контрол тем же проверенным способом, что и остальные гейты.
+    if (tab === TABS[0]) await готовККлику(page.locator('#tab-scenarios'), 'вкладки главной');
     await expect(page.locator(`#${tab}`)).toBeVisible();
     await check(`/#${tab}`);
   }

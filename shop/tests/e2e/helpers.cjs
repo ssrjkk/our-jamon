@@ -46,4 +46,13 @@ async function добавитьВКорзину(page, метка = 'карточ
   await контрол.click();
 }
 
-module.exports = { ADMIN_PASSWORD, createOrder, loginAdmin, готовККлику, добавитьВКорзину };
+// Закрытая шторка статической витрины лежит под `visibility: hidden` (index.html:507), а
+// innerText скрытого узла пуст: полный прогон 2026-11-13 читал имена служб сразу после
+// клика по «Корзина» и получал `""` вместо «Drivee · курьер». `toHaveCount` здесь не
+// помогает — он считает узлы в DOM и проходит, когда шторка ещё невидима.
+async function открытьСтатичнуюКорзину(page) {
+  await page.locator('#header-cart-btn').click();
+  await expect(page.locator('#cart-sheet'), 'статическая корзина не открылась').toBeVisible();
+}
+
+module.exports = { ADMIN_PASSWORD, createOrder, loginAdmin, готовККлику, добавитьВКорзину, открытьСтатичнуюКорзину };

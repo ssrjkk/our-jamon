@@ -10,7 +10,10 @@ export async function pushOrderToOneC(order: Order): Promise<{ ok: boolean; demo
     const response = await fetch(`${url.replace(/\/$/, '')}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(process.env.ONEC_TOKEN ? { Authorization: `Bearer ${process.env.ONEC_TOKEN}` } : {}) },
-      body: JSON.stringify({ id: order.id, createdAt: order.createdAt, customer: order.customer, delivery: order.delivery, items: order.items, itemsSum: order.itemsSum, total: order.total, status: order.status, paymentId: order.paymentId }),
+      // Оплатившим считается id из подписанного уведомления, а не только ведущая ссылка: заказ,
+      // принявший осиротевший платёж, мог вовсе не иметь paymentId, и тогда в бухгалтерию ушёл
+      // статус paid без любого платёжного id.
+      body: JSON.stringify({ id: order.id, createdAt: order.createdAt, customer: order.customer, delivery: order.delivery, items: order.items, itemsSum: order.itemsSum, total: order.total, status: order.status, paymentId: order.paidPaymentId ?? order.paymentId }),
       signal: AbortSignal.timeout(10000),
     });
     return response.ok ? { ok: true } : { ok: false, error: `one_c_http_${response.status}` };

@@ -360,12 +360,12 @@ test('live bank initialization has a correctly signed token and balanced receipt
   assert.equal((await s.load('app/api/orders/[id]/route.ts').POST(s.request({ action: 'demo-pay', token: order.accessToken }), s.context(order.id))).status, 403);
 }));
 
-test('bank notifications verify payment ID, amount, boolean status and monotonic payment state', () => withSystem(async s => {
+test('bank notifications verify signature, order, amount and monotonic payment state', () => withSystem(async s => {
   const calls = live(s);
   const order = await createOrder(s);
   const notify = s.load('app/api/tbank/notify/route.ts');
   assert.equal((await notify.POST(s.request(signedNotification(order, 'CONFIRMED', { Amount: 1 })))).status, 409);
-  assert.equal((await notify.POST(s.request(signedNotification(order, 'CONFIRMED', { PaymentId: 'other' })))).status, 409);
+  assert.equal((await notify.POST(s.request(signedNotification({ ...order, id: 'NH-MISSING' }, 'CONFIRMED')))).status, 409, 'уведомление о несуществующем заказе принято как оплата');
   const authorized = await notify.POST(s.request(signedNotification(order, 'AUTHORIZED')));
   assert.equal(authorized.body, 'OK');
   assert.equal((await s.load('lib/orders.ts').getOrder(order.id)).status, 'awaiting_payment');
@@ -377,6 +377,142 @@ test('bank notifications verify payment ID, amount, boolean status and monotonic
   assert.equal((await s.load('lib/orders.ts').getOrder(order.id)).status, 'paid');
   assert.equal(calls.filter((c) => c.url.endsWith('/orders')).length, before + 1);
   assert.equal(JSON.parse(calls.filter((c) => c.url.endsWith('/orders')).at(-1).options.body).status, 'paid');
+}));
+
+// Переменная режима больше не рисует демо сама: без SHOP_MODE магазин живой, и подделать
+// оплату в нём нельзя. Раньше `SHOP_MODE || 'demo'` означало, что забытая строка в
+// продакшен-контейнере отдаёт покупателю кнопку, которая переводит заказ в paid без банка.
+test('SHOP_MODE не выставлен — магазин живой, демо-оплата недоступна', () => withSystem(async s => {
+  const { isDemoMode } = s.load('lib/config.ts');
+  delete process.env.SHOP_MODE;
+  assert.equal(isDemoMode(), false, 'без SHOP_MODE режим обязан быть live');
+  process.env.SHOP_MODE = '';
+  assert.equal(isDemoMode(), false, 'пустое значение не должно включать демо');
+  process.env.SHOP_MODE = 'demo';
+  assert.equal(isDemoMode(), true, 'явное демо обязано работать: на нём держится локальный просмотр без банка');
+  process.env.SHOP_MODE = 'sandbox';
+  assert.throws(() => isDemoMode(), /SHOP_MODE must be demo or live/);
+  delete process.env.SHOP_MODE;
+  const quote = await s.load('lib/checkout.ts').quoteCart([pack], 'pickup');
+  assert.equal(quote.demo, false, 'расчёт корзины сам объявил себя демо');
+  const order = await createOrder(s);
+  assert.equal(order.demo, false, 'заказ без SHOP_MODE записан демо');
+  assert.equal(order.paymentUrl, undefined, 'без ключей банка платёжная ссылка не могла появиться');
+  assert.equal(order.paymentError, true, 'не настроенная оплата обязана быть видна как ошибка, а не как демо-ссылка');
+  const detail = s.load('app/api/orders/[id]/route.ts');
+  assert.equal((await detail.POST(s.request({ action: 'demo-pay', token: order.accessToken }), s.context(order.id))).status, 403, 'кнопка демо-оплаты жива без SHOP_MODE');
+  assert.equal((await s.load('lib/orders.ts').getOrder(order.id)).status, 'awaiting_payment', 'заказ сам стал оплаченным');
+}));
+
+// Банк выписывает PaymentId до того, как ответ Init дойдёт до магазина целым. Если ссылка
+// не записана, а платёж жив, уведомление об оплате раньше разбивалось о 409 и деньги
+// оставались на счёте без заказа. Реестр выдач хранит каждый id, который сообщил банк.
+test('оплата по потерянной и по второй ссылке примиряется, вторая встаёт на возврат', () => withSystem(async s => {
+  const calls = live(s);
+  const products = s.load('lib/products.ts').PRODUCTS;
+  let inits = 0;
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url, options });
+    if (url === process.env.ONEC_API_URL) return { ok: true, json: async () => ({ products }) };
+    if (url === process.env.ONEC_API_URL + '/orders') return { ok: true, status: 200 };
+    if (url === 'https://securepay.tinkoff.ru/v2/Init') {
+      inits += 1;
+      return inits === 1
+        ? { ok: false, status: 502, json: async () => ({ Success: false, ErrorCode: '001', Message: 'Invisible to the shop', PaymentId: '777001' }) }
+        : { ok: true, json: async () => ({ Success: true, PaymentURL: 'https://payment.example.test/session-2', PaymentId: '777002' }) };
+    }
+    throw new Error('Unexpected external endpoint: ' + url);
+  };
+  const order = await createOrder(s, [{ ...pack, qty: 2 }]);
+  assert.equal(inits, 1);
+  assert.equal(order.paymentId, undefined, 'ошибочный ответ Init не стал ведущей ссылкой');
+  assert.equal(order.paymentError, true);
+  assert.deepEqual(order.paymentIds, ['777001'], 'банк сообщил PaymentId, а магазин его выбросил');
+  await admin(s);
+  const detailRoute = s.load('app/api/orders/[id]/route.ts');
+  assert.equal((await detailRoute.PATCH(s.request({ action: 'cancel' }), s.context(order.id))).status, 409, 'заказ с живым осиротевшим платежом отменён локально: резерв снят, деньги останутся на счёте');
+  const retried = await detailRoute.PATCH(s.request({ action: 'retry-payment' }), s.context(order.id));
+  assert.equal(retried.status, 200);
+  assert.equal(retried.body.order.paymentId, '777002');
+  assert.deepEqual(retried.body.order.paymentIds, ['777001', '777002'], 'вторая выдача стёрла первую из реестра');
+  const notify = s.load('app/api/tbank/notify/route.ts');
+  const paidPushes = calls.filter((c) => c.url.endsWith('/orders')).length;
+  assert.equal((await notify.POST(s.request(signedNotification({ ...order, paymentId: '777001' }, 'CONFIRMED')))).status, 200, 'оплата по осиротевшей ссылке отклонена');
+  const paid = await s.load('lib/orders.ts').getOrder(order.id);
+  assert.equal(paid.status, 'paid', 'осиротевшая ссылка не пометила заказ оплаченным');
+  assert.equal(paid.paidPaymentId, '777001', 'оплативший id не записан в заказ');
+  assert.equal(calls.filter((c) => c.url.endsWith('/orders')).length, paidPushes + 1, 'заказ с осиротевшей ссылкой не передан в 1С');
+  assert.equal(JSON.parse(calls.filter((c) => c.url.endsWith('/orders')).at(-1).options.body).paymentId, '777001', 'примирённая оплата ушла в 1С без оплатившего id');
+  assert.equal((await notify.POST(s.request(signedNotification({ ...order, paymentId: '777002' }, 'CONFIRMED')))).status, 200, 'вторая оплаченная ссылка отклонена вместо постановки на возврат');
+  const settled = await s.load('lib/orders.ts').getOrder(order.id);
+  assert.equal(settled.status, 'paid', 'заказ сменил статус из-за второй оплаты');
+  assert.deepEqual(settled.refundPaymentIds, ['777002'], 'вторая оплата не встала в очередь возврата');
+  assert.equal(calls.filter((c) => c.url.endsWith('/orders')).length, paidPushes + 1, 'возврат уехал в 1С как новая отправка заказа');
+  assert.equal((await notify.POST(s.request(signedNotification({ ...order, paymentId: '777002' }, 'CONFIRMED')))).body, 'OK');
+  assert.deepEqual((await s.load('lib/orders.ts').getOrder(order.id)).refundPaymentIds, ['777002'], 'повторное уведомление удвоило очередь возврата');
+}));
+
+// Самый тяжёлый случай: ответ Init до магазина не дошёл вовсе, а банк платёж создал.
+// Заказ не знает ни одного id, и раньше любое уведомление об оплате билось в 409 навсегда.
+test('уведомление об оплате без известной выдачи ссылки принимает заказ и ставит чужой платёж на возврат', () => withSystem(async s => {
+  const calls = live(s);
+  const products = s.load('lib/products.ts').PRODUCTS;
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url, options });
+    if (url === process.env.ONEC_API_URL) return { ok: true, json: async () => ({ products }) };
+    if (url === process.env.ONEC_API_URL + '/orders') return { ok: true, status: 200 };
+    if (url === 'https://securepay.tinkoff.ru/v2/Init') throw new Error('bank timeout after the payment was created');
+    throw new Error('Unexpected external endpoint: ' + url);
+  };
+  const order = await createOrder(s);
+  assert.equal(order.paymentId, undefined, 'магазин записал ссылку, которой банк не сообщал');
+  assert.equal(order.paymentIds, undefined, 'магазин придумал id, которого банк не сообщал');
+  assert.equal(order.paymentError, true);
+  const notify = s.load('app/api/tbank/notify/route.ts');
+  assert.equal((await notify.POST(s.request(signedNotification({ ...order, paymentId: '888001' }, 'CONFIRMED', { Amount: 1 })))).status, 409, 'неизвестный id с неверной суммой принят как оплата');
+  const before = calls.filter((c) => c.url.endsWith('/orders')).length;
+  assert.equal((await notify.POST(s.request(signedNotification({ ...order, paymentId: '888001' }, 'CONFIRMED')))).status, 200, 'банк сообщил об оплате, а магазин её отклонил');
+  const paid = await s.load('lib/orders.ts').getOrder(order.id);
+  assert.equal(paid.status, 'paid', 'оплата без известной ссылки не пометила заказ оплаченным');
+  assert.equal(paid.paidPaymentId, '888001', 'оплативший id не записан в заказ');
+  assert.deepEqual(paid.paymentIds, ['888001'], 'id из уведомления не попал в реестр заказа');
+  assert.equal(calls.filter((c) => c.url.endsWith('/orders')).length, before + 1, 'оплата без известной ссылки не передана в 1С');
+  assert.equal(JSON.parse(calls.filter((c) => c.url.endsWith('/orders')).at(-1).options.body).paymentId, '888001', 'оплата без ведущей ссылки ушла в 1С без платёжного id');
+  await admin(s);
+  const second = await createOrder(s);
+  const detailRoute = s.load('app/api/orders/[id]/route.ts');
+  assert.equal((await detailRoute.PATCH(s.request({ action: 'cancel' }), s.context(second.id))).status, 200, 'заказ без известной выдачи платежа не отменяется локально');
+  assert.equal((await notify.POST(s.request(signedNotification({ ...second, paymentId: '888002' }, 'CONFIRMED')))).status, 200);
+  const cancelled = await s.load('lib/orders.ts').getOrder(second.id);
+  assert.equal(cancelled.status, 'cancelled', 'отменённый заказ сам стал оплаченным');
+  assert.deepEqual(cancelled.refundPaymentIds, ['888002'], 'оплата по отменённому заказу не встала на возврат');
+}));
+
+// Заказы, записанные до реестра, несут один paymentId без paymentIds. Примирение обязано
+// работать и по ним: иначе миграция превратила бы живые платежи в 409.
+test('заказ без реестра выдач принимается по своему единственному paymentId', () => withSystem(async s => {
+  const calls = live(s);
+  const order = await createOrder(s);
+  assert.deepEqual(order.paymentIds, ['123456']);
+  await s.load('lib/orders.ts').mutateOrder(order.id, (current) => { current.paymentIds = undefined; });
+  const legacy = await s.load('lib/orders.ts').getOrder(order.id);
+  assert.equal(legacy.paymentIds, undefined, 'старая форма заказа не воспроизведена');
+  const before = calls.filter((c) => c.url.endsWith('/orders')).length;
+  const notify = s.load('app/api/tbank/notify/route.ts');
+  assert.equal((await notify.POST(s.request(signedNotification(order, 'CONFIRMED', { Amount: 1 })))).status, 409, 'сумма уведомления не сверена с итогом заказа');
+  assert.equal((await notify.POST(s.request(signedNotification(order, 'CONFIRMED')))).status, 200, 'оплата старого заказа отбитая реестром');
+  assert.equal((await s.load('lib/orders.ts').getOrder(order.id)).status, 'paid');
+  assert.equal(calls.filter((c) => c.url.endsWith('/orders')).length, before + 1);
+  // Оплаченный заказ, мигрировавший без paidPaymentId: повторное уведомление о том же
+  // платеже не должно рождать ложный возврат, а второй пройденный платёж обязан встать в очередь.
+  await s.load('lib/orders.ts').mutateOrder(order.id, (current) => {
+    current.paidPaymentId = undefined;
+    current.paymentIds = ['123456', '222'];
+  });
+  assert.equal((await notify.POST(s.request(signedNotification(order, 'CONFIRMED')))).body, 'OK');
+  assert.equal((await s.load('lib/orders.ts').getOrder(order.id)).refundPaymentIds, undefined, 'повтор того же платежа записан как возврат');
+  assert.equal((await notify.POST(s.request(signedNotification(order, 'CONFIRMED', { PaymentId: '222' })))).status, 200);
+  assert.deepEqual((await s.load('lib/orders.ts').getOrder(order.id)).refundPaymentIds, ['222'], 'второй пройденный платёж не встал на возврат');
 }));
 
 test('недоступная или пустая выгрузка 1С держит витрину на прайсе 0711 и не молчит', () => withSystem(async s => {

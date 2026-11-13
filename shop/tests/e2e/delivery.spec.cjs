@@ -6,7 +6,7 @@ const { test, expect } = require('@playwright/test');
 // мест (разметка кнопок и DELIVERY_NAMES), и до этого гейта их расхождение видели только
 // глаза: в корзине было «Самовывоз СПб», а в заказе — «Самовывоз».
 const catalog = require('../../lib/catalog.json');
-const { готовККлику, добавитьВКорзину } = require('./helpers.cjs');
+const { готовККлику, добавитьВКорзину, открытьСтатичнуюКорзину } = require('./helpers.cjs');
 const staticURL = process.env.E2E_STATIC_URL || 'http://127.0.0.1:8765';
 
 // Механика: фасовка с граммами, чтобы добавить в корзину без ввода веса.
@@ -50,7 +50,7 @@ test('доставка: обе витрины показывают четыре 
   await page.goto(`${staticURL}/#dept-${PACK.category}`);
   const card = page.locator(`.product-card[data-product-id="${PACK.id}"]`);
   await card.locator('.add-btn').click();
-  await page.locator('#header-cart-btn').click();
+  await открытьСтатичнуюКорзину(page);
   await expect(page.locator('.cart-items-list .cart-item-row')).toHaveCount(1);
   await expect(page.locator('.delivery-radio-grid button[data-deliv-id]')).toHaveCount(4);
   const staticOptions = new Map();
@@ -71,6 +71,10 @@ test('доставка: выбранная служба отмечает тол�
     await option.locator('input').click();
     await expect(option.locator('input')).toBeChecked();
     expect(await page.locator('.delivery-radio-grid label input:checked').count()).toBe(1);
+    // Итог доставки Next пересчитывает запросом к /api/cart, поэтому читаем не сразу:
+    // без ожидания снимок ловил предыдущее значение и гейт падал на собственном темпе.
+    if (id === 'pickup') await expect(summary, 'самовывоз не стал нулевым').toHaveText(/0\s*₽/);
+    else await expect(summary, `служба ${id} выдумала цену`).toHaveText(/^\D*$/);
     const digits = (await summary.innerText()).replace(/\D/g, '');
     if (id === 'pickup') expect(digits).toBe('0');
     else expect(digits).toBe('');
@@ -79,7 +83,7 @@ test('доставка: выбранная служба отмечает тол�
   await page.goto(`${staticURL}/#dept-${PACK.category}`);
   const card = page.locator(`.product-card[data-product-id="${PACK.id}"]`);
   await card.locator('.add-btn').click();
-  await page.locator('#header-cart-btn').click();
+  await открытьСтатичнуюКорзину(page);
   for (const id of DELIVERY_IDS) {
     const button = page.locator(`.delivery-option-btn[data-deliv-id="${id}"]`);
     await button.click();
@@ -112,7 +116,7 @@ test('доставка: имя с кнопки доходит до заказа 
   await page.goto(`${staticURL}/#dept-${PACK.category}`);
   const card = page.locator(`.product-card[data-product-id="${PACK.id}"]`);
   await card.locator('.add-btn').click();
-  await page.locator('#header-cart-btn').click();
+  await открытьСтатичнуюКорзину(page);
   const staticDrivee = page.locator('.delivery-option-btn[data-deliv-id="drivee"]');
   expect((await staticDrivee.locator('strong').innerText()).trim()).toBe(driveeName);
   await staticDrivee.click();

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Order } from '@/lib/types';
+import { paymentIdsOf } from '@/lib/payment-registry';
 import { formatRub, formatWeightLabel } from './CartContext';
 
 type Feedback = { kind: 'error' | 'success'; text: string };
@@ -270,7 +271,8 @@ export default function AdminClient() {
           const status = statuses[order.status];
           const confirming = order.status === 'awaiting_confirmation';
           const closed = order.status === 'paid' || order.status === 'cancelled';
-          const canCancel = !closed && (order.demo || !order.paymentId);
+          const canCancel = !closed && (order.demo || paymentIdsOf(order).length === 0);
+          const refundIds = order.refundPaymentIds ?? [];
           const pendingWeights = order.items.some((item) => item.requiresWeightCheck && !item.weightConfirmed);
           const message = feedback[order.id];
           const errors = fieldErrors[order.id] ?? {};
@@ -330,6 +332,7 @@ export default function AdminClient() {
               {order.status === 'awaiting_payment' && <p className={'form-status-box' + (order.paymentError ? ' error' : '')}>{order.paymentError ? 'Ошибка создания оплаты. Заказ сохранён; создание ссылки можно повторить.' : order.paymentInitAt ? 'Создание платёжной ссылки выполняется. Обновите заказ; если попытка зависла, повторите её позже.' : order.paymentUrl ? 'Ссылка на оплату готова. Передайте покупателю страницу заказа вручную.' : 'Платёжная ссылка пока не создана.'}</p>}
               {!order.demo && <div className="admin-sync-status"><p className="checkout-hint">{order.onecSyncError ? `Не удалось синхронизировать с 1С (${order.onecSyncError}). Можно повторить вручную.` : order.onecSyncedAt ? `Синхронизировано с 1С: ${dateTime(order.onecSyncedAt)}.` : 'Синхронизация с 1С ожидает подтверждения.'}</p></div>}
               {order.status === 'paid' && <p className="checkout-hint">{order.demo ? 'Демо-оплата подтверждена; реальной отправки нет.' : 'Банк подтвердил оплату. Отправка ещё не подтверждена. Отмена и возврат выполняются через банк, не в этой панели.'}</p>}
+              {refundIds.length > 0 && <p className="form-status-box error" role="alert">Банк подтвердил оплату по ссылке {refundIds.join(', ')}, а заказ этой оплаты уже не ждёт. Деньги возвращает банк через кабинет: заказ остаётся в текущем статусе, повторной оплаты от покупателя не требуется.</p>}
               {!closed && !canCancel && <p className="checkout-hint">У заказа есть банковский платёж. Сначала отмените его в кабинете банка и дождитесь подтверждения: локальная отмена и снятие резерва здесь недоступны.</p>}
               <div className="checkout-actions">
                 <a className="btn-secondary" href={pageUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Страница заказа</a>

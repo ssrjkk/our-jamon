@@ -2,6 +2,7 @@ import { isDemoMode } from './config';
 import { resolveDelivery } from './delivery';
 import { getProducts } from './products';
 import { getOrder, mutateOrder, OrderConflict, reservedPieceIds, resolveCart } from './orders';
+import { paymentIdsOf } from './payment-registry';
 import { createTbankPayment } from './tbank';
 import { CartQuote, Order } from './types';
 
@@ -44,7 +45,14 @@ export async function initializeOrderPayment(id: string, baseUrl: string): Promi
   if (!pending || !start) return pending;
   const payment = await createTbankPayment({ orderId: pending.id, accessToken: pending.accessToken, amountRub: pending.total!, items: pending.items, description: `Заказ ${pending.id} · Наш Хамон`, customerPhone: pending.customer.phone, baseUrl });
   await mutateOrder(id, (order) => {
-    if (order.paymentInitAt !== attempt || order.status !== 'awaiting_payment') return;
+    if (order.status !== 'awaiting_payment') return;
+    // id попадает в реестр до того, как мы решим, удалась ли выдача и не устарела ли попытка:
+    // платёж, о котором банк сообщил даже в ошибочном или запоздалом ответе, позже обязан
+    // быть принят уведомлением. Ведущей ссылкой остаётся только ответ той же попытки.
+    if (payment.paymentId && !paymentIdsOf(order).includes(payment.paymentId)) {
+      order.paymentIds = [...(order.paymentIds ?? []), payment.paymentId];
+    }
+    if (order.paymentInitAt !== attempt) return;
     order.paymentInitAt = undefined;
     order.paymentError = !payment.ok;
     if (payment.ok) {

@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 // Ожидания вычисляются из собранного прайса 0711 (lib/catalog.json).
 // В этом файле нет артикулов, цен и количеств, придуманных для теста.
 const catalog = require('../../lib/catalog.json');
-const { createOrder, loginAdmin, готовККлику, добавитьВКорзину } = require('./helpers.cjs');
+const { createOrder, loginAdmin, готовККлику, добавитьВКорзину, открытьСтатичнуюКорзину } = require('./helpers.cjs');
 const root = path.resolve(__dirname, '../..');
 const shots = path.join(root, 'test-results/screenshots');
 fs.mkdirSync(shots, { recursive: true });
@@ -464,7 +464,7 @@ test('объёмная фасовка без граммов: ноль не пе�
 
   await page.goto(`${staticURL}/#dept-${VOLUME.product.category}`);
   await page.locator(`[data-action="add-to-cart"][data-product-id="${VOLUME.product.id}"]`).click();
-  await page.locator('#header-cart-btn').click();
+  await открытьСтатичнуюКорзину(page);
   await expect(page.locator('.cart-item-row')).toHaveCount(1);
   expect(await page.locator('.cart-item-row').first().innerText()).not.toMatch(/0[\u00a0 ]г/);
 });

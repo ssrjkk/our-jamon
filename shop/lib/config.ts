@@ -1,5 +1,9 @@
+// Отсутствие SHOP_MODE — это live, а не демо. Забынная переменная в продакшен-контейнере
+// раньше включала поддельную оплату: кнопка «Оплатить демо» переводила заказ в paid,
+// деньги не списывались, а покупатель ждал хамон. Демо теперь только по явному слову.
 export function isDemoMode(): boolean {
-  const mode = process.env.SHOP_MODE || 'demo';
+  const mode = process.env.SHOP_MODE;
+  if (mode === undefined || mode === '') return false;
   if (mode !== 'demo' && mode !== 'live') throw new Error('SHOP_MODE must be demo or live');
   return mode === 'demo';
 }

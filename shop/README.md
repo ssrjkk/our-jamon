@@ -1,6 +1,6 @@
 # Наш Хамон — shop
 
-Next.js 16 storefront and order processing for the deli shop. Requires Node.js 24.12–24.x. The default mode is an explicit demo: no real bank payments or 1C writes.
+Next.js 16 storefront and order processing for the deli shop. Requires Node.js 24.12–24.x. There is no demo default: `SHOP_MODE=demo` has to be set explicitly, and without it the shop expects real bank and 1C integrations.
 
 ## Run locally
 
@@ -27,7 +27,7 @@ Browser tests use installed Google Chrome and an isolated SQLite database under 
 
 | Variable | Meaning |
 |---|---|
-| `SHOP_MODE` | `demo` by default; `live` explicitly enables real integrations |
+| `SHOP_MODE` | `demo` marks orders paid without a bank charge; unset or `live` means real integrations, and `live` is the default |
 | `SHOP_URL` | Canonical shop address; a confirmed HTTPS address is required for live payments |
 | `ADMIN_PASSWORD` | Administrator secret, at least 16 characters |
 | `ORDERS_DB_PATH` | Persistent SQLite file; default `data/orders.sqlite` |
@@ -40,9 +40,11 @@ Browser tests use installed Google Chrome and an isolated SQLite database under 
 
 In live mode, missing or invalid 1C data does not fall back to demo inventory. `GET ONEC_API_URL` returns `Product[]` or `{ "products": Product[] }`, matching `lib/types.ts`. Orders and confirmed payment status are posted to `ONEC_API_URL/orders`. Failed synchronization is visible to the administrator and can be retried.
 
-Cart prices are quoted by `POST /api/cart`. Checkout rejects an outdated accepted total. Fixed-price legs retain their unit price; all actual weights and unknown shipping cost are confirmed together before payment. Signed bank notifications only mark the matching amount/payment ID as paid on `CONFIRMED`; `AUTHORIZED` is not payment confirmation. Demo payment uses a separate authorized order action, never an unsigned bank notification.
+Cart prices are quoted by `POST /api/cart`. Checkout rejects an outdated accepted total. Fixed-price legs retain their unit price; all actual weights and unknown shipping cost are confirmed together before payment. Signed bank notifications only mark an order paid on `CONFIRMED` when its exact amount matches; `AUTHORIZED` is not payment confirmation. Demo payment uses a separate authorized order action, never an unsigned bank notification.
 
 Internet payment is recorded as full prepayment. Validate the final handover receipt through the actual fiscal/1C setup before enabling live sales.
+
+A signed notification marks an order paid when the terminal signature verifies and `Amount` equals the order total in kopecks. The payment ID is recorded, not required to be known: the bank reports IDs whose `Init` response the shop never read (timeout, 5xx), and those charges still have to be accepted. Every reported ID lands in the order's payment registry, which is what blocks a local cancel, and a confirmed payment on a link the order no longer waits for is queued in `refundPaymentIds` for the bank to return.
 
 Payment links are copied and passed to customers manually. Automatic messenger delivery and CDEK point booking are not implemented; the interface does not claim otherwise.
 

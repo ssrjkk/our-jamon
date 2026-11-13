@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOrder, mutateOrder, formatWeight, OrderConflict } from '@/lib/orders';
+import { paymentIdsOf } from '@/lib/payment-registry';
 import { getAuthorizedOrder } from '@/lib/order-access';
 import { CheckoutError, initializeOrderPayment } from '@/lib/checkout';
 import { deliveryCostFor } from '@/lib/delivery';
@@ -67,7 +68,7 @@ export async function PATCH(req: NextRequest, { params }: Context) {
     if (body.action === 'cancel') {
       const updated = await mutateOrder(id, (order) => {
         if (order.status === 'paid') throw new OrderConflict('Оплаченный заказ нельзя отменить здесь. Возврат выполняется через банк.');
-        if (!order.demo && order.paymentId) throw new OrderConflict('Сначала отмените платёж в кабинете банка. До подтверждения банка резерв не снимается.');
+        if (!order.demo && paymentIdsOf(order).length) throw new OrderConflict('Сначала отмените платёж в кабинете банка. До подтверждения банка резерв не снимается.');
         order.status = 'cancelled';
       });
       if (updated) await syncOrderToOneC(updated);

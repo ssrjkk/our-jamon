@@ -62,9 +62,15 @@ export async function createTbankPayment(options: {
   try {
     const response = await fetch(TBANK_INIT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(10000) });
     const data: unknown = await response.json();
+    // PaymentId выписан банком ещё до того, как мы успели проверить ответ: если платформа
+    // вернула ошибку или URL оказался непригоден, платёж всё равно мог существовать.
+    // Выбросив этот id, магазин терял единственный способ принять оплату по такой ссылке.
+    const reported = data && typeof data === 'object' && 'PaymentId' in data
+      && ['string', 'number'].includes(typeof (data as { PaymentId?: unknown }).PaymentId)
+      ? String((data as { PaymentId: string | number }).PaymentId).trim() : '';
     if (!response.ok || !data || typeof data !== 'object' || !('Success' in data) || data.Success !== true
       || !('PaymentURL' in data) || typeof data.PaymentURL !== 'string' || !/^https:\/\//.test(data.PaymentURL)
-      || !('PaymentId' in data) || !['string', 'number'].includes(typeof data.PaymentId)) return { ok: false, error: 'payment_unavailable' };
+      || !('PaymentId' in data) || !['string', 'number'].includes(typeof data.PaymentId)) return { ok: false, error: 'payment_unavailable', ...(reported ? { paymentId: reported } : {}) };
     return { ok: true, paymentUrl: data.PaymentURL, paymentId: String(data.PaymentId) };
   } catch {
     return { ok: false, error: 'payment_unavailable' };
