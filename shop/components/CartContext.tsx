@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { MAX_CART_LINES, MAX_QTY_PER_LINE, MIN_QTY_PER_LINE, QTY_ADD_NOTICE, QTY_MAX_NOTICE, QTY_MIN_NOTICE, clampQuantity } from '@/lib/cart';
 import type { PurchaseKind } from '@/lib/types';
 
 export interface CartLine {
@@ -59,9 +60,9 @@ function loadLines(): { lines: CartLine[]; notice: string } {
       && typeof line.requiresWeightCheck === 'boolean' && (line.pieceId1c === null || typeof line.pieceId1c === 'string')
       && ['piece', 'average', 'pack', 'bulk', 'custom'].includes(line.kind) && Number.isSafeInteger(line.qty) && line.qty > 0
       && (line.packIdx === undefined || Number.isSafeInteger(line.packIdx) && line.packIdx >= 0));
-    const limited = valid.some((line) => line.qty > 20);
-    const lines = valid.map((line) => ({ ...line, qty: Math.min(line.qty, 20) }));
-    return { lines, notice: limited ? 'Можно заказать не более 20 одинаковых упаковок. Количество скорректировано.' : valid.length !== parsed.length ? 'Часть корзины не удалось восстановить. Проверьте её состав.' : '' };
+    const limited = valid.some((line) => clampQuantity(line.qty) !== line.qty);
+    const lines = valid.map((line) => ({ ...line, qty: clampQuantity(line.qty) }));
+    return { lines, notice: limited ? QTY_MAX_NOTICE : valid.length !== parsed.length ? 'Часть корзины не удалось восстановить. Проверьте её состав.' : '' };
   } catch {
     return { lines: [], notice: 'Корзина работает в этой вкладке, но браузер не разрешает сохранять её.' };
   }
@@ -112,11 +113,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     for (const line of incoming) {
       if (line.pieceId1c && next.some((item) => item.pieceId1c === line.pieceId1c)) { setNotice('Этот кусок уже есть в корзине.'); return false; }
       const index = line.kind === 'pack' ? next.findIndex((item) => item.kind === 'pack' && item.productId === line.productId && (item.packIdx ?? 0) === (line.packIdx ?? 0)) : -1;
-      if (line.qty < 1 || line.qty > 20 || index !== -1 && next[index].qty + line.qty > 20) { setNotice('Можно добавить не более 20 одинаковых упаковок.'); return false; }
+      if (line.qty < MIN_QTY_PER_LINE || line.qty > MAX_QTY_PER_LINE || index !== -1 && next[index].qty + line.qty > MAX_QTY_PER_LINE) { setNotice(QTY_ADD_NOTICE); return false; }
       if (index !== -1) next[index] = { ...next[index], qty: next[index].qty + line.qty };
       else next.push({ ...line, uid: newLineUid() });
     }
-    if (next.length > 100) { setNotice('В одном заказе может быть не более 100 позиций.'); return false; }
+    if (next.length > MAX_CART_LINES) { setNotice(`В одном заказе может быть не более ${MAX_CART_LINES} позиций.`); return false; }
     setNotice('');
     commit(next);
     return true;
@@ -135,9 +136,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     next.splice(Math.min(removed.index, next.length), 0, removed.line);
     commit(next);
   }, [removed, commit]);
+  // Поле количества не может показать число, которого корзина не принимает:
+  // значение доводится до диапазона и об этом говорится вслух. Раньше выход за
+  // 1…20 молча отбрасывался, и «21» в input уживался с 20 в корзине и в заказе.
   const setQuantity = useCallback((uid: string, qty: number) => {
-    if (!Number.isSafeInteger(qty) || qty < 1 || qty > 20) return;
-    commit(current.current.map((line) => line.uid === uid && line.kind === 'pack' ? { ...line, qty } : line));
+    const next = clampQuantity(qty);
+    if (next !== qty) setNotice(next === MAX_QTY_PER_LINE ? QTY_MAX_NOTICE : QTY_MIN_NOTICE);
+    commit(current.current.map((line) => line.uid === uid && line.kind === 'pack' ? { ...line, qty: next } : line));
   }, [commit]);
   const consumeLines = useCallback((ordered: CartLine[]) => {
     const quantities = new Map(ordered.map((line) => [line.uid, line.qty]));
@@ -177,6 +182,18 @@ export function formatWeightLabel(weightG: number): string {
 export function formatUnitSummary(item: { weightG: number; qty: number }): string {
   const parts = [];
   if (item.weightG > 0) parts.push(`${formatWeightLabel(item.weightG)} за шт.`);
-  if (item.qty > 1) parts.push(`${item.qty} шт.`);
+  if (item.qty > 1) parts.push(`${item.qty}\u00A0шт.`);
   return parts.join(' · ');
+}
+
+/**
+ * Русская форма счётного существительного: 1 товар, 2 товара, 5 товаров, 21 товар.
+ * Разряд берётся из последних двух цифр, иначе «21» и «111» получают «товаров»,
+ * и вслух читается неверное число позиций.
+ */
+export function formatCount(count: number, one: string, few: string, many: string): string {
+  const tail = Math.abs(count) % 100;
+  const last = tail % 10;
+  const word = tail >= 11 && tail <= 14 ? many : last === 1 ? one : last >= 2 && last <= 4 ? few : many;
+  return `${count}\u00A0${word}`;
 }

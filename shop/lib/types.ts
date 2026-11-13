@@ -93,7 +93,6 @@ export interface Order {
   paymentInitAt?: string;
   onecSyncedAt?: string;
   onecSyncError?: string;
-  comment?: string;
 }
 
 export interface DeliveryOption {

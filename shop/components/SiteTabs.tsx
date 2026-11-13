@@ -83,7 +83,7 @@ export default function SiteTabs({ panels }: { panels: Record<TabId, ReactNode> 
   }
 
   return (
-    <div className="shop-sections">
+    <div>
       <div className="site-tabs-wrap" id="shop-tabs">
         <div className="container site-tabs" role="tablist" aria-label="Разделы лавки" aria-orientation="horizontal">
           {TABS.map((tab, index) => (

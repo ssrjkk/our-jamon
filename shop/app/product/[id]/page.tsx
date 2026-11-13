@@ -26,7 +26,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const fixed = product.kind === 'piece' && product.category === 'leg' && typeof product.pieces[0]?.price === 'number';
 
   return <main id="main-content" className="container product-page">
-    <nav className="breadcrumbs" aria-label="Навигационная цепочка"><Link href="/catalog">Каталог</Link><span aria-hidden="true">/</span><Link href={`/catalog?category=${product.category}`}>{CATEGORY_TITLES[product.category].title}</Link></nav>
+    <nav className="breadcrumbs" aria-label="Хлебные крошки"><Link href="/catalog">Каталог</Link><span aria-hidden="true">/</span><Link href={`/catalog?category=${product.category}`}>{CATEGORY_TITLES[product.category].title}</Link></nav>
     <ProductCard product={product} serverReservedPieceIds={reserved} detail />
     <section className="product-information" aria-labelledby="product-info-title">
       <div><h2 id="product-info-title" className="section-title">Перед заказом</h2><dl className="product-facts">{product.code && <div><dt>Артикул поставщика</dt><dd className="tabular">{product.code}</dd></div>}{product.agingMonths && <div><dt>Выдержка</dt><dd>{product.agingMonths} месяцев</dd></div>}<div><dt>Формат</dt><dd>{CATEGORY_TITLES[product.category].title}</dd></div></dl></div>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { useCart } from './CartContext';
+import { useCart, formatCount } from './CartContext';
 
 const FOCUSABLE = 'a[href],button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])';
 
@@ -75,7 +75,7 @@ export default function SiteHeader() {
   return (
     <>
       <a className="skip-link" href="#main-content" onClick={(event) => {
-        const main = document.querySelector<HTMLElement>('main');
+        const main = document.getElementById('main-content');
         if (!main) return;
         event.preventDefault();
         main.tabIndex = -1;
@@ -99,7 +99,7 @@ export default function SiteHeader() {
             <Link href="/about">О нас</Link>
             <a href="/#delivery">Доставка</a>
           </nav>
-          <Link href="/cart" className="cart-trigger" data-cart-trigger aria-label={`Корзина: ${count} товаров`}>
+          <Link href="/cart" className="cart-trigger" data-cart-trigger aria-label={`Корзина: ${formatCount(count, 'товар', 'товара', 'товаров')}`}>
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"><path d="M5 8h14l1 12H4L5 8Z M8 8V6a4 4 0 0 1 8 0v2" stroke="currentColor" strokeWidth="1.5" /></svg>
             <span className="cart-trigger-label">Корзина</span><span className="cart-count-badge tabular" data-cart-badge>{count}</span>
           </Link>

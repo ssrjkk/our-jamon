@@ -147,6 +147,36 @@ test('округление цены веса живёт только в lib/pric
     [], 'в статической витрине появилась вторая формула цены веса');
 });
 
+// Диапазон отреза обязан оставаться одним числом: сервер, карточка и веса сверяют его
+// независимо, и дубликат означает витрину, которая предлагает вес, reject-уемый заказом,
+// либо подпись чипа, расходящуюся с текстом ошибки.
+test('диапазон отреза живёт только в lib/price.ts', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const skip = new Set(['node_modules', '.next', 'test-results', 'data']);
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) { if (!skip.has(entry.name)) walk(path.join(dir, entry.name)); }
+      else if (/\.(ts|tsx)$/.test(entry.name)) files.push(path.join(dir, entry.name));
+    }
+  };
+  for (const dir of ['app', 'components', 'lib']) walk(path.join(root, dir));
+  const code = (file) => fs.readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  // Строка import упоминает имя, но не использует его: без вырезания гейт зелёный
+  // и на файле, который константу только импортирует.
+  const usage = (file) => code(file).split('\n').filter((line) => !/^\s*import\b/.test(line)).join('\n');
+  const rel = (file) => path.relative(root, file).replace(/\\/g, '/');
+  const upper = files.filter((file) => path.basename(file) !== 'price.ts' && /(?<!\d)2(?:&nbsp;|[ \u00A0\u202F])?000(?!\d)/.test(code(file)));
+  assert.deepEqual(upper.map(rel), [], 'верхняя граница отреза продублирована вне lib/price.ts');
+  for (const name of ['lib/orders.ts', 'components/ProductCard.tsx', 'components/ScaleTerminal.tsx']) {
+    const source = usage(path.join(root, name));
+    assert.match(source, /CUT_WEIGHT_MIN_G/, `${name} задал границы отреза в обход lib/price.ts`);
+    assert.match(source, /CUT_WEIGHT_MAX_G/, `${name} задал границы отреза в обход lib/price.ts`);
+  }
+  assert.ok(files.length >= 40, `свип видел только ${files.length} файлов исходников — проверка потеряла опору`);
+});
+
 // Без этого теста прошлый гейт молчал бы на любой записи формулы: он искал только одну.
 test('детектор находит все исторические записи второй формулы', () => {
   const historical = [

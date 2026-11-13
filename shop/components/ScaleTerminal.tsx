@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Product } from '@/lib/types';
 import { useCart, formatRub, formatWeightLabel } from './CartContext';
-import { weightPriceOf } from '@/lib/price';
+import { weightPriceOf, formatGrams, CUT_WEIGHT_MIN_G, CUT_WEIGHT_MAX_G } from '@/lib/price';
 import { flyTokenToCart } from './Animations';
 
 export default function ScaleTerminal({ products, requestedWeightG }: { products: Product[]; requestedWeightG?: number }) {
@@ -35,8 +35,8 @@ export default function ScaleTerminal({ products, requestedWeightG }: { products
 
   const weightG = Number(weight);
   const bulk = product?.kind === 'pack' ? product.bulk : null;
-  const min = bulk?.minG ?? 50;
-  const max = bulk?.maxG ?? 2000;
+  const min = bulk?.minG ?? CUT_WEIGHT_MIN_G;
+  const max = bulk?.maxG ?? CUT_WEIGHT_MAX_G;
   const step = bulk?.stepG ?? 1;
   const valid = Number.isSafeInteger(weightG) && weightG >= min && weightG <= max && (weightG - min) % step === 0;
   const rate = bulk?.pricePerKg ?? product?.pricePerKg ?? 0;
@@ -61,9 +61,9 @@ export default function ScaleTerminal({ products, requestedWeightG }: { products
       <div className="scale-readout tabular"><div className="readout-cell"><span className="readout-label">Желаемый вес</span><strong className="readout-digits">{valid ? formatWeightLabel(weightG) : '—'}</strong></div><div className="readout-cell"><span className="readout-label">Цена за кг</span><strong className="readout-digits">{formatRub(rate)}</strong></div><div className="readout-cell"><span className="readout-label">Предварительно</span><strong className="readout-digits highlight">{valid ? formatRub(price) : '—'}</strong></div></div>
       <div className="scale-weight-field"><label htmlFor={`${id}-weight`}>Желаемый вес, г</label><input id={`${id}-weight`} className="form-input tabular" type="number" inputMode="numeric" min={min} max={max} step={step} value={weight} aria-invalid={!valid} aria-describedby={`${id}-hint`} onChange={(event) => { setWeight(event.target.value); setFeedback(''); }} /></div>
       <input type="range" min={min} max={max} step={step} value={valid ? weightG : min} aria-label="Желаемый вес порции в граммах" onChange={(event) => { setWeight(event.target.value); setFeedback(''); }} />
-      <p id={`${id}-hint`} className="scale-range-label">{bulk ? `От ${min} до ${max} г, шаг ${step} г.` : 'Без округления к соседнему куску: в заказ уйдёт указанный вами вес.'}{!valid && ` Укажите целый вес от ${min} до ${max} г${step > 1 ? ` с шагом ${step} г` : ''}.`}</p>
-      <div className="magnet-chips" role="group" aria-label="Быстрый выбор веса">{[100, 300, 500].filter((value) => value >= min && value <= max && (value - min) % step === 0).map((value) => <button type="button" className="magnet-btn tabular" key={value} aria-pressed={weightG === value} onClick={() => { setWeight(String(value)); setFeedback(''); }}>{value} г</button>)}</div>
+      <p id={`${id}-hint`} className="scale-range-label">{bulk ? `От ${min} до ${formatGrams(max)}, шаг ${formatGrams(step)}.` : 'Без округления к соседнему куску: в заказ уйдёт указанный вами вес.'}{!valid && ` Укажите целый вес от ${min} до ${formatGrams(max)}${step > 1 ? ` с шагом ${formatGrams(step)}` : ''}.`}</p>
+      <div className="magnet-chips" role="group" aria-label="Быстрый выбор веса">{[100, 300, 500].filter((value) => value >= min && value <= max && (value - min) % step === 0).map((value) => <button type="button" className="magnet-btn tabular" key={value} aria-pressed={weightG === value} onClick={() => { setWeight(String(value)); setFeedback(''); }}>{formatGrams(value)}</button>)}</div>
       <button ref={buttonRef} type="button" className="scale-add-btn" disabled={!valid} onClick={add}>Добавить порцию в корзину</button><p className="card-feedback" role="status">{feedback}</p>
-    </div><div className="scale-panel scale-info-panel"><h3>Сначала вес.<br />Потом оплата.</h3><ol><li>Указываете желаемый вес отреза — от 50 до 2 000 г.</li><li>Мы проверяем наличие, взвешиваем и подтверждаем сумму заказа и доставки.</li><li>После подтверждения оплачиваете заказ по ссылке.</li></ol><p className="scale-info-foot">У фасовок цена фиксирована. У целых ног с ценой за штуку она не меняется после взвешивания.</p></div></div> : <div className="scale-panel"><h3>Весовые товары сейчас недоступны</h3><p>В актуальном каталоге нет отрезов и порций на развес. Выберите готовую фасовку.</p><Link href="/catalog" className="scale-add-btn">Открыть каталог</Link></div>}
+    </div><div className="scale-panel scale-info-panel"><h3>Сначала вес.<br />Потом оплата.</h3><ol><li>Указываете желаемый вес отреза — от {min} до {formatGrams(max)}.</li><li>Мы проверяем наличие, взвешиваем и подтверждаем сумму заказа и доставки.</li><li>После подтверждения оплачиваете заказ по ссылке.</li></ol><p className="scale-info-foot">У фасовок цена фиксирована. У целых ног с ценой за штуку она не меняется после взвешивания.</p></div></div> : <div className="scale-panel"><h3>Весовые товары сейчас недоступны</h3><p>В актуальном каталоге нет отрезов и порций на развес. Выберите готовую фасовку.</p><Link href="/catalog" className="scale-add-btn">Открыть каталог</Link></div>}
   </div></section>;
 }

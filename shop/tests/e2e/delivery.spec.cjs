@@ -6,6 +6,7 @@ const { test, expect } = require('@playwright/test');
 // мест (разметка кнопок и DELIVERY_NAMES), и до этого гейта их расхождение видели только
 // глаза: в корзине было «Самовывоз СПб», а в заказе — «Самовывоз».
 const catalog = require('../../lib/catalog.json');
+const { готовККлику, добавитьВКорзину } = require('./helpers.cjs');
 const staticURL = process.env.E2E_STATIC_URL || 'http://127.0.0.1:8765';
 
 // Механика: фасовка с граммами, чтобы добавить в корзину без ввода веса.
@@ -32,7 +33,7 @@ async function fillStaticCheckout(page) {
 
 test('доставка: обе витрины показывают четыре службы с одними именами', async ({ page }) => {
   await page.goto(`/product/${PACK.id}`);
-  await page.getByRole('button', { name: /В корзину/ }).click();
+  await добавитьВКорзину(page, 'страница фасовки с граммами');
   await page.goto('/cart');
   // Ждём, пока корзина реально отрендерит оформление: без этого снимок `.all()` на
   // планшете успевал пройти по пустой корзине и гейт падал не на вёрстке, а на себе.
@@ -62,7 +63,7 @@ test('доставка: обе витрины показывают четыре 
 
 test('доставка: выбранная служба отмечает только себя и не выдумывает цену', async ({ page }) => {
   await page.goto(`/product/${PACK.id}`);
-  await page.getByRole('button', { name: /В корзину/ }).click();
+  await добавитьВКорзину(page, 'страница фасовки с граммами');
   await page.goto('/cart');
   const summary = page.locator('.checkout-summary div', { has: page.locator('span', { hasText: /^Доставка$/ }) }).locator('strong');
   for (const id of DELIVERY_IDS) {
@@ -94,14 +95,16 @@ test('доставка: выбранная служба отмечает тол�
 
 test('доставка: имя с кнопки доходит до заказа на обеих витринах', async ({ page, request }) => {
   await page.goto(`/product/${PACK.id}`);
-  await page.getByRole('button', { name: /В корзину/ }).click();
+  await добавитьВКорзину(page, 'страница фасовки с граммами');
   await page.goto('/cart');
   const drivee = page.locator('.delivery-radio-grid label:has(input[value="drivee"])');
   const driveeName = (await drivee.locator('strong').innerText()).trim();
   await drivee.locator('input').click();
   await page.locator('#checkout-address').fill('Санкт-Петербург, тестовый адрес');
   await fillNextCheckout(page);
-  await page.getByRole('button', { name: 'Оформить демо-заказ', exact: true }).click();
+  const submit = page.getByRole('button', { name: 'Оформить демо-заказ', exact: true });
+  await готовККлику(submit, 'оформление заказа с курьером');
+  await submit.click();
   await expect(page).toHaveURL(/\/order\/NH-[A-F0-9]+\?token=[a-f0-9]{32}/);
   await expect(page.locator('.cart-item-row').first()).toBeVisible();
   expect((await page.locator('aside, main').allInnerTexts()).join('\n')).toContain(driveeName);

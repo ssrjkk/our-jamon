@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { CartItemInput, CartQuote, DeliveryOption, Messenger } from '@/lib/types';
+import { MAX_QTY_PER_LINE, MIN_QTY_PER_LINE, QTY_LIMIT_NOTE } from '@/lib/cart';
 import { useCart, formatRub, formatUnitSummary } from './CartContext';
 
 type Props = { deliveryOptions: DeliveryOption[]; freeFrom: number | null; demo: boolean };
@@ -183,11 +184,11 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
   }
 
   if (!ready) {
-    return <main className="container cart-page"><div className="cart-empty-state" role="status"><h1 className="section-title">Корзина</h1><p>Восстанавливаем ваш выбор…</p></div></main>;
+    return <main id="main-content" className="container cart-page"><div className="cart-empty-state" role="status"><h1 className="section-title">Корзина</h1><p>Восстанавливаем ваш выбор…</p></div></main>;
   }
   if (count === 0) {
     return (
-      <main className="container cart-page">
+      <main id="main-content" className="container cart-page">
         <div className="cart-empty-state">
           <h1 className="section-title">Корзина пока пуста</h1>
           <p>Выберите кусок, нарезку или целую ногу в каталоге.</p>
@@ -200,10 +201,10 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
   }
 
   return (
-    <main className="container cart-page">
+    <main id="main-content" className="container cart-page">
       <section aria-labelledby="cart-title">
-        <header className="checkout-header">
-          <p className="section-eyebrow">Ваш выбор · {count} шт.</p>
+        <header className="section-head">
+          <p className="bento-period">Ваш выбор · {count}&nbsp;шт.</p>
           <h1 id="cart-title" className="section-title">Корзина</h1>
           <p className="cart-head-sub">Без регистрации. Весовые позиции проверим перед оплатой.</p>
         </header>
@@ -226,11 +227,11 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
                   </p>
                   {line.kind === 'pack' && (
                     <div className="cart-line-controls">
-                      <button type="button" disabled={busy || line.qty <= 1} onClick={() => setQuantity(line.uid, line.qty - 1)} aria-label={`Уменьшить количество: ${item?.title ?? line.title}`}>−</button>
+                      <button type="button" disabled={busy || line.qty <= MIN_QTY_PER_LINE} onClick={() => setQuantity(line.uid, line.qty - 1)} aria-label={`Уменьшить количество: ${item?.title ?? line.title}`}>−</button>
                       <label htmlFor={`quantity-${line.uid}`}>Количество</label>
-                      <input id={`quantity-${line.uid}`} type="number" className="tabular" inputMode="numeric" min={1} max={20} step={1} value={line.qty} disabled={busy} onChange={(event) => setQuantity(line.uid, Number(event.target.value))} />
-                      <button type="button" disabled={busy || line.qty >= 20} onClick={() => setQuantity(line.uid, line.qty + 1)} aria-label={`Увеличить количество: ${item?.title ?? line.title}`}>+</button>
-                      <span className="cart-item-note">До 20 одинаковых упаковок</span>
+                      <input id={`quantity-${line.uid}`} type="number" className="tabular" inputMode="numeric" min={MIN_QTY_PER_LINE} max={MAX_QTY_PER_LINE} step={1} value={line.qty} disabled={busy} onChange={(event) => setQuantity(line.uid, Number(event.target.value))} />
+                      <button type="button" disabled={busy || line.qty >= MAX_QTY_PER_LINE} onClick={() => setQuantity(line.uid, line.qty + 1)} aria-label={`Увеличить количество: ${item?.title ?? line.title}`}>+</button>
+                      <span className="cart-item-note">{QTY_LIMIT_NOTE}</span>
                     </div>
                   )}
                 </div>
@@ -256,7 +257,7 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
           <h2 id="checkout-title" className="checkout-title">Оформление</h2>
           <p className="checkout-hint">Получение, контакты и проверенный расчёт — в одном месте.</p>
           {isDemo && <p className="demo-note"><strong>Демонстрационный режим.</strong> Заказ не отправляется в реальный банк или 1С. Не вводите реальные персональные данные; используйте вымышленные контакты.</p>}
-          <fieldset className="checkout-fieldset" disabled={busy}>
+          <fieldset disabled={busy}>
             <legend>Как получить заказ</legend>
             <div className="delivery-radio-grid">
               {deliveryOptions.map((option) => (
@@ -280,7 +281,7 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
               </div>
             )}
           </fieldset>
-          <fieldset className="checkout-fieldset" disabled={busy}>
+          <fieldset disabled={busy}>
             <legend>Контакты для заказа</legend>
             <div className="form-field">
               <label htmlFor="checkout-name">Ваше имя</label>

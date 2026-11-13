@@ -30,6 +30,8 @@ interface CatalogItem {
   pieces?: Product['pieces'];
   packs?: Product['packs'];
   bulk?: Product['bulk'];
+  // Живая выгрузка 1С может прислать уже готовый адрес картинки; прайс 0711 хранит имя файла.
+  imageUrl?: string;
 }
 
 const entries = catalog as unknown as {
@@ -55,14 +57,14 @@ const toProduct = (entry: CatalogItem): Product => ({
   code: entry.code,
   category: entry.category,
   title: entry.title,
-  agingMonths: entry.agingMonths,
+  agingMonths: entry.agingMonths ?? null,
   description: entry.description,
   kind: entry.kind ?? 'pack',
   pricePerKg: entry.pricePerKg ?? 0,
   pieces: entry.pieces ?? [],
   packs: entry.packs ?? [],
   bulk: entry.bulk ?? null,
-  imageUrl: entry.image ? `/${entry.image}` : undefined,
+  imageUrl: entry.image ? `/${entry.image}` : entry.imageUrl ?? undefined,
   imageCaption: entry.imageCaption,
   imageW: entry.imageW ?? undefined,
   imageH: entry.imageH ?? undefined,
@@ -215,7 +217,13 @@ async function fetchCatalog(): Promise<Catalog> {
     });
     if (!response.ok) throw new Error(`Catalog service responded ${response.status}`);
     const data: unknown = await response.json();
-    const list = Array.isArray(data) ? data : data && typeof data === 'object' && 'products' in data ? (data as { products: unknown }).products : undefined;
+    const raw = Array.isArray(data) ? data : data && typeof data === 'object' && 'products' in data ? (data as { products: unknown }).products : undefined;
+    if (!Array.isArray(raw)) throw new Error('Catalog service returned invalid product data');
+    // Выгрузка проходит через ту же нормализацию, что и прайс 0711: опущенное поле
+    // («bulk», «pieces», «kind», «agingMonths») означает то же самое, что и в каталоге,
+    // а не поломку. Без этого 1С без фасовки на развес отклонялась целиком, и витрина
+    // молча оставалась на прайсе. required-поля (id, title, code) по-прежнему проверяются.
+    const list = raw.map((entry) => (entry && typeof entry === 'object' ? toProduct(entry as CatalogItem) : entry));
     if (!validCatalog(list)) throw new Error('Catalog service returned invalid product data');
     // Пустая выгрузка — это сброшенная интеграция, а не лавка без товаров.
     if (!list.length) throw new Error('Catalog service returned an empty product list');

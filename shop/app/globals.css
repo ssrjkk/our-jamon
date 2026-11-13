@@ -60,6 +60,8 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .btn-secondary:hover, .bento-btn:hover { background: var(--fat-white); }
 .section { padding-block: 48px 64px; }
 .section-head { display: grid; gap: 12px; max-width: 760px; margin-bottom: 32px; }
+/* В сетке стретчатся даже inline-flex дети, поэтому чип статуса остаётся прижатым к началу. */
+.section-head > .status-chip { justify-self: start; }
 .section-title { font: 700 clamp(1.9rem, 3.2vw, 3rem)/1.15 var(--font-serif); color: var(--cured-ruby); letter-spacing: -.035em; text-wrap: balance; }
 .section-subtitle { color: var(--cured-ruby); max-width: 66ch; font-weight: 600; }
 
@@ -116,7 +118,9 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .site-tabs button:focus-visible { outline-offset: -5px; }
 .site-tabs button { flex-shrink: 0; min-height: 56px; padding: 14px 4px; border-bottom: 2px solid transparent; color: var(--graphite-muted); white-space: nowrap; font-size: .8125rem; font-weight: 600; }
 .site-tabs button[aria-selected="true"] { border-color: var(--cured-ruby); color: var(--cured-ruby); font-weight: 600; }
-[role="tabpanel"] { scroll-margin-top: calc(var(--header-h) + 64px); }
+/* Якорь отдела (#dept-*) приземляется под обе липкие полосы: у отдела нет своей
+   полосы, но он тоже цель перехода по хэшу — без маргина заголовок уходит под шапку. */
+[role="tabpanel"], .dept-section { scroll-margin-top: calc(var(--header-h) + 64px); }
 
 /* Поиск, применимые фильтры и один отдел */
 .catalog-section { padding-block: 36px 64px; }
@@ -346,6 +350,9 @@ input[type="range"] { width: 100%; min-height: 36px; accent-color: var(--cured-r
 .checkout-form { min-width: 0; }
 .checkout-title { font: 700 clamp(1.5rem, 2.5vw, 2rem)/1.2 var(--font-serif); color: var(--cured-ruby); }
 .checkout-hint { font-size: .8125rem; color: var(--graphite-muted); }
+/* Ошибка поля — тот же кегль, что подсказка, но цветом ошибки: без правила
+   сообщение «Неверный пароль» рисовалось обычным текстом и не отличалось от подписи. */
+.field-error { font-size: .8125rem; color: var(--error-red); }
 .checkout-form fieldset { display: grid; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
 .cart-page > section > .cart-items { margin-top: 20px; }
 .cart-page > section > .checkout-actions { margin-block: 16px; }
@@ -392,6 +399,23 @@ label.delivery-option-btn { cursor: pointer; }
 .status-chip { display: inline-flex; padding: 5px 8px; border: 1px solid var(--bone-line); border-radius: var(--radius); background: var(--paper-salt); font-size: .6875rem; color: var(--cured-ruby); }
 .status-chip.paid { background: var(--cured-ruby); color: var(--fat-white); border-color: var(--cured-ruby); }
 .status-chip.cancelled { color: var(--error-red); }
+/* Панель лавки и страница заказа не входят в публичные витрины, поэтому классы их
+   контейнеров не встретили ни одного правила, а `* { margin: 0 }` склеил заголовок со
+   статусом, карточки заказов между собой и подписи покупателя в одну простыню.
+   Шапки блоков остаются на уже существующем примитиве .section-head, а надзаголовок —
+   на .bento-period: второй копии того же правила в таблице стилей не нужно. */
+.admin-page { display: grid; gap: 24px; }
+.admin-header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; }
+.admin-login { max-width: 480px; margin-inline: auto; }
+.admin-orders { display: grid; gap: 24px; }
+.admin-order-card { min-width: 0; }
+.admin-order-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.admin-customer { display: grid; gap: 8px; }
+.admin-sync-status { display: grid; gap: 12px; justify-items: start; }
+.admin-items .cart-item-details > .form-field { margin-top: 12px; }
+.order-block { display: grid; gap: 12px; }
+.order-delivery { display: grid; gap: 8px; }
+.order-payment-action, .order-payment-retry { display: grid; gap: 12px; justify-items: start; }
 .site-footer { background: var(--surface-tint); border-top: 1px solid var(--bone-line); padding-block: 40px calc(80px + env(safe-area-inset-bottom, 0px)); font-size: .875rem; }
 .site-footer a { padding-block: 3px; }
 .footer-grid { display: grid; gap: 32px; }

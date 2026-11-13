@@ -196,13 +196,13 @@ export default function AdminClient() {
     for (const item of order.items.filter((item) => item.requiresWeightCheck)) {
       const raw = (weights[order.id]?.[item.uid] ?? '').trim();
       const value = Number(raw);
-      if (!/^\d+$/.test(raw) || !Number.isSafeInteger(value) || value < 1 || value > 30000) nextErrors[item.uid] = 'Введите фактический целый вес от 1 до 30 000 г.';
+      if (!/^\d+$/.test(raw) || !Number.isSafeInteger(value) || value < 1 || value > 30000) nextErrors[item.uid] = 'Введите фактический целый вес от 1 до 30\u00A0000\u00A0г.';
       else actualWeights[item.uid] = value;
     }
     const rawCost = (deliveryCosts[order.id] ?? '').trim();
     const deliveryCost = rawCost === '' ? undefined : Number(rawCost);
     if (rawCost === '' && order.delivery.cost === null) nextErrors.deliveryCost = 'Согласуйте и укажите стоимость доставки.';
-    else if (deliveryCost !== undefined && (!/^\d+$/.test(rawCost) || !Number.isSafeInteger(deliveryCost) || deliveryCost < 0 || deliveryCost > 100000)) nextErrors.deliveryCost = 'Введите целую стоимость от 0 до 100 000 ₽.';
+    else if (deliveryCost !== undefined && (!/^\d+$/.test(rawCost) || !Number.isSafeInteger(deliveryCost) || deliveryCost < 0 || deliveryCost > 100000)) nextErrors.deliveryCost = 'Введите целую стоимость от 0 до 100\u00A0000\u00A0₽.';
     setFieldErrors((previous) => ({ ...previous, [order.id]: nextErrors }));
     const firstField = Object.keys(nextErrors)[0];
     if (firstField) {
@@ -233,7 +233,7 @@ export default function AdminClient() {
     return (
       <main id="main-content" className="container admin-page">
         <section className="bento-card admin-login" aria-labelledby="admin-title">
-          <p className="section-eyebrow">Для команды лавки</p>
+          <p className="bento-period">Для команды лавки</p>
           <h1 id="admin-title" className="section-title">Управление заказами</h1>
           <p className="checkout-hint">Проверка веса, согласование доставки и контроль оплаты.</p>
           {loading ? <p className="form-status-box" role="status">Проверяем сессию…</p> : (
@@ -255,7 +255,7 @@ export default function AdminClient() {
   return (
     <main id="main-content" className="container admin-page">
       <header className="admin-header">
-        <div><p className="section-eyebrow">Операционная панель</p><h1 className="section-title">Заказы</h1><p className="checkout-hint">Время указано по Москве. Оплата не подтверждает отправку.</p></div>
+        <div className="section-head"><p className="bento-period">Операционная панель</p><h1 className="section-title">Заказы</h1><p className="checkout-hint">Время указано по Москве. Оплата не подтверждает отправку.</p></div>
         <div className="checkout-actions">
           <button type="button" className="btn-secondary" disabled={disabled} onClick={() => { void load(); }}>{loading ? 'Обновляем…' : 'Обновить заказы'}</button>
           <button type="button" className="btn-secondary" disabled={disabled} onClick={logout}>{sessionBusy ? 'Выходим…' : 'Выйти'}</button>
@@ -290,7 +290,7 @@ export default function AdminClient() {
                 <p className="checkout-hint">{order.consentedAt ? `Согласие на обработку данных: ${dateTime(order.consentedAt)}.` : 'Отметка о согласии отсутствует.'}</p>
               </div>
               <form className="checkout-form" onSubmit={(event) => confirm(event, order)} noValidate>
-                <fieldset className="checkout-fieldset" disabled={disabled || !confirming}>
+                <fieldset disabled={disabled || !confirming}>
                   <legend>{confirming ? 'Проверить все позиции' : 'Состав заказа'}</legend>
                   <div className="cart-items admin-items">
                     {order.items.map((item) => {
@@ -299,7 +299,7 @@ export default function AdminClient() {
                         <div key={item.uid} className="cart-item-row">
                           <div className="cart-item-details">
                             <strong className="cart-item-title">{item.title}</strong>
-                            <span className="cart-item-sub">{item.label} · {item.qty} шт.</span>
+                            <span className="cart-item-sub">{item.label} · {item.qty}&nbsp;шт.</span>
                             {item.weightG > 0 && <p className="cart-item-note tabular">{formatWeightLabel(item.weightG)} за шт.{item.qty > 1 ? ` · всего ${formatWeightLabel(item.weightG * item.qty)}` : ''}</p>}
                             <p className="cart-item-note">{item.requiresWeightCheck ? item.weightConfirmed ? 'Вес подтверждён.' : 'Нужен фактический вес.' : 'Фиксированная фасовка.'} {item.pricePerKg === null ? 'Цена за штуку фиксирована; изменение веса её не меняет.' : `${formatRub(item.pricePerKg)} / кг.`}</p>
                             {confirming && item.requiresWeightCheck && <div className="form-field">

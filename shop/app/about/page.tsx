@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
-  return <main id="main-content" className="about-page">
+  return <main id="main-content">
     <section className="section about-intro"><div className="container">
       <nav className="breadcrumbs" aria-label="Хлебные крошки"><Link href="/">Главная</Link><span aria-hidden="true">/</span><span aria-current="page">О нас</span></nav>
       <div className="section-head"><p className="bento-period">Наш Хамон · Сытный рынок</p><h1 className="section-title">О нас</h1><p className="section-subtitle">Небольшая лавка с главным героем — хамоном. Мы на фуд-аллее Сытного рынка в Санкт-Петербурге.</p></div>

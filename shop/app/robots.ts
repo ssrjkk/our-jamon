@@ -1,6 +1,5 @@
 import type { MetadataRoute } from 'next';
-
-const SITE_URL = process.env.SHOP_URL || 'https://ssrjkk.github.io/our-jamon';
+import { siteUrl } from '@/lib/config';
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -9,6 +8,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/admin', '/cart', '/order/', '/api/'],
     },
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    sitemap: siteUrl('/sitemap.xml'),
   };
 }

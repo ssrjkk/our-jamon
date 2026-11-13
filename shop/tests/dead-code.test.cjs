@@ -3,6 +3,8 @@
 // экспорты компонентов и lib и требует вызова в другом файле либо второго использования
 // в своём. Второе условие нужно для честности: onec.ts и tbank.ts экспортируют функции,
 // которые нужны только их собственному модулю, и это не мусор.
+// Тот же разбор применён к полям lib/types.ts: поле описывает факт заказа или товара,
+// и если его никто не читает и не пишет, это выдумка о данных, а не запас на будущее.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -23,9 +25,15 @@ function sources(dirs) {
   return files;
 }
 
-/** Комментарии вырезаны: упоминание функции в шапке файла — не пользователь. */
+/**
+ * Комментарии вырезаны: упоминание функции в шапке файла — не пользователь.
+ * Двойная косая черта после двоеточия ('https://…') продолжает строковый литерал, а не
+ * начинает комментарий: без проверки на двоеточие из URL вырезался бы хвост и имя в нём.
+ */
 const codeOf = (file) => stripComments(fs.readFileSync(file, 'utf8'));
-const stripComments = (source) => source.replace(/\/\/[^\n]*/g, '');
+const stripComments = (source) => source
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 
 function declaredIn(source) {
   return [
@@ -60,6 +68,25 @@ function storefrontEntries() {
   return entries;
 }
 
+/** Поля всех экспортируемых интерфейсов как «Имя.поле» — ровно то, что читает витрина. */
+function declaredFields(source) {
+  const fields = [];
+  for (const block of source.matchAll(/^export interface (\w+) \{([\s\S]*?)\r?\n\}/gm)) {
+    for (const prop of block[2].matchAll(/^\s{2}(\w+)\??:/gm)) fields.push(`${block[1]}.${prop[1]}`);
+  }
+  return fields;
+}
+
+/**
+ * types — исходник lib/types.ts как есть, users — те, кто поле читает или пишет:
+ * витрина, сервер и скрипт синхронизации с 1С. Комментарии режутся здесь, поэтому
+ * упоминание поля в шапке модуля не может считаться его использованием.
+ */
+function deadFieldsIn(types, users) {
+  const texts = users.map(stripComments);
+  return declaredFields(stripComments(types)).filter((field) => !texts.some((text) => count(text, field.split('.')[1]) > 0));
+}
+
 test('в компонентах и lib не осталось экспортов без пользователя', () => {
   const entries = storefrontEntries();
   const targets = [...entries.keys()].filter((key) => key.startsWith('components/') || key.startsWith('lib/'));
@@ -76,10 +103,41 @@ test('детектор считает мёртвым только то, до ч�
       'export function selfUsed() { return selfUsed(); }',
       'export function importedElsewhere() { return 1; }',
     ].join('\n')],
-    ['components/Consumer.tsx', 'import { importedElsewhere } from \'@/lib/module\';\nexport const value = importedElsewhere();\n'],
+    ['components/Consumer.tsx', [
+      'import { importedElsewhere } from \'@/lib/module\';',
+      'export const value = importedElsewhere();',
+      '/* bounceOlives(stage) в блочном комментарии — тоже не вызов */',
+    ].join('\n')],
   ]);
   assert.deepEqual(deadExportsIn(entries, ['lib/module.ts']), ['lib/module.ts :: bounceOlives'],
     'детектор не видит мёртвый экспорт: гейт не сможет поймать следующий такой же');
+});
+
+test('в lib/types.ts не осталось полей без читателя', () => {
+  const types = fs.readFileSync(path.join(root, 'lib', 'types.ts'), 'utf8');
+  const users = sources(['app', 'components', 'lib', 'scripts'])
+    .filter((file) => path.relative(root, file).split(path.sep).join('/') !== 'lib/types.ts')
+    .map((file) => fs.readFileSync(file, 'utf8'));
+  assert.ok(declaredFields(stripComments(types)).length >= 60,
+    `гейт потерял охват: полей в типах ${declaredFields(stripComments(types)).length}`);
+  assert.deepEqual(deadFieldsIn(types, users), [],
+    'поле описывает заказ или товар, которого никто не читает и не пишет — его надо удалить из типа');
+});
+
+test('детектор полей не путает мёртвое поле с живым', () => {
+  const types = [
+    'export interface Order {',
+    '  id: string;',
+    '  status: OrderStatus;',
+    '  phantom?: string;',
+    '}',
+  ].join('\n');
+  const users = [
+    'export const x = order.id + order.status;',
+    '/* phantom?: строка из старой формы, заказчику её не отдаём */',
+  ];
+  assert.deepEqual(deadFieldsIn(types, users), ['Order.phantom'],
+    'детектор не видит мёртвое поле: следующий Order.comment пройдёт гейт незаметно');
 });
 
 test('полёт оливкок остался только там, где он действительно вызывается', () => {

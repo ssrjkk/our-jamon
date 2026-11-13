@@ -2,6 +2,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { execFileSync } = require('node:child_process');
 const { defineConfig } = require('@playwright/test');
+const { ADMIN_PASSWORD } = require('./tests/e2e/helpers.cjs');
 const output = path.join(__dirname, 'test-results');
 fs.mkdirSync(output, { recursive: true });
 
@@ -75,7 +76,7 @@ module.exports = defineConfig({
       env: {
         ...process.env,
         SHOP_MODE: 'demo', SHOP_URL: baseURL,
-        ADMIN_PASSWORD: 'test-only-admin-passphrase',
+        ADMIN_PASSWORD,
         ORDERS_DB_PATH: dbPath, ORDERS_LEGACY_PATH: path.join(output, 'no-legacy-orders.json'),
         ONEC_API_URL: '', ONEC_TOKEN: '', TBANK_TERMINAL_KEY: '', TBANK_PASSWORD: '', TBANK_TAXATION: '', TBANK_VAT: '',
         DELIVERY_CDEK_RUB: '', DELIVERY_YANDEX_RUB: '', DELIVERY_DRIVEE_RUB: '', FREE_DELIVERY_FROM: '',

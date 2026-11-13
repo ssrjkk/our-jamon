@@ -123,7 +123,7 @@ test('обе витрины зовут по одним и тем же конта
   assert.deepEqual([...staticContacts].sort(), [...nextContacts].sort(), 'витрины предлагают разные способы связи');
 });
 
-test('группы каталога идут в одном порядке и с одними заголовками', () => {
+test('группы каталога идут в одном порядке и с одними заголовками и подписями', () => {
   const deptOrder = staticArray('DEPT_ORDER');
   assert.ok(deptOrder, 'в index.html больше нет DEPT_ORDER — гейт потерял опору');
   assert.equal(deptOrder.length, catalog.categories.length,
@@ -133,6 +133,15 @@ test('группы каталога идут в одном порядке и с 
   const names = (list) => JSON.stringify(list.map((dept) => [dept.cat, dept.title]));
   assert.equal(names(deptOrder), names(catalog.categories),
     `группы разошлись: статика ${names(deptOrder)}, прайс ${names(catalog.categories)}`);
+  // Подпись группы («note») — третья строка под заголовком, и в index.html она появляется
+  // только из sync-static. Три из двенадцати подписей остались с обычным пробелом в
+  // разделе тысяч, тогда как прайс перешёл на неразрывный: покупатель Pages читал
+  // «2 000 г», которое переносится на другую строку, а покупатель Next — «2 000 г».
+  const drifted = catalog.categories.map((category, index) => ['cat', 'title', 'note']
+    .filter((field) => deptOrder[index][field] !== category[field])
+    .map((field) => `${category.cat}.${field}: статика ${JSON.stringify(deptOrder[index][field])}, прайс ${JSON.stringify(category[field])}`))
+    .flat();
+  assert.deepEqual(drifted, [], `${drifted.length} полей(о) группы разошлись с прайсом:\n${drifted.join('\n')}`);
 });
 
 // Адрес лавки и часы печатаются в обеих витринах словами, а не из одного слоя: на

@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: Context) {
         if (Object.keys(actual).some((uid) => !weighted.some((item) => item.uid === uid))) throw new CheckoutError('Неизвестная весовая позиция.');
         for (const item of weighted) {
           const weight = actual[item.uid];
-          if (typeof weight !== 'number' || !Number.isSafeInteger(weight) || weight <= 0 || weight > 30000) throw new CheckoutError('Для каждой весовой позиции укажите целый вес от 1 до 30 000 г.');
+          if (typeof weight !== 'number' || !Number.isSafeInteger(weight) || weight <= 0 || weight > 30000) throw new CheckoutError('Для каждой весовой позиции укажите целый вес от 1 до 30\u00A0000\u00A0г.');
           item.weightG = weight;
           item.label = item.label.replace(/~?[\d.,]+[\u00a0 ](?:кг|г)/, formatWeight(weight));
           if (item.pricePerKg !== null) item.price = weightPriceOf(weight, item.pricePerKg);

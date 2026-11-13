@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 export default function ShopPanel({ showAboutLink = true }: { showAboutLink?: boolean }) {
-  return <section className="section shop-section" aria-labelledby="shop-heading">
+  return <section className="section" aria-labelledby="shop-heading">
     <div className="container shop-visit-grid">
       <figure className="shop-interior">
         <img src="/brand/shop-interior.webp" width="720" height="1280" loading="lazy" decoding="async"

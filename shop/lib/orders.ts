@@ -4,7 +4,8 @@ import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { CartItemInput, CartItemResolved, Order, OrderStatus, Product } from './types';
 import { PRODUCTS, averageWeightOf, piecePriceOf } from './products';
-import { weightPriceOf } from './price';
+import { MAX_CART_LINES, MAX_QTY_PER_LINE, MIN_QTY_PER_LINE } from './cart';
+import { weightPriceOf, CUT_WEIGHT_MIN_G, CUT_WEIGHT_MAX_G, CUT_RANGE } from './price';
 
 export class OrderConflict extends Error {}
 
@@ -163,7 +164,7 @@ export interface ResolveResult {
 
 export function resolveCart(inputs: unknown, reserved: Set<string>, catalog: Product[]): ResolveResult {
   const invalid = (error: string): ResolveResult => ({ ok: false, error });
-  if (!Array.isArray(inputs) || !inputs.length || inputs.length > 100) return invalid('Добавьте товары в корзину.');
+  if (!Array.isArray(inputs) || !inputs.length || inputs.length > MAX_CART_LINES) return invalid('Добавьте товары в корзину.');
   const items: CartItemResolved[] = [];
   const selectedPieces = new Set<string>();
   for (const value of inputs) {
@@ -171,8 +172,8 @@ export function resolveCart(inputs: unknown, reserved: Set<string>, catalog: Pro
     const input = value as CartItemInput;
     const product = catalog.find((candidate) => candidate.id === input.productId);
     if (!product) return invalid('Один из товаров больше недоступен. Удалите его из корзины.');
-    const qty = input.qty ?? 1;
-    if (!Number.isSafeInteger(qty) || qty < 1 || qty > 20) return invalid('Количество упаковок должно быть целым числом от 1 до 20.');
+    const qty = input.qty ?? MIN_QTY_PER_LINE;
+    if (!Number.isSafeInteger(qty) || qty < MIN_QTY_PER_LINE || qty > MAX_QTY_PER_LINE) return invalid(`Количество упаковок должно быть целым числом от ${MIN_QTY_PER_LINE} до ${MAX_QTY_PER_LINE}.`);
     let weightG: number;
     let price: number;
     let rate: number | null;
@@ -213,7 +214,7 @@ export function resolveCart(inputs: unknown, reserved: Set<string>, catalog: Pro
         price = piecePriceOf(product, weightG, fixed);
         label = `${product.category === 'leg' ? 'Целая нога' : 'Кусок'} ~${formatWeight(weightG)}`;
       } else if (product.kind === 'piece' && product.category === 'piece' && input.kind === 'custom') {
-        if (!Number.isSafeInteger(input.weightG) || input.weightG! < 50 || input.weightG! > 2000) return invalid('Для отреза укажите вес от 50 до 2 000 г.');
+        if (!Number.isSafeInteger(input.weightG) || input.weightG! < CUT_WEIGHT_MIN_G || input.weightG! > CUT_WEIGHT_MAX_G) return invalid(`Для отреза укажите вес ${CUT_RANGE}.`);
         weightG = input.weightG!;
         rate = product.pricePerKg;
         price = weightPriceOf(weightG, rate);

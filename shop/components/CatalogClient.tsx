@@ -7,7 +7,7 @@ import { CATEGORY_TITLES, DEPT_ORDER, type CatalogPreview } from '@/lib/products
 import ProductCard from './ProductCard';
 import { ProductArt } from './Art';
 
-const AGING = [{ value: '8-12', label: '8–12 мес.' }, { value: '14-18', label: '14–18 мес.' }, { value: '20-22', label: '20–22 мес.' }, { value: '24', label: '24+ мес.' }];
+const AGING = [{ value: '8-12', label: '8–12\u00A0мес.' }, { value: '14-18', label: '14–18\u00A0мес.' }, { value: '20-22', label: '20–22\u00A0мес.' }, { value: '24', label: '24+ мес.' }];
 function ageMatches(months: number | null, value: string) {
   if (!value || value === 'all') return true;
   if (!months) return false;
@@ -117,7 +117,7 @@ export default function CatalogClient({ products, previews, serverReservedPieceI
           {q && <button type="button" className="search-clear" aria-label="Очистить поиск" onClick={() => { update({ q: '' }, true); searchRef.current?.focus(); }}>×</button>}
         </div>
         <div className="catalog-filters">
-          {(ageOptions.length > 1 || aging !== 'all') && <label className="compact-filter">Выдержка<select value={aging} onChange={(event) => update({ aging: event.target.value })}><option value="all">Любая</option>{ageOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}{aging !== 'all' && !ageOptions.some((option) => option.value === aging) && <option value={aging}>{aging} мес.</option>}</select></label>}
+          {(ageOptions.length > 1 || aging !== 'all') && <label className="compact-filter">Выдержка<select value={aging} onChange={(event) => update({ aging: event.target.value })}><option value="all">Любая</option>{ageOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}{aging !== 'all' && !ageOptions.some((option) => option.value === aging) && <option value={aging}>{aging}&nbsp;мес.</option>}</select></label>}
           {filtered && <button className="filter-reset" type="button" onClick={reset}>Сбросить всё</button>}
         </div>
       </div>
@@ -147,7 +147,7 @@ function PreviewCard({ preview, Heading }: { preview: CatalogPreview; Heading: '
       <div className="product-card-intro">
         <div className="card-media"><ProductArt product={preview} /></div>
         <div className="card-header-row"><Heading className="card-title">{preview.title}</Heading></div>
-        <div className="card-meta">{preview.agingMonths ? `${preview.agingMonths} мес. выдержки` : CATEGORY_TITLES[preview.category].short}</div>
+        <div className="card-meta">{preview.agingMonths ? `${preview.agingMonths}\u00A0мес. выдержки` : CATEGORY_TITLES[preview.category].short}</div>
         {preview.description && <p className="card-desc">{preview.description}</p>}
       </div>
       <div className="selector-dynamic-slot">

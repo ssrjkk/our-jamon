@@ -4,6 +4,7 @@ import Stories from './Stories';
 import { useCart } from './CartContext';
 import type { Product } from '@/lib/types';
 import { piecePriceOf } from '@/lib/products';
+import { formatGrams } from '@/lib/price';
 import { KITS } from '@/lib/products';
 import { resolveKit } from './Scenarios';
 
@@ -19,7 +20,7 @@ export default function HomeStories({ products }: { products: Product[] }) {
   return <Stories piece={piece} setAvailable={Boolean(kit)} setPrice={kit?.reduce((sum, item) => sum + item.pack.price, 0)}
     onPieceAdd={() => {
       if (!piece) return false;
-      return addLine({ productId: piece.productId, title: piece.title, label: `Отрез под заказ ~${piece.weightG} г`, price: piece.price, weightG: piece.weightG, requiresWeightCheck: true, pieceId1c: null, kind: 'custom', qty: 1 });
+      return addLine({ productId: piece.productId, title: piece.title, label: `Отрез под заказ ~${formatGrams(piece.weightG)}`, price: piece.price, weightG: piece.weightG, requiresWeightCheck: true, pieceId1c: null, kind: 'custom', qty: 1 });
     }}
     onSetAdd={() => {
       if (!kit) return 'Полный набор сейчас недоступен. Выберите товары в каталоге.';

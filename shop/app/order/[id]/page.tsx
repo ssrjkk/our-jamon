@@ -47,10 +47,10 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const retryPayment = paymentReady && modeMatches && (order.paymentError || (!order.paymentUrl && !paymentInitializing));
 
   return (
-    <main id="main-content" className="container order-page">
+    <main id="main-content" className="container">
       <article className="order-status-card" aria-labelledby="order-title">
-        <header className="order-header">
-          <p className="section-eyebrow">Ваш заказ</p>
+        <header className="section-head">
+          <p className="bento-period">Ваш заказ</p>
           <h1 id="order-title" className="section-title">Заказ № {order.id}</h1>
           <p className={'status-chip ' + order.status}>{orderStatusRu(order.status)}</p>
           <p className="checkout-hint"><time dateTime={order.createdAt}>{new Intl.DateTimeFormat('ru-RU', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Europe/Moscow' }).format(new Date(order.createdAt))}</time> · время Москвы</p>
@@ -59,7 +59,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
         {cancelled ? (
           <p className="form-status-box">Заказ отменён. Оплата на этой странице недоступна. Если это ошибка, свяжитесь с лавкой.</p>
         ) : (
-          <section aria-labelledby="order-next-title">
+          <section className="order-block" aria-labelledby="order-next-title">
             <h2 id="order-next-title" className="checkout-title">{paid ? order.demo ? 'Демо-оплата подтверждена' : 'Оплата подтверждена' : confirming ? 'Сначала согласуем детали' : 'Заказ готов к оплате'}</h2>
             <ol className="order-steps">
               <li className="order-step is-done">Заказ сохранён. Его состав и расчёт — ниже.</li>
@@ -77,7 +77,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
           </section>
         )}
 
-        <section aria-labelledby="order-items-title">
+        <section className="order-block" aria-labelledby="order-items-title">
           <h2 id="order-items-title" className="checkout-title">Состав заказа</h2>
           <div className="cart-items">
             {order.items.map((item) => (
@@ -85,7 +85,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
                 <div className="cart-item-details">
                   <strong className="cart-item-title">{item.title}</strong>
                   <span className="cart-item-sub">{item.label}</span>
-                  <p className="cart-item-note tabular">{item.qty} шт.{item.weightG > 0 ? ` · ${grams(item.weightG)} за шт.${item.qty > 1 ? ` · всего ${grams(item.weightG * item.qty)}` : ''}` : ''}</p>
+                  <p className="cart-item-note tabular">{item.qty}&nbsp;шт.{item.weightG > 0 ? ` · ${grams(item.weightG)} за шт.${item.qty > 1 ? ` · всего ${grams(item.weightG * item.qty)}` : ''}` : ''}</p>
                   <p className="cart-item-note">{item.requiresWeightCheck
                     ? item.weightConfirmed ? 'Фактический вес подтверждён.' : 'Предварительный вес: проверим перед оплатой.'
                     : 'Фиксированная фасовка.'} {item.pricePerKg === null ? `Фиксированная цена за штуку: ${rub(item.price)}.` : `Цена по весу: ${rub(item.pricePerKg)} / кг.`}</p>

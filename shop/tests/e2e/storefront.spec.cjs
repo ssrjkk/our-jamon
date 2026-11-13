@@ -7,6 +7,7 @@ const crypto = require('node:crypto');
 // Ожидания вычисляются из собранного прайса 0711 (lib/catalog.json).
 // В этом файле нет артикулов, цен и количеств, придуманных для теста.
 const catalog = require('../../lib/catalog.json');
+const { createOrder, loginAdmin, готовККлику, добавитьВКорзину } = require('./helpers.cjs');
 const root = path.resolve(__dirname, '../..');
 const shots = path.join(root, 'test-results/screenshots');
 fs.mkdirSync(shots, { recursive: true });
@@ -74,6 +75,7 @@ async function noOverflow(page) {
   const size = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, width: document.documentElement.scrollWidth }));
   expect(size.width).toBeLessThanOrEqual(size.viewport + 1);
 }
+// Ожидание гидратации перед клиентским кликом — в helpers.cjs (готовККлику).
 async function openCatalog(page, surface) {
   if (surface === 'next') await page.goto('/catalog');
   else await page.goto(`${staticURL}/#catalog`);
@@ -88,14 +90,6 @@ const cardsOf = (page) => page.locator('.dept-section article[data-product-id],.
 async function fillSearch(page, surface, query) {
   if (surface === 'next') await page.getByRole('searchbox', { name: 'Поиск по всей лавке' }).fill(query);
   else await page.locator('#catalog-search').fill(query);
-}
-async function createOrder(api, items, deliveryId = 'pickup') {
-  const quoted = await api.post('/api/cart', { data: { items, deliveryId } });
-  expect(quoted.status()).toBe(200);
-  const { quote } = await quoted.json();
-  const created = await api.post('/api/orders', { data: { items, customer: { name: 'Локальный тест', phone: '+79991234567' }, consent: true, messenger: 'SMS', deliveryId, deliveryAddress: deliveryId === 'pickup' ? '' : 'Тестовый адрес', expectedItemsSum: quote.itemsSum, expectedDeliveryCost: quote.delivery.cost } });
-  expect(created.status()).toBe(201);
-  return { ...await created.json(), quote };
 }
 
 test.afterAll(() => {
@@ -322,18 +316,20 @@ test('отрез под заказ: 50–2 000 г и ставка из прай�
   await expect(page.locator('.option-chip')).toHaveCount(0);
   await expectAmount(page.locator('.rate-per-100'), Math.round(rateOf(CUT) / 10));
   const weight = page.getByLabel('Желаемый вес отреза, г');
+  const add = page.getByRole('button', { name: /В корзину/ });
   for (const grams of [300, 500, 50, 2000]) {
     await weight.fill(String(grams));
     await expectAmount(page.locator('.price-value'), cutPrice(CUT, grams));
-    await expect(page.getByRole('button', { name: /В корзину/ })).toBeEnabled();
+    await expect(add).toBeEnabled();
   }
   for (const invalid of ['49', '2001', '300.5', '']) {
     await weight.fill(invalid);
-    await expect(page.getByRole('button', { name: /В корзину/ })).toBeDisabled();
+    await expect(add).toBeDisabled();
     await expect(page.locator('.price-value')).toHaveText('—');
   }
   await weight.fill('400');
-  await page.getByRole('button', { name: /В корзину/ }).click();
+  await готовККлику(add, 'отрез под заказ');
+  await add.click();
   await page.goto('/cart');
   await expect(page.locator('.cart-item-row')).toHaveCount(1);
   await expectAmount(page.locator('.cart-item-price strong'), cutPrice(CUT, 400));
@@ -360,6 +356,7 @@ test('фасовка, ставка за 100 г и аксессуары за шт
   await expectAmount(page.locator('.price-value'), pack.price);
   await expectAmount(page.locator('.rate-per-100'), per100(PACK));
   const add = page.getByRole('button', { name: /В корзину/ });
+  await готовККлику(add, 'фасовка на странице товара');
   await add.click(); await add.click(); await add.click();
   await expect(page.locator('[data-cart-badge]')).toHaveText('3');
   await page.goto('/cart');
@@ -388,13 +385,15 @@ test('лимит 20 одинаковых упаковок и атомарное 
   expect(KITS.evening.items.some((item) => item.productId === PACK)).toBe(true);
 
   await page.goto(`/product/${PACK}`);
-  await page.getByRole('button', { name: /В корзину/ }).click();
+  await добавитьВКорзину(page);
   await page.goto('/cart');
   await page.getByLabel('Количество', { exact: true }).fill(String(MAX_SAME_PACK));
   await expect(page.locator('[data-cart-badge]')).toHaveText(String(MAX_SAME_PACK));
   await page.goto('/#scenarios');
   const card = page.locator('.scenario-card').filter({ hasText: KITS.evening.title });
-  await card.getByRole('button', { name: 'Добавить весь набор', exact: true }).click();
+  const addKit = card.getByRole('button', { name: 'Добавить весь набор', exact: true });
+  await готовККлику(addKit, 'набор на панели подборок');
+  await addKit.click();
   await expect(card.getByRole('status')).toContainText('Набор не добавлен');
   await expect(page.locator('[data-cart-badge]')).toHaveText(String(MAX_SAME_PACK));
   await page.goto('/cart');
@@ -419,10 +418,11 @@ test('лимит 20 одинаковых упаковок и атомарное 
 
 test('оформление проверяет поля и выполняет демо-оплату', async ({ page }, info) => {
   await page.goto(`/product/${PACK}`);
-  await page.getByRole('button', { name: /В корзину/ }).click();
+  await добавитьВКорзину(page);
   await page.goto('/cart');
   const submit = page.getByRole('button', { name: 'Оформить демо-заказ', exact: true });
   await expect(submit).toBeEnabled();
+  await готовККлику(submit, 'оформление демо-заказа');
   await submit.click();
   await expect(page.locator('#checkout-name')).toHaveAttribute('aria-invalid', 'true');
   await page.getByLabel('Ваше имя', { exact: true }).fill('Локальный тест');
@@ -443,7 +443,7 @@ test('оформление проверяет поля и выполняет д�
 
 test('объёмная фасовка без граммов: ноль не печатается в корзине, заказе и админке', async ({ page, request }, info) => {
   await page.goto(`/product/${VOLUME.product.id}`);
-  await page.getByRole('button', { name: /В корзину/ }).click();
+  await добавитьВКорзину(page, 'фасовка без граммов');
   await page.goto('/cart');
   const row = page.locator('.cart-item-row').first();
   await expect(page.locator('.cart-item-row')).toHaveCount(1);
@@ -453,12 +453,10 @@ test('объёмная фасовка без граммов: ноль не пе�
   const order = await createOrder(request, [{ productId: VOLUME.product.id, kind: 'pack', packIdx: VOLUME.index, qty: 2 }]);
   await page.goto(`/order/${order.orderId}?token=${order.accessToken}`);
   await expect(page.locator('.cart-item-row')).toHaveCount(1);
-  await expect(page.locator('.cart-item-row').first()).toContainText('2 шт.');
+  await expect(page.locator('.cart-item-row').first()).toContainText(/2[\u00a0 ]шт\./);
   expect(await page.locator('.cart-items').innerText()).not.toMatch(/0[\u00a0 ]г/);
 
-  await page.goto('/admin');
-  await page.getByLabel('Пароль администратора').fill('test-only-admin-passphrase');
-  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  await loginAdmin(page);
   const card = page.locator('.admin-order-card').filter({ hasText: order.orderId });
   await expect(card).toBeVisible();
   expect(await card.innerText()).not.toMatch(/0[\u00a0 ]г/);
@@ -481,7 +479,7 @@ test('корзина второй вкладки дополняется и оч�
   await expect(second.locator('[data-cart-badge]')).toHaveText('0');
 
   await page.goto(`/product/${PACK}`);
-  await page.getByRole('button', { name: /В корзину/ }).click();
+  await добавитьВКорзину(page);
   await expect(page.locator('[data-cart-badge]')).toHaveText('1');
   await expect(second.locator('[data-cart-badge]')).toHaveText('1');
   await expect(second.locator('.cart-item-row')).toHaveCount(1);
@@ -504,9 +502,7 @@ test('админ подтверждает вес и согласованную �
   await privateContext.close();
   await guest.dispose();
 
-  await page.goto('/admin');
-  await page.getByLabel('Пароль администратора').fill('test-only-admin-passphrase');
-  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  await loginAdmin(page);
   const card = page.locator('.admin-order-card').filter({ hasText: order.orderId });
   await expect(card).toBeVisible();
   const confirmedWeight = 400;
@@ -542,6 +538,157 @@ test('ошибка входа в админку возвращает фокус 
   await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await expect(page.locator('#admin-password-error')).toHaveText('Введите пароль администратора.');
   await expect(page.locator('#admin-pass')).toBeFocused();
+});
+
+test('якорь отдела приземляется ниже липких полос, а не под шапку', async ({ page }) => {
+  // Переход по #dept-* обязан показать заголовок отдела: без scroll-margin-top раздел
+  // вставал нулевой координатой под липкой шапкой, и покупатель видел логотип вместо отдела.
+  const hits = () => {
+    const title = document.querySelector('.dept-section .dept-title');
+    if (!title) return null;
+    const r = title.getBoundingClientRect();
+    const hit = document.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
+    return { y: Math.round(r.top), перекрыт: Boolean(hit) && !title.contains(hit), под: hit ? String(hit.className || hit.tagName) : '' };
+  };
+  for (const [метка, url] of [
+    ['Pages /#dept-cheese', `${staticURL}/index.html#dept-cheese`],
+    ['Next /catalog#dept-cheese', '/catalog?category=cheese#dept-cheese'],
+    ['Next /#dept-piece', '/#dept-piece'],
+  ]) {
+    // Оба профиля прокрутки: весь набор крутится под reduce, поэтому плавную ветку —
+    // она же более длинная и более склонная приземлиться под шапку — надо мерить отдельно.
+    for (const профиль of ['reduce', 'no-preference']) {
+      await page.emulateMedia({ reducedMotion: профиль === 'reduce' ? 'reduce' : 'no-preference' });
+      await page.goto(url);
+      let замер;
+      await expect.poll(async () => {
+        замер = await page.evaluate(hits);
+        return замер && !замер.перекрыт;
+      }, { message: `${метка} (${профиль}): заголовок отдела под липкой полосой`, timeout: 6000 }).toBe(true);
+      expect(замер.y, `${метка} (${профиль}): прокрутка к отделу не сработала вовсе`).toBeGreaterThanOrEqual(0);
+    }
+  }
+});
+
+test('сообщение об ошибке поля красится цветом ошибки, а не обычным текстом', async ({ page }) => {
+  await page.goto('/admin');
+  await page.getByLabel('Пароль администратора').fill('совсем-неверный-пароль');
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  await expect(page.locator('#admin-password-error')).toHaveText('Неверный пароль');
+  const look = await page.evaluate(() => {
+    const ошибка = document.querySelector('#admin-password-error');
+    const подсказка = document.querySelector('.checkout-hint');
+    const probe = document.createElement('span');
+    probe.style.color = getComputedStyle(document.documentElement).getPropertyValue('--error-red').trim();
+    document.body.append(probe);
+    const цветОшибки = getComputedStyle(probe).color;
+    probe.remove();
+    return { цвет: getComputedStyle(ошибка).color, цветОшибки, цветПодсказки: getComputedStyle(подсказка).color };
+  });
+  expect(look.цвет, 'ошибка поля печатается не цветом токена --error-red').toBe(look.цветОшибки);
+  expect(look.цвет, 'ошибка поля совпадает с цветом обычного текста').not.toBe(look.цветПодсказки);
+});
+
+test('экраны не прыгают: накопленный сдвиг макета в пределах «хорошо»', async ({ page }) => {
+  // 0.1 — общепринятая граница «хорошо» для CLS. Карточка без width/height, баннер
+  // над контентом и статус корзины, поменявший высоту после гидратации, уходят за неё,
+  // и глаз это видит, а проверка «страница открылась» — нет.
+  await page.addInitScript(() => {
+    window.__сдвиг = 0;
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) if (!e.hadRecentInput) window.__сдвиг += e.value;
+    }).observe({ type: 'layout-shift', buffered: true });
+  });
+  for (const [метка, url] of [
+    ['Next /', '/'], ['Next /catalog', '/catalog'], ['Next /cart', '/cart'], ['Pages /', `${staticURL}/index.html`],
+  ]) {
+    await page.goto(url);
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(600);
+    const загрузка = await page.evaluate(() => Number(window.__сдвиг.toFixed(4)));
+    expect(загрузка, `${метка}: CLS загрузки ${загрузка} ≥ 0.1`).toBeLessThan(0.1);
+    // Плеер историй: картинка доезжает до уже открытой рамки.
+    await page.evaluate(() => { window.__сдвиг = 0; });
+    const пузырёк = page.locator('.story-bubble').first();
+    if (await пузырёк.isVisible().catch(() => false)) {
+      await пузырёк.click();
+      await page.waitForTimeout(900);
+      const плеер = await page.evaluate(() => Number(window.__сдвиг.toFixed(4)));
+      expect(плеер, `${метка} · плеер историй: CLS ${плеер} ≥ 0.1`).toBeLessThan(0.1);
+    }
+  }
+});
+
+test('ни один id не дублируется в живом DOM обеих витрин', async ({ page }) => {
+  // Дубль id молча ломает getElementById, aria-* и for: ссылка ведёт в первый узел,
+  // и подпись контрола уходит чужому элементу. Статический гейт веток не видит —
+  // здесь именно тот DOM, который получает покупатель.
+  const дубли = () => page.evaluate(() => {
+    const seen = new Map();
+    for (const node of document.querySelectorAll('[id]')) seen.set(node.id, (seen.get(node.id) || 0) + 1);
+    return [...seen].filter(([, n]) => n > 1).map(([id, n]) => `${id} x${n}`);
+  });
+  const маршруты = [
+    ['Next /', '/'], ['Next /catalog', '/catalog'], ['Next /about', '/about'], ['Next /cart', '/cart'],
+    ['Next /product', `/product/${CUT}`], ['Next /admin', '/admin'], ['Next 404', '/net-takoy-stranicy'],
+    ['Pages /', `${staticURL}/index.html`], ['Pages #cart', `${staticURL}/index.html#cart`], ['Pages 404', `${staticURL}/404.html`],
+  ];
+  for (const [метка, url] of маршруты) {
+    await page.goto(url);
+    await page.waitForLoadState('load');
+    expect(await дубли(), `${метка}: в DOM два узла с одним id`).toEqual([]);
+  }
+});
+
+test('каждая якорная ссылка на странице ведёт в элемент живого DOM', async ({ page }) => {
+  // В исходниках Next id панели — переменная (`id={tab.id}`), поэтому юнит-гейт по тексту
+  // файла такую цель не увидит. Здесь сверяем то, что реально отрисовано: битый якорь —
+  // это кнопка без эффекта, и покупатель жмёт в пустоту.
+  const битые = () => page.evaluate(() => [...document.querySelectorAll('a[href^="#"]')]
+    .map((link) => link.getAttribute('href'))
+    .filter((href) => href && href.length > 1)
+    .filter((href) => !document.getElementById(decodeURIComponent(href.slice(1)))));
+  const маршруты = [
+    ['Next /', '/'], ['Next /catalog', '/catalog'], ['Next /about', '/about'], ['Next /cart', '/cart'],
+    ['Next /admin', '/admin'], ['Next /product', `/product/${CUT}`], ['Next 404', '/net-takoy-stranicy'],
+    ['Pages /', `${staticURL}/index.html`], ['Pages #cart', `${staticURL}/index.html#cart`], ['Pages 404', `${staticURL}/404.html`],
+  ];
+  for (const [метка, url] of маршруты) {
+    await page.goto(url);
+    await page.waitForLoadState('load');
+    expect(await битые(), `${метка}: якорь без цели в отрисованной странице`).toEqual([]);
+  }
+});
+
+test('кнопки первого экрана обеих витрин действительно перекладывают экран', async ({ page }) => {
+  // «Выбрать хамон» и «Найти лавку» — якоря. Если цель не найдена или перехват молчит,
+  // нажатие меняет только адрес. Поэтому мерим экран до и после: до нажатия раздела нет
+  // в верхней полосе (в Next он ещё и скрыт, пока вкладка не активна), после — он там.
+  const состояние = (id) => page.evaluate((target) => {
+    const node = document.getElementById(target);
+    return node ? { скрыт: node.hidden, top: Math.round(node.getBoundingClientRect().top), экран: window.innerHeight } : null;
+  }, id);
+  for (const [метка, url, вкладка] of [
+    ['Pages', `${staticURL}/index.html`, null],
+    ['Next', '/', '#tab-shop'],
+  ]) {
+    await page.goto(url);
+    for (const [текст, id] of [['Найти лавку', 'shop'], ['Выбрать хамон', 'catalog']]) {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const до = await состояние(id);
+      expect(до, `${метка}: на странице нет #${id}`).not.toBeNull();
+      const полоса = Math.round(до.экран / 2);
+      expect(до.скрыт || до.top > полоса, `${метка}: #${id} и до нажатия в верхней полосе — проверять нечего`).toBe(true);
+      await page.getByRole('link', { name: текст, exact: true }).click();
+      await expect.poll(async () => {
+        const после = await состояние(id);
+        return Boolean(после) && !после.скрыт && после.top >= 0 && после.top <= полоса;
+      }, { message: `${метка}: «${текст}» не привёл #${id} в верхнюю полосу`, timeout: 5000 }).toBe(true);
+      expect(page.url(), `${метка}: «${текст}» не меняет адрес`).toContain(`#${id}`);
+      if (вкладка && id === 'shop') await expect(page.locator(вкладка)).toHaveAttribute('aria-selected', 'true');
+    }
+  }
 });
 
 test('позиции прайса без цены отдаются как «уточнить в лавке»', async ({ page }, info) => {
@@ -808,7 +955,9 @@ test('наборы прайса считаются по реальным фас�
   for (const kit of catalog.kits) {
     await expectAmount(page.locator('.scenario-card').filter({ hasText: kit.title }).locator('.scenario-total'), kitPrice(kit.id));
   }
-  await page.locator('.scenario-card').filter({ hasText: KITS.self.title }).getByRole('button', { name: 'Добавить весь набор' }).click();
+  const addKit = page.locator('.scenario-card').filter({ hasText: KITS.self.title }).getByRole('button', { name: 'Добавить весь набор' });
+  await готовККлику(addKit, 'набор «Для себя» на панели подборок');
+  await addKit.click();
   await expect(page.locator('[data-cart-badge]')).toHaveText(String(KITS.self.items.length));
   await page.goto('/cart');
   await expect(page.locator('.cart-item-row')).toHaveCount(KITS.self.items.length);
@@ -931,6 +1080,76 @@ test('полировка обеих витрин — selection, tap, скрол�
   }
 });
 
+test('профиль «меньше движения» глушит прокрутку, переходы и полёт в корзину', async ({ page }) => {
+  // Весь набор идёт с reducedMotion:'reduce' (playwright.config.cjs), поэтому плавная ветка
+  // в браузере не проверяется никогда, а reduce-ветка — молча: удали медиазапрос, тесты просто
+  // станут медленнее и шумнее. Здесь один и тот же замер снимается в обоих профилях, и разница
+  // обязана быть видна числами.
+  const замер = () => page.evaluate(() => {
+    const вмс = (list) => list.split(',').map((value) => Math.round(parseFloat(value) * 100000) / 100);
+    const button = document.querySelector('.btn-primary');
+    return { scroll: getComputedStyle(document.documentElement).scrollBehavior, переходы: button ? вмс(getComputedStyle(button).transitionDuration) : null };
+  });
+
+  for (const [метка, url] of [['Next', '/'], ['Pages', `${staticURL}/index.html`]]) {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.goto(url);
+    await page.waitForLoadState('load');
+    const обычно = await замер();
+    expect(обычно.переходы, `${метка}: на странице нет .btn-primary — сверять нечего`).not.toBeNull();
+    expect(обычно.scroll, `${метка}: без настройки прокрутка не плавная — проверка была бы пустой`).toBe('smooth');
+    expect(Math.max(...обычно.переходы), `${метка}: без настройки переход кнопки ${обычно.переходы}мс`).toBeGreaterThanOrEqual(100);
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const снижено = await замер();
+    expect(снижено.scroll, `${метка}: prefers-reduced-motion не отключает плавную прокрутку`).toBe('auto');
+    // Под reduce декларация одна («transition-duration: .01ms»), поэтому список из трёх
+    // значений сжимается в одно — сравнивать длину нельзя, только величину каждого.
+    expect(снижено.переходы.length, `${метка}: под reduce переходов не осталось вовсе`).toBeGreaterThan(0);
+    expect(снижено.переходы.every((d) => d <= 0.01), `${метка}: prefers-reduced-motion не глушит переходы кнопки — ${снижено.переходы}мс`).toBe(true);
+  }
+
+  // Полёт иконки запускает JS, а не CSS, поэтому его считаем по собственному событию:
+  // под «меньше движения» гард обязан не допустить даже диспатча. Токен в DOM сравнивать
+  // нельзя — он живёт 0,58 с и зависит от того, успел ли подкачаться gsap-чанк.
+  const считатель = () => page.evaluate(() => {
+    window.nhFlyCount = 0;
+    window.addEventListener('nh-fly-token', () => { window.nhFlyCount += 1; });
+  });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(`/product/${PACK}`);
+  await page.waitForLoadState('load');
+  await считатель();
+  await добавитьВКорзину(page, 'Next, профиль по умолчанию');
+  await expect.poll(() => page.evaluate(() => window.nhFlyCount), 'Next: без настройки добавление в корзину не запускает полёт').toBe(1);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(`/product/${PACK}`);
+  await page.waitForLoadState('load');
+  await считатель();
+  await добавитьВКорзину(page, 'Next, профиль «меньше движения»');
+  // Корзина живёт в localStorage контекста, поэтому к этому моменту в ней уже лежит
+  // добавка из ветки «по умолчанию»: цифра обязана быть 2. До гейта готовности второй
+  // клик терялся в негидратированную кнопку, badge читался как 1 и проверка «ноль
+  // полётов» проходила молча — не потому что гард глушит, а потому что не срабатывал
+  // сам полёт. Значит сначала доказываем, что оба добавления состоялись, и только
+  // затем требуем ноль токенов.
+  await expect(page.locator('[data-cart-badge]'), 'Next: под «меньше движения» товар не добавился — сверять глушение нечем').toHaveText('2');
+  await expect.poll(() => page.evaluate(() => window.nhFlyCount), 'Next: под «меньше движения» полёт всё равно диспатчится').toBe(0);
+  expect(await page.evaluate(() => document.querySelectorAll('.flying-token').length), 'Next: под «меньше движения» в DOM появился летящий токен').toBe(0);
+
+  // На бумажной витрине gsap приходит с CDN, поэтому локально полёта нет ни при каком профиле.
+  // Её гард проверяем по исходнику: обе фирменные сцены обязаны спрашивать настройку системы.
+  const paper = fs.readFileSync(path.resolve(root, '../index.html'), 'utf8');
+  for (const имя of ['flyTokenToCart', 'bounceOlivesInCard']) {
+    const начало = paper.indexOf(`function ${имя}(`);
+    expect(начало, `бумажная витрина: сцена ${имя} пропала из исходника`).toBeGreaterThan(-1);
+    const следующий = paper.indexOf('\nfunction ', начало + 1);
+    const тело = paper.slice(начало, следующий < 0 ? начало + 1200 : следующий);
+    expect(тело.includes('prefersReducedMotion()'), `бумажная витрина: ${имя} не проверяет «меньше движения»`).toBe(true);
+  }
+});
+
 test('статичная витрина живёт без CDN — шрифты и gsap недоступны, корзина работает', async ({ page }) => {
   const errors = [];
   const external = [];
@@ -986,8 +1205,12 @@ test('фото не растягиваются выше исходного ра�
   };
   for (const surface of ['next', 'static']) {
     for (const cat of CATS) {
-      await page.goto(surface === 'next' ? `/catalog#dept-${cat}` : `${staticURL}/#dept-${cat}`);
-      await expect(page.locator(`#dept-${cat}`)).toBeVisible();
+      // Next отдаёт отдел по `?category` прямо в первом HTML; `#dept-…` без параметра появляется
+      // только после гидратации (hashchange → replaceState → перерисовка), и на нагруженном
+      // мобильном проекте эта цепочка не вмещалась в бюджет ожидания — гейт падал на отсутствии
+      // id, а не на размере фотографии. Замер от серверного URL тот же самый.
+      await page.goto(surface === 'next' ? `/catalog?category=${cat}` : `${staticURL}/#dept-${cat}`);
+      await expect(page.locator(`#dept-${cat}`), `${surface} ${cat}: отдел не отрисован — сверять фотографии нечем`).toBeVisible();
       for (const row of await measure()) {
         expect(row.rendered, `${surface} ${cat} ${row.src}`).toBeLessThanOrEqual(row.natural + 1);
       }
@@ -1204,7 +1427,7 @@ test('свинки нет нигде: вето маркетолога от 8 н�
 
 test('удаление позиции можно отменить без таймера и потери фокуса', async ({ page }) => {
   await page.goto(`/product/${PACK}`);
-  await page.getByRole('button', { name: /В корзину/ }).click();
+  await добавитьВКорзину(page);
   await page.goto('/cart');
   await page.clock.install();
   await page.locator('.cart-item-row .cart-remove-btn').click();
@@ -1266,7 +1489,7 @@ test('ошибки веса и подписи действий доступны 
     for (const value of ['300.5', '49', '2001', '']) {
       await weight.fill(value);
       await expect(weight).toHaveAttribute('aria-invalid', 'true');
-      await expect(weight).toHaveAccessibleDescription(/Укажите целый вес от 50 до 2 000 г/);
+      await expect(weight).toHaveAccessibleDescription(/Укажите целый вес от 50 до 2[\u00a0 ]000[\u00a0 ]г/);
     }
     await weight.fill('300');
     await expect(weight).toHaveAttribute('aria-invalid', 'false');
@@ -1423,7 +1646,9 @@ test('next: полоски историй и поле количества в к
   }
   await page.keyboard.press('Escape');
   await page.goto(`/product/${PACK}`);
-  await page.locator('.product-detail-card .add-btn').click();
+  const добавить = page.locator('.product-detail-card .add-btn');
+  await готовККлику(добавить, 'карточка товара со страницы истории');
+  await добавить.click();
   await page.goto('/cart');
   const line = page.locator('.cart-line-controls input');
   await expect(line, 'next: поле количества в корзине').toBeVisible();
@@ -1500,6 +1725,7 @@ test('next: заголовки безопасности и мета главно
     expect(headers['referrer-policy'], `${path}: нет referrer-policy`).toBe('strict-origin-when-cross-origin');
     expect(headers['x-frame-options'], `${path}: нет защиты от фреймов`).toBe('DENY');
     expect(headers['permissions-policy'], `${path}: нет permissions-policy`).toContain('camera=()');
+    expect(headers['strict-transport-security'], `${path}: нет HSTS`).toBe('max-age=31536000');
   }
   const html = await (await request.get(`${baseURL}/`)).text();
   expect(html).toContain('name="description"');

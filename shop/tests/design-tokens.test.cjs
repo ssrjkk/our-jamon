@@ -124,3 +124,81 @@ test('в разметке бумажной витрины нет inline-цвет
   const colored = [...html.matchAll(/style="[^"]*"/g)].map((m) => m[0]).filter((s) => /color\s*:|background/.test(s));
   assert.deepEqual(colored, [], 'index.html: цвет задан инлайном вместо класса');
 });
+
+// Класс в разметке без правила рисуется обычным текстом — именно так сообщение
+// «Неверный пароль» было неотличимо от подписи под полем. Сверяем обе таблицы стилей
+// с тем, что витрины реально используют: дрейф в любую сторону значит, что из одной
+// разметки собираются две разные страницы.
+const styleClasses = (css) => new Set([...css.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
+
+const nextMarkup = () => {
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.tsx$/.test(entry.name)) files.push(read(full));
+    }
+  };
+  for (const dir of ['app', 'components']) walk(path.join(root, dir));
+  return files;
+};
+
+const classesOf = (text, pattern) => {
+  const out = new Set();
+  for (const m of text.matchAll(pattern)) for (const cls of m[1].split(/\s+/).filter(Boolean)) out.add(cls);
+  return out;
+};
+
+test('ни одна витрина не использует класс, которого нет в её таблице стилей', () => {
+  const styledNext = styleClasses(nextCss);
+  const styledStatic = styleClasses(staticCss);
+  const usedNext = new Set();
+  for (const text of nextMarkup()) {
+    classesOf(text, /className="([a-zA-Z][\w -]*)"/g).forEach((c) => usedNext.add(c));
+    classesOf(text, /className=\{`([a-zA-Z][\w -]*)`\}/g).forEach((c) => usedNext.add(c));
+  }
+  const usedStatic = new Set();
+  for (const m of read(path.join(root, '..', 'index.html')).matchAll(/class="([a-zA-Z][\w -]*)"/g)) {
+    for (const cls of m[1].split(/\s+/).filter(Boolean)) usedStatic.add(cls);
+  }
+  assert.ok(usedNext.size >= 200, `классов в разметке Next стало ${usedNext.size} — свип теряет опору`);
+  assert.ok(usedStatic.size >= 180, `классов в разметке статики стало ${usedStatic.size} — свип теряет опору`);
+  const молчитNext = [...usedNext].filter((c) => styledStatic.has(c) && !styledNext.has(c)).sort();
+  const молчитСтатика = [...usedStatic].filter((c) => styledNext.has(c) && !styledStatic.has(c)).sort();
+  assert.deepEqual(молчитNext, [], 'Next использует класс, стилизованный в статике, но в globals.css для него нет правила');
+  assert.deepEqual(молчитСтатика, [], 'статика использует класс, стилизованный в Next, но в её <style> нет правила');
+});
+
+// Предыдущий гейт сверяет таблицы стилей между собой и молчит про класс, которого нет
+// ни в одной из них: разметка панели лавки и страницы заказа существовала без единого
+// правила, и `* { margin: 0 }` склеил её в одну простыню. Здесь опора — только globals.css,
+// поэтому проверка ловит и новый контейнер без стиля, и удалённое правило.
+test('каждый класс Next-разметки имеет правило в globals.css', () => {
+  const styled = styleClasses(nextCss);
+  const used = new Set();
+  for (const text of nextMarkup()) {
+    classesOf(text, /className="([a-zA-Z][\w -]*)"/g).forEach((c) => used.add(c));
+    classesOf(text, /className=\{`([a-zA-Z][\w -]*)`\}/g).forEach((c) => used.add(c));
+  }
+  assert.ok(used.size >= 200, `классов в Next-разметке стало ${used.size} — свип теряет опору`);
+  const silent = [...used].filter((c) => !styled.has(c)).sort();
+  assert.deepEqual(silent, [], 'эти классы Next-разметки не имеют ни одного правила в globals.css');
+});
+
+// Отдельно про сообщения об ошибках: static-витрина их не знает (у неё статус-бокс),
+// поэтому предыдущий гейт их не видит, а покупатель судит о невалидном поле по цвету.
+test('сообщение role="alert" имеет правило, а инлайн-ошибка красится токеном ошибки', () => {
+  const alertClasses = new Set();
+  for (const text of nextMarkup()) {
+    for (const m of text.matchAll(/className="([a-zA-Z][\w -]*)"[^>]*role="alert"|role="alert"[^>]*className="([a-zA-Z][\w -]*)"/g)) {
+      for (const cls of (m[1] || m[2]).split(/\s+/).filter(Boolean)) alertClasses.add(cls);
+    }
+  }
+  assert.ok(alertClasses.size >= 3, `классов сообщений об ошибке стало ${alertClasses.size} — свип теряет опору`);
+  const styledNext = styleClasses(nextCss);
+  assert.deepEqual([...alertClasses].filter((c) => !styledNext.has(c)).sort(), [],
+    'сообщение об ошибке выводится стилем обычного текста');
+  assert.match(nextCss, /\.field-error\s*\{[^}]*color:\s*var\(--error-red\)/,
+    'globals.css: .field-error не задан цветом ошибки — сообщение неотличимо от подсказки');
+});

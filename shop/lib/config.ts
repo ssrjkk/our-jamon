@@ -24,3 +24,13 @@ export function configuredAmount(name: string): number | null {
   if (!Number.isSafeInteger(amount) || amount < 0) throw new Error(`Invalid amount configuration: ${name}`);
   return amount;
 }
+
+// metadataBase, sitemap и robots печатают один адрес: переезд на домен — это одна
+// SHOP_URL, а не три fallback-строки, где пропущенная продолжает отдавать GitHub Pages.
+// Хвостовая косая черта срезается: иначе из «https://домен/» собирается «https://домен//catalog».
+const PAGES_URL = 'https://ssrjkk.github.io/our-jamon';
+
+export function siteUrl(path = ''): string {
+  const configured = process.env.SHOP_URL?.trim();
+  return `${(configured || PAGES_URL).replace(/\/+$/, '')}${path}`;
+}

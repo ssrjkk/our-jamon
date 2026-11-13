@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useId, useRef, useState } from 'react';
 import type { Product } from '@/lib/types';
 import { averageWeightOf, piecePriceOf, calcPricePer100g, CATEGORY_TITLES } from '@/lib/products';
-import { weightPriceOf } from '@/lib/price';
+import { weightPriceOf, formatGrams, CUT_WEIGHT_MIN_G, CUT_WEIGHT_MAX_G, CUT_RANGE } from '@/lib/price';
 import { useCart, formatRub, formatWeightLabel } from './CartContext';
 import { ProductArt } from './Art';
 import { flyTokenToCart } from './Animations';
@@ -25,7 +25,7 @@ export default function ProductCard({ product, serverReservedPieceIds, detail = 
   const reserved = new Set([...serverReservedPieceIds, ...reservedPieceIds]);
   const hasPiece = product.pieces.some((piece) => !reserved.has(piece.id1c));
   const customWeight = Number(requested);
-  const validCustom = Number.isSafeInteger(customWeight) && customWeight >= 50 && customWeight <= 2000;
+  const validCustom = Number.isSafeInteger(customWeight) && customWeight >= CUT_WEIGHT_MIN_G && customWeight <= CUT_WEIGHT_MAX_G;
   const packIndex = selection.startsWith('pack-') ? Number(selection.slice(5)) : 0;
   const pack = product.packs[packIndex];
   const custom = product.kind === 'piece' && product.category === 'piece' && selection === 'custom';
@@ -47,15 +47,15 @@ export default function ProductCard({ product, serverReservedPieceIds, detail = 
   const choices: Choice[] = (product.kind === 'piece'
     ? [
         avgWeight > 0 && { key: 'average', label: product.category === 'leg' ? 'Целиком' : 'Средний кусок', sub: `~${formatWeightLabel(avgWeight)}`, checked: !custom, select: () => choose('average') },
-        product.category === 'piece' && { key: 'custom', label: 'Отрез под заказ', sub: '50–2 000 г', checked: custom, select: () => choose('custom') },
+        product.category === 'piece' && { key: 'custom', label: 'Отрез под заказ', sub: `${CUT_WEIGHT_MIN_G}–${formatGrams(CUT_WEIGHT_MAX_G)}`, checked: custom, select: () => choose('custom') },
       ]
     : [
         ...product.packs.map((option, index) => ({ key: `pack-${index}`, label: option.label, sub: formatRub(option.price), checked: selection === `pack-${index}`, select: () => choose(`pack-${index}`) })),
-        ...(product.bulk ? [{ key: 'bulk', label: 'На развес', sub: `${product.bulk.minG}–${product.bulk.maxG} г`, checked: bulk, select: () => choose('bulk') }] : []),
+        ...(product.bulk ? [{ key: 'bulk', label: 'На развес', sub: `${product.bulk.minG}–${formatGrams(product.bulk.maxG)}`, checked: bulk, select: () => choose('bulk') }] : []),
       ]
   ).filter((choice): choice is Choice => Boolean(choice));
   function add() {
-    if (!canAdd) { setFeedback(custom && !validCustom ? 'Укажите целый вес от 50 до 2 000 г.' : 'Товар сейчас недоступен. Уточните наличие в лавке.'); return; }
+    if (!canAdd) { setFeedback(custom && !validCustom ? `Укажите целый вес ${CUT_RANGE}.` : 'Товар сейчас недоступен. Уточните наличие в лавке.'); return; }
     const success = addLine({
       productId: product.id, title: product.title, label, price, weightG,
       requiresWeightCheck: product.kind === 'piece' || bulk, pieceId1c: null,
@@ -72,15 +72,15 @@ export default function ProductCard({ product, serverReservedPieceIds, detail = 
       <div className="product-card-intro">
         <div className="card-media"><ProductArt product={product} /></div>
         <div className="card-header-row"><Heading className="card-title">{detail ? product.title : <Link href={`/product/${product.id}`}>{product.title}</Link>}</Heading></div>
-        <div className="card-meta">{product.agingMonths ? `${product.agingMonths} мес. выдержки` : CATEGORY_TITLES[product.category].short}</div>
+        <div className="card-meta">{product.agingMonths ? `${product.agingMonths}\u00A0мес. выдержки` : CATEGORY_TITLES[product.category].short}</div>
         {product.description && <p className="card-desc">{product.description}</p>}
-        {product.category !== 'extras' && !isFixed && pricePer100 > 0 && <p className="rate-per-100 tabular">{formatRub(Math.round(pricePer100))} / 100 г</p>}
+        {product.category !== 'extras' && !isFixed && pricePer100 > 0 && <p className="rate-per-100 tabular">{formatRub(Math.round(pricePer100))} / 100&nbsp;г</p>}
       </div>
       <div className="selector-dynamic-slot">
         {choices.length > 1
           ? <fieldset className="product-options"><legend className="selector-caption">{product.kind === 'piece' ? 'Какой формат вам подходит?' : 'Фасовка'}</legend><div className="options-wrap">{choices.map((choice) => <label className="option-chip" key={choice.key}><input type="radio" name={`${id}-format`} checked={choice.checked} onChange={choice.select} /><span>{choice.label}<small className="chip-sub">{choice.sub}</small></span></label>)}</div></fieldset>
           : choices.length === 1 && <div className="product-options"><div className="selector-caption">{product.kind === 'piece' ? 'Формат' : 'Фасовка'}</div>{choices.map((choice) => <p className="option-static" key={choice.key}><span>{choice.label}</span><small className="chip-sub">{choice.sub}</small></p>)}</div>}
-        {custom && <div className="form-field" aria-live="polite" aria-relevant="additions"><label htmlFor={`${id}-weight`}>Желаемый вес отреза, г</label><input className="form-input tabular" id={`${id}-weight`} type="number" inputMode="numeric" min="50" max="2000" step="1" value={requested} aria-invalid={!validCustom} aria-describedby={!validCustom ? `${id}-weight-error` : undefined} onChange={(event) => { setRequested(event.target.value); setFeedback(''); }} />{!validCustom && <p id={`${id}-weight-error`} className="card-feedback">Укажите целый вес от 50 до 2 000 г.</p>}</div>}
+        {custom && <div className="form-field" aria-live="polite" aria-relevant="additions"><label htmlFor={`${id}-weight`}>Желаемый вес отреза, г</label><input className="form-input tabular" id={`${id}-weight`} type="number" inputMode="numeric" min={CUT_WEIGHT_MIN_G} max={CUT_WEIGHT_MAX_G} step="1" value={requested} aria-invalid={!validCustom} aria-describedby={!validCustom ? `${id}-weight-error` : undefined} onChange={(event) => { setRequested(event.target.value); setFeedback(''); }} />{!validCustom && <p id={`${id}-weight-error`} className="card-feedback">Укажите целый вес {CUT_RANGE}.</p>}</div>}
         {bulk && product.bulk && <div className="bulk-slider-box"><label htmlFor={`${id}-bulk`}>Вес порции: <strong className="tabular">{formatWeightLabel(bulkWeight)}</strong></label><input id={`${id}-bulk`} type="range" min={product.bulk.minG} max={product.bulk.maxG} step={product.bulk.stepG} value={bulkWeight} onChange={(event) => { setBulkWeight(Number(event.target.value)); setFeedback(''); }} /></div>}
         {(product.kind === 'piece' || bulk) && <p className="custom-cut-note">{isFixed ? 'Вес уточним при сборке. Цена за штуку останется прежней.' : custom ? 'Подберём отрез по вашему запросу. Точный вес и сумму согласуем перед оплатой.' : 'Точный вес и сумму подтвердим перед оплатой.'}</p>}
         <div className="card-footer"><div className="price-stack"><span className="price-label">{canAdd ? caption : custom && !validCustom ? 'Укажите вес' : 'Нет в наличии'}</span><strong className="price-value tabular">{canAdd ? formatRub(price) : '—'}</strong></div><button ref={addRef} type="button" className="add-btn" disabled={!canAdd} onClick={add}>В корзину <span aria-hidden="true">+</span></button></div>

@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
-const { root } = require('./helpers.cjs');
+const { createSystem, root } = require('./helpers.cjs');
 
 const git = (args, cwd) => execFileSync('git', args, { cwd: cwd || root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim().split('\n').filter(Boolean);
 
@@ -250,4 +250,113 @@ test('ни одна локальная ссылка на ассет не вед�
     if (digest(pagesFile) !== digest(shopFile)) drifted.push(url);
   }
   assert.deepEqual(drifted, [], 'один и тот же ассет в двух корнях разный: витрины рисуют разные картинки');
+});
+
+// Переезд на домен обязан оставаться одной заменой SHOP_URL: адрес витрины определён
+// в одном месте, а карта сайтов накрывает каждый публичный маршрут. Пропущенный
+// fallback продолжает печатать GitHub Pages как канонический, а маршрут без записи
+// в sitemap просто не индексируется.
+test('адрес витрины задан один раз, карта сайтов накрывает все публичные маршруты', async () => {
+  const system = createSystem();
+  try {
+    const { siteUrl } = system.load('lib/config.ts');
+    const { default: robots } = system.load('app/robots.ts');
+    const { default: sitemap } = system.load('app/sitemap.ts');
+    const base = new URL(siteUrl());
+    const entries = await sitemap();
+    const paths = entries.map((entry) => {
+      const url = new URL(entry.url);
+      assert.equal(url.origin, base.origin, 'запись карты сайтов ведёт не на адрес витрины');
+      return url.pathname;
+    });
+
+    const skip = new Set(['node_modules', '.next', 'test-results', 'data']);
+    const sources = [];
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const file = path.join(dir, entry.name);
+        if (entry.isDirectory()) { if (!skip.has(entry.name)) walk(file); }
+        else if (/\.(ts|tsx)$/.test(entry.name)) sources.push(file);
+      }
+    };
+    for (const dir of ['app', 'components', 'lib']) walk(path.join(root, dir));
+    const rel = (file) => path.relative(root, file).replace(/[/\\]/g, '/');
+    assert.ok(sources.length >= 40, `свип видел только ${sources.length} файлов исходников — проверка потеряла опору`);
+    const secondAddress = sources.filter((file) => rel(file) !== 'lib/config.ts'
+      && (/github\.io/.test(fs.readFileSync(file, 'utf8')) || /const SITE_URL\b/.test(fs.readFileSync(file, 'utf8'))));
+    assert.deepEqual(secondAddress.map(rel), [], 'адрес витрины задан в обход siteUrl() из lib/config.ts');
+    assert.match(fs.readFileSync(path.join(root, 'app/layout.tsx'), 'utf8'), /metadataBase: new URL\(siteUrl\(\)\)/,
+      'metadataBase больше не берёт адрес из siteUrl()');
+
+    const appRoot = path.join(root, 'app');
+    const pages = [];
+    const walkRoutes = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const file = path.join(dir, entry.name);
+        if (entry.isDirectory()) walkRoutes(file);
+        else if (entry.name === 'page.tsx') pages.push(file);
+      }
+    };
+    walkRoutes(appRoot);
+    const routes = pages.map((file) => {
+      const folder = path.relative(appRoot, file).replace(/[/\\]/g, '/').replace(/page\.tsx$/, '').replace(/\/$/, '');
+      return `/${folder}`;
+    });
+    assert.ok(routes.length >= 6, `маршрутов приложения осталось ${routes.length} — свип теряет опору`);
+
+    const disallow = robots().rules.disallow;
+    const isPrivate = (route) => disallow.some((prefix) => (prefix.endsWith('/')
+      ? route.startsWith(prefix)
+      : route === prefix || route.startsWith(`${prefix}/`)));
+    assert.deepEqual(routes.filter(isPrivate).sort(), ['/admin', '/cart', '/order/[id]'],
+      'список закрытых от индексации маршрутов изменился — сверьте robots и карту сайтов');
+    const unmapped = routes.filter((route) => route.includes('[') && !isPrivate(route) && route !== '/product/[id]');
+    assert.deepEqual(unmapped, [], 'появился динамический маршрут, который карта сайтов не раскрывает');
+
+    const { getProducts } = system.load('lib/products.ts');
+    const products = await getProducts();
+    const expected = [...new Set([...routes.filter((route) => !isPrivate(route) && !route.includes('[')),
+      ...products.map((product) => `/product/${product.id}`)])];
+    assert.ok(expected.length >= 100, `публичных адресов осталось ${expected.length} — сверка была бы пустой`);
+    assert.deepEqual([...paths].sort(), [...expected].sort(), 'карта сайтов разошлась с публичными маршрутами приложения');
+  } finally {
+    system.cleanup();
+  }
+});
+
+// Заголовки безопасности — часть публичного контракта: их отдаёт конфиг, а не код страниц,
+// и молча потерять CSP или HSTS можно на любой правке next.config.ts.
+test('конфиг отдаёт CSP и HSTS в проде и не отдаёт CSP в dev', async () => {
+  const system = createSystem();
+  const original = process.env.NODE_ENV;
+  try {
+    const { default: config } = system.load('next.config.ts');
+    const read = async (env) => {
+      process.env.NODE_ENV = env;
+      const [entry] = await config.headers();
+      return new Map(entry.headers.map((header) => [header.key.toLowerCase(), header.value]));
+    };
+    const production = await read('production');
+    assert.equal(production.get('x-content-type-options'), 'nosniff');
+    assert.equal(production.get('x-frame-options'), 'DENY');
+    assert.match(production.get('strict-transport-security'), /^max-age=31536000/, 'HSTS короче года — страница переживает смену сертификата без политики');
+    const csp = production.get('content-security-policy');
+    assert.ok(csp, 'в production нет Content-Security-Policy');
+    for (const directive of ["default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data:", "font-src 'self' data:", "connect-src 'self'", "form-action 'self'",
+      "frame-ancestors 'none'", "base-uri 'self'", "object-src 'none'"]) {
+      assert.ok(csp.split('; ').includes(directive), `CSP потеряла директиву ${directive}`);
+    }
+    assert.equal(csp.split('; ').length, 10, 'состав CSP изменился — сверьте с замером в браузере');
+    assert.doesNotMatch(csp, /unsafe-eval/, 'eval в CSP открывает всю страницу любому встроенному скрипту');
+    assert.doesNotMatch(csp, /\*|https?:\/\//, 'CSP разрешила чужой домен или источник-подстановку');
+    const development = await read('development');
+    assert.equal(development.has('content-security-policy'), false,
+      'CSP в dev глушит HMR и eval-карты React: локальные проверки падают не из-за кода');
+    assert.equal(development.get('strict-transport-security'), production.get('strict-transport-security'),
+      'базовые заголовки обязаны совпадать в обоих режимах');
+  } finally {
+    process.env.NODE_ENV = original;
+    system.cleanup();
+  }
 });

@@ -221,6 +221,22 @@ test('checkout validates customer data, consent and the accepted server quote', 
   assert.equal((await s.load('lib/orders.ts').readOrders()).length, 0);
 }));
 
+// Заказ заводит строку в базе и платёж, поэтому чужая страница не должна уметь его создать:
+// /api/orders сверяет источник так же, как админский вход и PATCH заказа.
+test('POST /api/orders: чужой источник отклоняется до записи заказа', () => withSystem(async s => {
+  const { quoteCart } = s.load('lib/checkout.ts');
+  const quote = await quoteCart([pack], 'pickup');
+  const body = { customer: { name: 'Test customer', phone: '+79991234567' }, consent: true, items: [pack], deliveryId: 'pickup', messenger: 'SMS', expectedItemsSum: quote.itemsSum, expectedDeliveryCost: quote.delivery.cost };
+  const { POST } = s.load('app/api/orders/route.ts');
+  for (const origin of ['https://foreign.example.test', 'http://localhost:3303']) {
+    const denied = await POST(s.request(body, undefined, { origin }));
+    assert.equal(denied.status, 403, `${origin} создал заказ`);
+    assert.match(denied.body.error, /источник/i);
+  }
+  assert.equal((await s.load('lib/orders.ts').readOrders()).length, 0, 'чужой источник записал заказ в базу');
+  assert.equal((await POST(s.request(body, undefined, { origin: process.env.SHOP_URL }))).status, 201, 'свой источник отклонён');
+}));
+
 test('private order access requires its token, cookie or a signed admin session', () => withSystem(async s => {
   const order = await createOrder(s);
   const route = s.load('app/api/orders/[id]/route.ts');
@@ -493,4 +509,30 @@ test('страница товара тянет выгрузку 1С один р�
   // Кэша нет: завершённый запрос не переиспользуется, живые цены не устаревают молча.
   await loadCatalog();
   assert.equal(calls.length - before, 2, 'второй подряд идущий запрос обязан уйти в 1С заново');
+}));
+
+// Прайс 0711 описывает каждый товар целиком, поэтому нормализация «опущено = null»
+// была видна только на встроенном каталоге. Живая выгрузка 1С поля, которого у неё нет,
+// просто не присылает: «bulk», «pieces», «agingMonths» отсутствуют, а не равны null.
+test('выгрузка 1С без необязательных полей остаётся выгрузкой, а не отказом', () => withSystem(async s => {
+  live(s);
+  const { PRODUCTS, loadCatalog } = s.load('lib/products.ts');
+  const stripped = structuredClone(PRODUCTS).map((product) => {
+    const { bulk, pieces, ...rest } = product;
+    void bulk; void pieces;
+    return rest;
+  });
+  global.fetch = async () => ({ ok: true, json: async () => ({ products: stripped }) });
+  const catalog = await loadCatalog();
+  assert.equal(catalog.origin, 'onec', 'витрина отвергла выгрузку только за то, что в ней нет пустых полей');
+  assert.equal(catalog.notice, null);
+  assert.equal(catalog.products.length, PRODUCTS.length);
+  assert.ok(catalog.products.every((product) => product.bulk === null), 'опущенный bulk не стал null');
+  assert.ok(catalog.products.every((product) => Array.isArray(product.pieces) && product.pieces.length === 0), 'опущенные pieces не стали пустым списком');
+  // Проверка контракта обязана остаться проверкой: отсутствие обязательного поля — отказ.
+  const noTitle = structuredClone(PRODUCTS).map((product) => ({ ...product, title: undefined }));
+  global.fetch = async () => ({ ok: true, json: async () => ({ products: noTitle }) });
+  const refused = await loadCatalog();
+  assert.equal(refused.origin, 'built-in', 'выгрузка без названий прошла как годная');
+  assert.match(refused.notice, /invalid product data/);
 }));

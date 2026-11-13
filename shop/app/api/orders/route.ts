@@ -6,8 +6,11 @@ import { orderCookieName } from '@/lib/order-access';
 import { catalogHealth } from '@/lib/products';
 import { syncOrderToOneC } from '@/lib/onec';
 import { isAdmin } from '@/lib/admin';
+import { requestOriginAllowed } from '@/lib/config';
 
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get('origin');
+  if (!requestOriginAllowed(origin, req.headers.get('host'), req.nextUrl.origin)) return NextResponse.json({ error: 'Недопустимый источник запроса.' }, { status: 403 });
   const body: unknown = await req.json().catch(() => null);
   if (!body || typeof body !== 'object' || !('customer' in body) || !body.customer || typeof body.customer !== 'object') return NextResponse.json({ error: 'Укажите данные для связи.' }, { status: 400 });
   const customer = body.customer;
