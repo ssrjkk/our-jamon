@@ -1,7 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const { createSystem } = require('./helpers.cjs');
+const fs = require('node:fs');
+const path = require('node:path');
+const { createSystem, captureServerLog, root } = require('./helpers.cjs');
+
+// Каталог, который никогда не откроется как база: путь указывает на папку. Им проверяют
+// и /api/health, и то, что причина сбоя остаётся в журнале сервера.
+const unreadableDb = path.join(root, 'test-results', 'db-is-a-directory');
+fs.mkdirSync(unreadableDb, { recursive: true });
 
 // Оливки GORDAL 300 г = 450 ₽ из прайса 0711.
 const pack = { productId: 'nf-00000229', kind: 'pack', qty: 1 };
@@ -13,7 +20,7 @@ async function withSystem(action, options) {
 
 test('POST /api/cart: битое тело и неполная форма — 400, расчёт — 200 no-store', () => withSystem(async s => {
   const { POST } = s.load('app/api/cart/route.ts');
-  const badJson = await POST({ json: async () => { throw new Error('bad json'); } });
+  const badJson = await POST({ ...s.request({}), json: async () => { throw new Error('bad json'); } });
   assert.equal(badJson.status, 400);
   assert.ok(badJson.body.error);
   assert.equal((await POST(s.request({}))).status, 400);
@@ -226,3 +233,175 @@ test('PATCH retry-payment: ссылка доводится до конца, а �
   assert.match(tooSoon.body.error, /чуть позже/);
   assert.equal(inits.length, 1, 'вторая попытка внутри минуты всё-таки ушла в банк');
 }));
+
+// Повтор оплаты — единственный шаг покупателя, который по его клику звонит в банк и пишет
+// в базу. Квота нужна именно на него: зависшая кнопка на странице заказа не должна множить
+// инициации платежей, а ротация X-Forwarded-For не должна открывать второй счёт тому же
+// адресу. Админский PATCH под квоту не попадает умышленно: там один оператор правит
+// десятки заказов в минуту, и защищать от него нужно банк, а не лавку.
+test('POST retry-payment: десять повторов в минуту на адрес, одиннадцатый — 429', () => withSystem(async s => {
+  Object.assign(process.env, LIVE_ENV);
+  const { saveOrder } = s.load('lib/orders.ts');
+  const { POST } = s.load('app/api/orders/[id]/route.ts');
+  const order = routeOrder({ paymentId: undefined, paymentUrl: undefined, paymentError: true });
+  await saveOrder(order);
+  const url = `${process.env.SHOP_URL}/api/orders/${order.id}?token=${order.accessToken}`;
+  const inits = [];
+  global.fetch = async (endpoint, options = {}) => {
+    if (endpoint === 'https://securepay.tinkoff.ru/v2/Init') { inits.push(JSON.parse(options.body)); return { ok: true, json: async () => ({ Success: true, PaymentURL: 'https://payment.example.test/session-9', PaymentId: '987654' }) }; }
+    throw new Error('Unexpected external endpoint: ' + endpoint);
+  };
+  const post = (address) => POST(s.request({ action: 'retry-payment' }, url, address ? { 'x-forwarded-for': address } : {}), { params: Promise.resolve({ id: order.id }) });
+
+  const statuses = [];
+  for (let attempt = 0; attempt < 10; attempt += 1) statuses.push((await post('203.0.113.7')).status);
+  assert.equal(statuses[0], 200, 'первый повтор не вернул ссылку');
+  assert.equal(statuses.filter((code) => code === 429).length, 0, 'минутная квота поврата оплаты меньше десяти');
+  assert.equal(inits.length, 1, 'банк инициировали второй раз за живую ссылку');
+  const blocked = await post('203.0.113.7');
+  assert.equal(blocked.status, 429, 'одиннадцатый повтор с того же адреса дошёл до банка');
+  assert.ok(Number(blocked.headers.get('retry-after')) > 0, '429 без Retry-After клиент повторяет наугад');
+  assert.equal((await post('198.51.100.9, 203.0.113.7')).status, 429, 'левая часть X-Forwarded-For открыла вторую квоту тому же клиенту');
+  assert.equal((await post('198.51.100.9')).status, 200, 'чужая блокировка перешла другому адресу');
+  assert.equal((await post(null)).status, 200, 'без заголовка прокси сработала общая корзина: NAT и вкладки одного покупателя остались без поврата');
+  assert.equal(inits.length, 1, 'квота не остановила обращения к банку');
+}));
+
+// Квота обращений (находки №6 и №8). Ключ — адрес, который дописывает обратный прокси,
+// поэтому тест подставляет X-Forwarded-For сам, как если бы прокси уже стоял перед магазином.
+const CART_BODY = { items: [pack], deliveryId: 'pickup' };
+
+test('POST /api/cart: чужой источник отбит, а накрутка с одного адреса упирается в 429', () => withSystem(async s => {
+  const { POST } = s.load('app/api/cart/route.ts');
+  const url = 'http://localhost:3302/api/cart';
+  const from = (address) => s.request(CART_BODY, url, address ? { 'x-forwarded-for': address } : {});
+  assert.equal((await POST(s.request(CART_BODY, url, { origin: 'https://attacker.example.test' }))).status, 403, 'страница с чужого домена пересчитывала корзину');
+  let passed = 0;
+  for (let attempt = 0; attempt < 60; attempt += 1) if ((await POST(from('203.0.113.7'))).status === 200) passed += 1;
+  assert.equal(passed, 60, 'минутная квота расчёта корзины меньше шестидесяти');
+  const blocked = await POST(from('203.0.113.7'));
+  assert.equal(blocked.status, 429, 'шестьдесят первый расчёт с того же адреса прошёл');
+  assert.ok(Number(blocked.headers.get('retry-after')) > 0, '429 без Retry-After клиент повторяет наугад');
+  assert.equal((await POST(from('198.51.100.9, 203.0.113.7'))).status, 429, 'левая часть X-Forwarded-For открыла вторую квоту тому же клиенту');
+  assert.equal((await POST(from('198.51.100.9'))).status, 200, 'чужая блокировка перешла другому адресу');
+  let anonymous = 0;
+  for (let attempt = 0; attempt < 70; attempt += 1) if ((await POST(from(null))).status === 200) anonymous += 1;
+  assert.equal(anonymous, 70, 'без заголовка прокси сработала общая корзина: NAT и вкладки одного покупателя остались без расчёта');
+}));
+
+test('POST /api/orders: двадцать заказов в минуту с адреса, дальше отказ до конца окна', () => withSystem(async s => {
+  const { POST } = s.load('app/api/orders/route.ts');
+  const quote = await s.load('lib/checkout.ts').quoteCart([pack], 'pickup');
+  const payload = { customer: { name: 'Test customer', phone: '+79991234567' }, consent: true, items: [pack], deliveryId: 'pickup', messenger: 'SMS', expectedItemsSum: quote.itemsSum, expectedDeliveryCost: quote.delivery.cost };
+  const request = (address) => s.request(payload, 'http://localhost:3302/api/orders', { 'x-forwarded-for': address });
+  const statuses = [];
+  for (let attempt = 0; attempt < 21; attempt += 1) statuses.push((await POST(request('203.0.113.20'))).status);
+  assert.deepEqual(statuses.slice(0, 20), Array(20).fill(201), 'квота заказов за минуту меньше двадцати');
+  assert.equal(statuses[20], 429, 'двадцать первый заказ с того же адреса принят');
+  assert.equal((await s.load('lib/orders.ts').readOrders()).length, 20, 'запрос сверх квоты всё-таки записал заказ');
+  assert.equal((await POST(request('198.51.100.20'))).status, 201, 'другой адрес унаследовал чужую блокировку');
+}));
+
+test('POST /api/admin/login: десять неудач с адреса закрывают вход даже с верным паролем', () => withSystem(async s => {
+  process.env.ADMIN_PASSWORD = ADMIN_PASSPHRASE;
+  const { POST } = s.load('app/api/admin/login/route.ts');
+  const attempt = (value, address) => POST(s.request({ password: value }, 'http://localhost:3302/api/admin/login', address ? { 'x-forwarded-for': address } : {}));
+  const fails = [];
+  for (let tryNumber = 0; tryNumber < 10; tryNumber += 1) fails.push((await attempt('неверный пароль', '203.0.113.31')).status);
+  assert.deepEqual(fails, Array(10).fill(401), 'окно неудач считается не по неверному паролю');
+  const locked = await attempt(ADMIN_PASSPHRASE, '203.0.113.31');
+  assert.equal(locked.status, 429, 'одиннадцатая попытка с верным паролем вошла');
+  assert.match(locked.body.error, /неудачных попыток/);
+  assert.match(locked.body.error, /через \d+ мин/);
+  assert.equal(Number(locked.headers.get('retry-after')), 900);
+  for (let visit = 0; visit < 12; visit += 1) {
+    s.jar.clear();
+    assert.equal((await attempt(ADMIN_PASSPHRASE, '198.51.100.31')).status, 200, 'успешный вход истратил окно неудач');
+  }
+  assert.equal((await attempt('неверный пароль', '192.0.2.1')).status, 401, 'адрес, который только успешно входил, не получил новый бюджет неудач');
+}));
+
+test('POST /api/admin/login: перестановка адресов не обходит окно — работает глобальная корзина', () => withSystem(async s => {
+  process.env.ADMIN_PASSWORD = ADMIN_PASSPHRASE;
+  const { POST } = s.load('app/api/admin/login/route.ts');
+  const attempt = (value, address) => POST(s.request({ password: value }, 'http://localhost:3302/api/admin/login', address ? { 'x-forwarded-for': address } : {}));
+  for (let tryNumber = 0; tryNumber < 30; tryNumber += 1) {
+    assert.equal((await attempt('неверный пароль', `203.0.113.${tryNumber + 1}`)).status, 401, 'каждый адрес получил по своей квоте, глобальной корзины нет');
+  }
+  assert.equal((await attempt(ADMIN_PASSPHRASE, '192.0.2.99')).status, 429, 'ротация X-Forwarded-For открыла перебор с нового адреса');
+  assert.equal((await attempt('неверный пароль', null)).status, 429, 'без заголовка прокси перебор остался открыт');
+}));
+
+// Журнал сервера (находка №9): покупатель видит вежливый отказ, а лавка — причину.
+test('Журнал: сбой банка остаётся причиной в логе, а заказ всё равно принят', () => withSystem(async s => {
+  Object.assign(process.env, LIVE_ENV);
+  const products = s.load('lib/products.ts').PRODUCTS;
+  global.fetch = async (url) => {
+    if (url === process.env.ONEC_API_URL) return { ok: true, json: async () => ({ products }) };
+    if (url === process.env.ONEC_API_URL + '/orders') return { ok: true, status: 200 };
+    if (url === 'https://securepay.tinkoff.ru/v2/Init') throw new Error('tls handshake timed out');
+    throw new Error('Unexpected external endpoint: ' + url);
+  };
+  const quote = await s.load('lib/checkout.ts').quoteCart([pack], 'pickup');
+  const payload = { customer: { name: 'Test customer', phone: '+79991234567' }, consent: true, items: [pack], deliveryId: 'pickup', messenger: 'SMS', expectedItemsSum: quote.itemsSum, expectedDeliveryCost: quote.delivery.cost };
+  let response;
+  const lines = await captureServerLog(async () => {
+    response = await s.load('app/api/orders/route.ts').POST(s.request(payload));
+  });
+  assert.equal(response.status, 201, 'магазин отверг заказ целиком из-за недоступного банка');
+  assert.equal(response.body.paymentError, true);
+  assert.ok(!JSON.stringify(response.body).includes('tls handshake'), 'внутренняя причина ушла покупателю');
+  assert.ok(lines.some((line) => line.startsWith('[tbank-init]') && line.includes('tls handshake timed out')), 'сбой банка не попал в журнал');
+  assert.equal(lines.filter((line) => line.startsWith('[order-create]')).length, 0, 'ссылка не выписана, но заказ создан — отказ по созданию придуман');
+}));
+
+test('Журнал: 503 корзины и заказа из-за нерабочей базы объяснены в логе, а не в ответе', () => withSystem(async s => {
+  const cart = s.load('app/api/cart/route.ts');
+  const orders = s.load('app/api/orders/route.ts');
+  const quote = { itemsSum: 450, delivery: { cost: 0 } };
+  const payload = { customer: { name: 'Test customer', phone: '+79991234567' }, consent: true, items: [pack], deliveryId: 'pickup', messenger: 'SMS', expectedItemsSum: quote.itemsSum, expectedDeliveryCost: quote.delivery.cost };
+  let cartResponse;
+  let orderResponse;
+  const lines = await captureServerLog(async () => {
+    cartResponse = await cart.POST(s.request(CART_BODY, 'http://localhost:3302/api/cart'));
+    orderResponse = await orders.POST(s.request(payload, 'http://localhost:3302/api/orders'));
+  });
+  assert.equal(cartResponse.status, 503);
+  assert.match(cartResponse.body.error, /Не удалось рассчитать корзину/);
+  assert.equal(orderResponse.status, 503);
+  assert.match(orderResponse.body.error, /Не удалось сохранить заказ/);
+  assert.ok(!JSON.stringify([cartResponse.body, orderResponse.body]).includes('database file'), 'путь или текст сбоя базы ушли покупателю');
+  assert.ok(lines.some((line) => line.startsWith('[cart]')), 'отказ корзины ничем не объяснён в журнале');
+  assert.ok(lines.some((line) => line.startsWith('[order-create]')), 'отказ создания заказа ничем не объяснён в журнале');
+}, { env: { ORDERS_DB_PATH: unreadableDb } }));
+
+test('GET /api/health: база читается — 200, и никакого содержимого базы в ответе', () => withSystem(async s => {
+  const { GET } = s.load('app/api/health/route.ts');
+  const res = await GET();
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'no-store', 'мониторинг закеширован — мониторинг слепой');
+  assert.deepEqual(res.body, { status: 'ok', mode: 'demo', database: 'ok', catalog: { origin: 'unknown', notice: null, checkedAt: null } });
+  process.env.SHOP_MODE = 'live';
+  await s.load('lib/products.ts').loadCatalog();
+  const live = await GET();
+  assert.equal(live.body.mode, 'live');
+  assert.equal(live.body.catalog.origin, 'built-in', 'мониторинг не увидел, чем именно наполнен каталог');
+  assert.match(live.body.catalog.notice, /ONEC_API_URL/);
+  assert.ok(Date.parse(live.body.catalog.checkedAt) > 0, 'время последней проверки каталога не показано');
+  await s.load('lib/orders.ts').saveOrder(routeOrder({}));
+  const dump = JSON.stringify((await GET()).body);
+  assert.ok(!dump.includes('Test customer') && !dump.includes('79991234567'), 'health отдал данные заказа');
+  assert.ok(!dump.includes(process.env.ORDERS_DB_PATH), 'health отдал путь к базе');
+}));
+
+test('GET /api/health: база не читается — 503 с причиной в журнале, а не в ответе', () => withSystem(async s => {
+  const { GET } = s.load('app/api/health/route.ts');
+  let res;
+  const lines = await captureServerLog(async () => { res = await GET(); });
+  assert.equal(res.status, 503, 'неоткрытая база выглядит для контейнера здоровой');
+  assert.equal(res.body.database, 'unavailable');
+  assert.equal(res.body.status, 'error');
+  assert.equal(res.headers.get('cache-control'), 'no-store');
+  assert.ok(lines.some((line) => line.startsWith('[orders-db]')), 'база не открылась, а в журнале пусто');
+  assert.ok(!JSON.stringify(res.body).includes('sqlite'), 'путь к базе ушёл в публичный ответ');
+}, { env: { ORDERS_DB_PATH: unreadableDb } }));

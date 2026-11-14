@@ -5,9 +5,25 @@ import { DatabaseSync } from 'node:sqlite';
 import { CartItemInput, CartItemResolved, Order, OrderStatus, Product } from './types';
 import { PRODUCTS, averageWeightOf, piecePriceOf } from './products';
 import { MAX_CART_LINES, MAX_QTY_PER_LINE, MIN_QTY_PER_LINE } from './cart';
+import { logServerError } from './server-log';
 import { weightPriceOf, CUT_WEIGHT_MIN_G, CUT_WEIGHT_MAX_G, CUT_RANGE } from './price';
 
 export class OrderConflict extends Error {}
+
+// Бросок ссылки на оплату не должен навечно убирать кусок с витрины: резерв живёт
+// RESERVATION_TTL_HOURS с последней записи заказа, поэтому согласование веса хозяином
+// обнуляет часы, а забытый заказ освобождает кусок сам. Оплаченный заказ держит кусок:
+// его резерв снимает только отмена. Просрочку выпускает не крон, а любое обращение к
+// базе, потому что отдельного процесса в контейнере нет.
+const RESERVATION_TTL_DEFAULT_HOURS = 24;
+
+function reservationTtlMs(): number {
+  const raw = process.env.RESERVATION_TTL_HOURS?.trim();
+  if (!raw) return RESERVATION_TTL_DEFAULT_HOURS * 3600000;
+  const hours = Number(raw);
+  if (!Number.isSafeInteger(hours) || hours <= 0) throw new Error('RESERVATION_TTL_HOURS must be a positive whole number of hours');
+  return hours * 3600000;
+}
 
 let database: DatabaseSync | undefined;
 
@@ -16,16 +32,26 @@ function persist(db: DatabaseSync, order: Order): void {
     .run(order.id, order.createdAt, JSON.stringify(order));
   db.prepare('DELETE FROM reservations WHERE order_id = ?').run(order.id);
   if (order.status !== 'cancelled') {
-    const reserve = db.prepare('INSERT INTO reservations (piece_id, order_id) VALUES (?, ?)');
+    const reserve = db.prepare('INSERT INTO reservations (piece_id, order_id, reserved_at) VALUES (?, ?, ?)');
+    // Штамп ставится при каждой пересохранённой транзакции: часы резерва отсчитываются
+    // от последнего дела с заказом, а не от его появления.
+    const reservedAt = new Date().toISOString();
     for (const item of order.items) {
-      if (item.pieceId1c) reserve.run(item.pieceId1c, order.id);
+      if (item.pieceId1c) reserve.run(item.pieceId1c, order.id, reservedAt);
     }
   }
+}
+
+function releaseExpiredReservations(db: DatabaseSync, now = Date.now()): void {
+  db.prepare(`DELETE FROM reservations WHERE reserved_at <> '' AND reserved_at < ?
+    AND order_id IN (SELECT id FROM orders WHERE json_extract(payload, '$.status') IN ('awaiting_confirmation', 'awaiting_payment'))`)
+    .run(new Date(now - reservationTtlMs()).toISOString());
 }
 
 function transaction<T>(db: DatabaseSync, action: () => T): T {
   db.exec('BEGIN IMMEDIATE');
   try {
+    releaseExpiredReservations(db);
     const result = action();
     db.exec('COMMIT');
     return result;
@@ -82,7 +108,14 @@ function getDatabase(): DatabaseSync {
   const db = new DatabaseSync(filename);
   try {
     db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
-    db.exec('CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, payload TEXT NOT NULL CHECK(json_valid(payload))); CREATE TABLE IF NOT EXISTS reservations (piece_id TEXT PRIMARY KEY, order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE); CREATE INDEX IF NOT EXISTS orders_created_at ON orders(created_at DESC);');
+    db.exec('CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, payload TEXT NOT NULL CHECK(json_valid(payload))); CREATE TABLE IF NOT EXISTS reservations (piece_id TEXT PRIMARY KEY, order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE, reserved_at TEXT NOT NULL DEFAULT \'\'); CREATE INDEX IF NOT EXISTS orders_created_at ON orders(created_at DESC);');
+    // База, поднятая до срока резерва, колонки не имеет: без штампа просрочку считать
+    // нечем, поэтому старые строки получают время появления заказа и доживают свой срок.
+    const columns = db.prepare('PRAGMA table_info(reservations)').all().map((row) => String(row.name));
+    if (!columns.includes('reserved_at')) {
+      db.exec('ALTER TABLE reservations ADD COLUMN reserved_at TEXT NOT NULL DEFAULT \'\'');
+      db.exec('UPDATE reservations SET reserved_at = (SELECT created_at FROM orders WHERE orders.id = reservations.order_id) WHERE reserved_at = \'\'');
+    }
     const version = db.prepare('PRAGMA user_version').get() as { user_version: number };
     if (version.user_version === 0) {
       // The JSON source stays untouched; the schema version prevents a second import.
@@ -138,7 +171,23 @@ export async function updateOrder(id: string, patch: Partial<Order>): Promise<Or
 }
 
 export async function reservedPieceIds(): Promise<Set<string>> {
-  return new Set(getDatabase().prepare('SELECT piece_id FROM reservations').all().map((row) => String(row.piece_id)));
+  const db = getDatabase();
+  // Витрина читает резервы на каждом рендере каталога: здесь просрочка и уходит, иначе
+  // брошенный заказ висел бы на полке до первой записи в базу.
+  releaseExpiredReservations(db);
+  return new Set(db.prepare('SELECT piece_id FROM reservations').all().map((row) => String(row.piece_id)));
+}
+
+// Ответ /api/health читается без авторизации, поэтому наружу идёт только «база жива /
+// база не читается»: путь к файлу и текст ошибки остаются в журнале сервера.
+export function databaseHealth(): boolean {
+  try {
+    getDatabase().prepare('SELECT 1 FROM orders LIMIT 1').get();
+    return true;
+  } catch (error) {
+    logServerError('orders-db', error);
+    return false;
+  }
 }
 
 export function generateOrderId(): string {

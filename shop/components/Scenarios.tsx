@@ -7,6 +7,7 @@ import type { Product } from '@/lib/types';
 import { KITS, type CatalogKit } from '@/lib/products';
 import { flyTokenToCart } from './Animations';
 import { ChoicePhotos } from './BuyerChoices';
+import { revealProps, revealInto } from '@/lib/reveal';
 
 export function resolveKit(products: Product[], items: CatalogKit['items']) {
   const resolved = items.map((item) => {
@@ -38,10 +39,10 @@ export default function Scenarios({ products }: { products: Product[] }) {
   }
 
   return <section className="section"><div className="container">
-    <div className="section-head"><h2 className="section-title">Для себя, к столу и на подарок</h2><p className="section-subtitle">Примеры подборок из лавки. Состав выбираем под ваш вкус и повод.</p></div>
+    <div className="section-head" {...revealInto('mask')}><h2 className="section-title">Для себя, к столу и на подарок</h2><p className="section-subtitle">Примеры подборок из лавки. Состав выбираем под ваш вкус и повод.</p></div>
     <ChoicePhotos />
-    <div className="section-head catalog-kits-heading"><h3 className="checkout-title">Готовые наборы из каталога</h3><p className="checkout-hint">Фотографии выше — примеры выбора, а не фиксированный состав этих наборов. Состав и цены наборов указаны ниже.</p></div>
-    {kits.length ? <div className="scenarios-grid">{kits.map((kit) => <article className="scenario-card" key={kit.id}>
+    <div className="section-head catalog-kits-heading" {...revealInto('mask')}><h3 className="checkout-title">Готовые наборы из каталога</h3><p className="checkout-hint">Фотографии выше — примеры выбора, а не фиксированный состав этих наборов. Состав и цены наборов указаны ниже.</p></div>
+    {kits.length ? <div className="scenarios-grid">{kits.map((kit) => <article className="scenario-card" key={kit.id} {...revealProps}>
       <p className="scenario-label">{kit.label}</p><h4 className="scenario-name">{kit.title}</h4><p className="card-desc">{kit.description}</p>
       <ul className="scenario-list">{kit.resolved!.map(({ product, pack }) => <li key={product.id}><span>{product.title}<small>{pack.label}</small></span><span className="tabular">{formatRub(pack.price)}</span></li>)}</ul>
       <div className="scenario-total-row"><span>Стоимость товаров</span><strong className="scenario-total tabular">{formatRub(kit.resolved!.reduce((sum, item) => sum + item.pack.price, 0))}</strong></div>

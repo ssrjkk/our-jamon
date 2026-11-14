@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 export type TabId = 'catalog' | 'scenarios' | 'buyer-choices' | 'aging' | 'weight-system' | 'shop' | 'delivery';
 const TABS: { id: TabId; label: string }[] = [
@@ -32,13 +32,39 @@ export function navigateToTab(id: TabId) {
 
 export default function SiteTabs({ panels }: { panels: Record<TabId, ReactNode> }) {
   const [active, setActive] = useState<TabId>('catalog');
+  const barRef = useRef<HTMLDivElement>(null);
   const select = useCallback((id: TabId, scroll: boolean) => {
     setActive(id);
-    if (scroll) requestAnimationFrame(() => {
-      document.getElementById('shop-tabs')?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-      document.getElementById(`tab-${id}`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    // Индикатор и слой движения измеряют панель после смены hidden: скрывать под
+    // невидимой панелью нельзя, а rect до перерисовки ещё считает её нулевой.
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('nh-panel-change'));
+      if (scroll) {
+        document.getElementById('shop-tabs')?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        document.getElementById(`tab-${id}`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
     });
   }, []);
+
+  useEffect(() => {
+    const bar = barRef.current;
+    if (!bar) return;
+    const draw = () => {
+      const node = document.getElementById(`tab-${active}`);
+      if (!node || node.offsetParent !== bar) return;
+      bar.style.setProperty('--tab-w', `${node.offsetWidth}px`);
+      bar.style.setProperty('--tab-x', `${node.offsetLeft}px`);
+      bar.setAttribute('data-tabs-ready', '');
+    };
+    draw();
+    const observer = new ResizeObserver(draw);
+    observer.observe(bar);
+    window.addEventListener('nh-panel-change', draw);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('nh-panel-change', draw);
+    };
+  }, [active]);
 
   useEffect(() => {
     const sync = () => select(tabFromHash(window.location.hash), Boolean(window.location.hash));
@@ -85,14 +111,15 @@ export default function SiteTabs({ panels }: { panels: Record<TabId, ReactNode> 
   return (
     <div>
       <div className="site-tabs-wrap" id="shop-tabs">
-        <div className="container site-tabs" role="tablist" aria-label="Разделы лавки" aria-orientation="horizontal">
+        <div className="container site-tabs" ref={barRef} role="tablist" aria-label="Разделы лавки" aria-orientation="horizontal">
           {TABS.map((tab, index) => (
-            <button key={tab.id} id={`tab-${tab.id}`} type="button" role="tab" aria-controls={tab.id}
+            <button key={tab.id} id={`tab-${tab.id}`} type="button" role="tab" data-tab={tab.id} aria-controls={tab.id}
               aria-selected={active === tab.id} tabIndex={active === tab.id ? 0 : -1}
               onKeyDown={(event) => keyboard(event, index)} onClick={() => navigateToTab(tab.id)}>
               {tab.label}
             </button>
           ))}
+          <span className="tab-underline" aria-hidden="true" />
         </div>
       </div>
       {TABS.map((tab) => (

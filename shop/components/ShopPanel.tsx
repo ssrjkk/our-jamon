@@ -1,14 +1,15 @@
 import Link from 'next/link';
+import { revealProps, revealInto } from '@/lib/reveal';
 
 export default function ShopPanel({ showAboutLink = true }: { showAboutLink?: boolean }) {
   return <section className="section" aria-labelledby="shop-heading">
     <div className="container shop-visit-grid">
-      <figure className="shop-interior">
+      <figure className="shop-interior" {...revealInto('clip')}>
         <img src="/brand/shop-interior.webp" width="720" height="1280" loading="lazy" decoding="async"
           alt="Интерьер лавки «Наш Хамон»: стеклянная витрина и светящаяся вывеска с окороком на красной стене" />
         <figcaption>Наша лавка на Сытном рынке. Фото интерьера; актуальные товары и цены — в каталоге.</figcaption>
       </figure>
-      <div className="shop-visit-copy">
+      <div className="shop-visit-copy" {...revealProps}>
         <p className="bento-period">Санкт-Петербург · Сытный рынок</p>
         <h2 id="shop-heading" className="section-title">Наша лавка</h2>
         <p className="section-subtitle">Та самая вывеска. Настоящая витрина. Приходите выбрать свой хамон.</p>
@@ -25,12 +26,12 @@ export default function ShopPanel({ showAboutLink = true }: { showAboutLink?: bo
       </div>
     </div>
     <div className="container shop-supplier-strip">
-      <figure>
+      <figure {...revealInto('clip')}>
         <img src="/brand/supplier-sliced-macro.webp" width="1230" height="530" style={{ maxWidth: 615 }} loading="lazy" decoding="async"
           alt="Вакуумная нарезка хамона в фирменной упаковке поставщика «Дом Хамона» на золотой подложке" />
         <figcaption>Витрина поставщика «Дом Хамона» · Коломна. Фото из брендбука бренда.</figcaption>
       </figure>
-      <figure>
+      <figure {...revealInto('clip')}>
         <img src="/brand/supplier-leg-tag.webp" width="740" height="600" style={{ maxWidth: 370 }} loading="lazy" decoding="async"
           alt="Нога хамона с картонной биркой выдержки «10 Madrid» поставщика «Дом Хамона»" />
         <figcaption>Нога с биркой выдержки поставщика.</figcaption>

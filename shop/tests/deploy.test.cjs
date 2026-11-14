@@ -360,3 +360,21 @@ test('конфиг отдаёт CSP и HSTS в проде и не отдаёт C
     system.cleanup();
   }
 });
+
+// Готовность контейнера читает тот же маршрут, что и внешний мониторинг. Переименованный
+// путь молчит: docker бесконечно перезапускает контейнер, а в журнале приложения нет ни
+// одной строчки — базовая проверка не должна зависеть от угадывания.
+test('HEALTHCHECK контейнера ведёт в существующий публичный маршрут', () => {
+  const dockerfile = fs.readFileSync(path.join(root, 'Dockerfile'), 'utf8');
+  const line = dockerfile.split(/\r?\n/).find((row) => row.startsWith('HEALTHCHECK'));
+  assert.ok(line, 'в Dockerfile нет HEALTHCHECK: контейнер с нерабочей базой притворяется живым');
+  const target = line.match(/'(\/[a-z][a-z0-9/_-]*)'/)?.[1];
+  assert.equal(target, '/api/health', 'проверка готовности зовёт не тот маршрут');
+  const routeFile = path.join(root, 'app', ...target.split('/').filter(Boolean), 'route.ts');
+  assert.ok(fs.existsSync(routeFile), `маршрут ${target} из HEALTHCHECK не существует`);
+  const source = fs.readFileSync(routeFile, 'utf8');
+  assert.doesNotMatch(source, /isAdmin|cookies\(\)/, 'готовность под авторизацией: контейнер никогда не станет ready');
+  assert.match(source, /await connection\(\)/, 'маршрут готовности закеширован — мониторинг видит одну и ту же дату');
+  assert.match(source, /Cache-Control': 'no-store/, 'ответ готовности кэшируется между проверками');
+  assert.match(dockerfile, /^CMD \["node", "server\.js"\]$/m, 'запуск standalone-сервера изменился — сверьте порт HEALTHCHECK');
+});

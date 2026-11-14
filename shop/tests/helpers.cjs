@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '..');
 function createSystem(options = {}) {
   fs.mkdirSync(path.join(root, 'test-results'), { recursive: true });
   const dir = fs.mkdtempSync(path.join(root, 'test-results/unit-'));
-  const keys = ['SHOP_MODE', 'SHOP_URL', 'ORDERS_DB_PATH', 'ORDERS_LEGACY_PATH', 'ADMIN_PASSWORD', 'ONEC_API_URL', 'ONEC_TOKEN', 'TBANK_TERMINAL_KEY', 'TBANK_PASSWORD', 'TBANK_TAXATION', 'TBANK_VAT', 'FREE_DELIVERY_FROM', 'DELIVERY_CDEK_RUB', 'DELIVERY_YANDEX_RUB', 'DELIVERY_DRIVEE_RUB'];
+  const keys = ['SHOP_MODE', 'SHOP_URL', 'ORDERS_DB_PATH', 'ORDERS_LEGACY_PATH', 'ADMIN_PASSWORD', 'RESERVATION_TTL_HOURS', 'ONEC_API_URL', 'ONEC_TOKEN', 'TBANK_TERMINAL_KEY', 'TBANK_PASSWORD', 'TBANK_TAXATION', 'TBANK_VAT', 'FREE_DELIVERY_FROM', 'DELIVERY_CDEK_RUB', 'DELIVERY_YANDEX_RUB', 'DELIVERY_DRIVEE_RUB'];
   const previous = new Map(keys.map(key => [key, process.env[key]]));
   keys.forEach(key => delete process.env[key]);
   Object.assign(process.env, { SHOP_MODE: 'demo', SHOP_URL: 'http://localhost:3302', ORDERS_DB_PATH: options.dbPath || path.join(dir, 'orders.sqlite'), ORDERS_LEGACY_PATH: path.join(dir, 'orders.json'), ...options.env });
@@ -68,6 +68,18 @@ function createSystem(options = {}) {
 }
 
 /**
+ * Причина отказа, которую покупатель не видит, обязана оставаться в журнале сервера.
+ * Тест читает именно журнал, а не текст ответа: строки console.error за время action.
+ */
+async function captureServerLog(action) {
+  const lines = [];
+  const original = console.error;
+  console.error = (...args) => { lines.push(args.map(String).join(' ')); };
+  try { await action(); } finally { console.error = original; }
+  return lines;
+}
+
+/**
  * Аргументы Math.round(...), где вес делится на 1000: ровно те записи, которыми
  * карточка расходилась с сервером. Скобки считаются по балансу, поэтому детектор
  * не зависит от того, в каком порядке стоят множитель и делитель.
@@ -90,4 +102,4 @@ function priceWeightRounds(source) {
   return found;
 }
 
-module.exports = { createSystem, root, priceWeightRounds };
+module.exports = { createSystem, captureServerLog, root, priceWeightRounds };

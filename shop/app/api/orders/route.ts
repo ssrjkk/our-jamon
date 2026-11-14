@@ -7,10 +7,14 @@ import { catalogHealth } from '@/lib/products';
 import { syncOrderToOneC } from '@/lib/onec';
 import { isAdmin } from '@/lib/admin';
 import { requestOriginAllowed } from '@/lib/config';
+import { guardAttempts } from '@/lib/rate-limit';
+import { logServerError } from '@/lib/server-log';
 
 export async function POST(req: NextRequest) {
   const origin = req.headers.get('origin');
   if (!requestOriginAllowed(origin, req.headers.get('host'), req.nextUrl.origin)) return NextResponse.json({ error: 'Недопустимый источник запроса.' }, { status: 403 });
+  const limited = guardAttempts('order', req.headers, 20, 60000);
+  if (limited) return limited;
   const body: unknown = await req.json().catch(() => null);
   if (!body || typeof body !== 'object' || !('customer' in body) || !body.customer || typeof body.customer !== 'object') return NextResponse.json({ error: 'Укажите данные для связи.' }, { status: 400 });
   const customer = body.customer;
@@ -44,8 +48,14 @@ export async function POST(req: NextRequest) {
     response.cookies.set(orderCookieName(saved.id), saved.accessToken, { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', maxAge: 30 * 24 * 60 * 60, path: '/' });
     return response;
   } catch (error) {
-    if (error instanceof CheckoutError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof CheckoutError) {
+      if (error.status >= 500) logServerError('order-create', error);
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     if (error instanceof OrderConflict) return NextResponse.json({ error: error.message }, { status: 409 });
+    // Сюда доходят отказы, которые покупатель уже считает принятым заказом: в журнале
+    // обязана остаться исходная причина, а не только вежливый текст на витрине.
+    logServerError('order-create', error);
     return NextResponse.json({ error: 'Не удалось сохранить заказ. Попробуйте позже или свяжитесь с лавкой.' }, { status: 503 });
   }
 }

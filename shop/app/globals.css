@@ -23,6 +23,29 @@
   --scrim-story: rgba(36, 27, 23, 0.8);
   --lift-shadow: 0 10px 28px rgba(36, 27, 23, 0.1);
   --tap-tint: rgba(91, 40, 36, 0.16);
+  /* Движение: одна шкала длительностей и две кривые. Правило без токена — это цифра,
+     которую потом никто не сводит с остальными, а «кратно» набирается именно из них. */
+  --dur-press: .12s;
+  --dur-control: .22s;
+  --dur-enter: .45s;
+  /* Срез и шторка читаются медленнее подъёма: длинный ход — тот же жест, что и
+     в «nh-rise», но по одной оси, поэтому ему нужна своя длительность. */
+  --dur-wipe: calc(var(--dur-enter) * 1.6);
+  --dur-ambient: 26s;
+  --stagger: 70ms;
+  --ease-cut: cubic-bezier(.22, .61, .36, 1);
+  --ease-settle: cubic-bezier(.34, 1.42, .64, 1);
+  --reveal-shift: 18px;
+  /* Край маски всегда выведен за границу узла: inset(0) обрезал бы и рамку, и скругление,
+     и тень, которая у карточки появляется под курсором. */
+  --reveal-bleed: -.25em;
+  /* Параллакс первого экрана: множители при --hero-shift (0…один экран) и предел в
+     пикселях. Знаки противоположные — текст и кадр едут в разные стороны; если бы оба
+     были одного знака, это выглядело бы как одна плашка, уехавшая не туда. */
+  --parallax-copy: -.045;
+  --parallax-sign: .07;
+  --parallax-limit: 40px;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 .14 0 0 0 0 .10 0 0 0 0 .08 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; }
@@ -47,7 +70,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .skip-link { position: fixed; top: 8px; left: 16px; z-index: 100; padding: 12px; background: var(--fat-white); border-radius: var(--radius); transform: translateY(-150%); }
 .skip-link:focus { transform: none; }
-.btn-primary, .btn-secondary, .bento-btn, .add-btn, .story-action-btn, .scale-add-btn { display: inline-flex; align-items: center; justify-content: center; gap: 16px; min-height: 48px; padding: 12px 20px; border: 1px solid var(--cured-ruby); border-radius: var(--radius); text-decoration: none; font-size: .875rem; font-weight: 500; line-height: 1.4; transition: background .18s, color .18s, transform .12s; }
+.btn-primary, .btn-secondary, .bento-btn, .add-btn, .story-action-btn, .scale-add-btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 16px; min-height: 48px; padding: 12px 20px; border: 1px solid var(--cured-ruby); border-radius: var(--radius); text-decoration: none; font-size: .875rem; font-weight: 500; line-height: 1.4; transition: background-color var(--dur-control) var(--ease-cut), color var(--dur-control) var(--ease-cut), box-shadow var(--dur-enter) var(--ease-cut), transform var(--dur-press) var(--ease-settle); }
 .btn-primary, .add-btn, .story-action-btn { background: var(--cured-ruby); color: var(--fat-white); }
 .btn-secondary, .bento-btn { background: transparent; color: var(--cured-ruby); }
 .btn-primary:hover:not(:disabled), .add-btn:hover:not(:disabled), .story-action-btn:hover:not(:disabled) { background: var(--cured-ruby-hover); }
@@ -75,7 +98,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .site-header { position: sticky; top: 0; z-index: 40; background: var(--paper-salt); border-bottom: 1px solid var(--bone-line); }
 .header-inner { min-height: var(--header-h); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .menu-group { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.menu-toggle { display: grid; place-items: center; min-width: 44px; min-height: 44px; margin-left: -10px; color: var(--cured-ruby); border: 1px solid transparent; border-radius: var(--radius); transition: border-color 0.15s ease; }
+.menu-toggle { display: grid; place-items: center; min-width: 44px; min-height: 44px; margin-left: -10px; color: var(--cured-ruby); border: 1px solid transparent; border-radius: var(--radius); transition: border-color var(--dur-control) var(--ease-cut); }
 .menu-toggle:hover { border-color: var(--bone-line); }
 .brand-link { flex-shrink: 0; }
 .brand-logo { width: 152px; height: 44px; object-fit: contain; }
@@ -86,9 +109,9 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .cart-trigger { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--cured-ruby); font-size: .875rem; }
 .cart-trigger-label { display: none; }
 .cart-count-badge { display: grid; place-items: center; min-width: 24px; height: 24px; padding-inline: 5px; border: 1px solid var(--bone-line); border-radius: 50%; font-size: .75rem; }
-.menu-backdrop { position: fixed; inset: 0; z-index: 70; background: var(--scrim); visibility: hidden; opacity: 0; transition: opacity .2s, visibility .2s; }
+.menu-backdrop { position: fixed; inset: 0; z-index: 70; background: var(--scrim); visibility: hidden; opacity: 0; transition: opacity var(--dur-control) var(--ease-cut), visibility var(--dur-control); }
 .menu-backdrop.is-open { visibility: visible; opacity: 1; }
-.menu-drawer { position: fixed; inset: 0 auto 0 0; z-index: 71; width: min(380px, 92vw); padding: 24px 24px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 16px; background: var(--paper-salt); overflow-y: auto; visibility: hidden; transform: translateX(-100%); transition: transform .25s, visibility .25s; border-radius: 0 var(--radius) var(--radius) 0; }
+.menu-drawer { position: fixed; inset: 0 auto 0 0; z-index: 71; width: min(380px, 92vw); padding: 24px 24px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 16px; background: var(--paper-salt); overflow-y: auto; visibility: hidden; transform: translateX(-100%); transition: transform var(--dur-enter) var(--ease-cut), visibility var(--dur-enter); border-radius: 0 var(--radius) var(--radius) 0; }
 .menu-drawer.is-open { visibility: visible; transform: none; }
 .menu-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--bone-line); }
 .menu-link { display: flex; align-items: center; min-height: 56px; border-bottom: 1px solid var(--bone-line); text-decoration: none; }
@@ -151,7 +174,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .catalog-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 
 /* Этикетки товаров: цифра — только реальная выдержка */
-.product-card { display: flex; flex-direction: column; justify-content: space-between; gap: 22px; min-width: 0; padding: 18px; background: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); transition: border-color .18s, box-shadow .18s, transform .18s; }
+.product-card { display: flex; flex-direction: column; justify-content: space-between; gap: 22px; min-width: 0; padding: 18px; background: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); transition: border-color var(--dur-control) var(--ease-cut), box-shadow var(--dur-control) var(--ease-cut), transform var(--dur-control) var(--ease-cut); }
 .product-card:hover { border-color: var(--cured-ruby); box-shadow: var(--lift-shadow); transform: translateY(-2px); }
 .product-card-intro { min-width: 0; }
 .card-media { position: relative; overflow: hidden; border-radius: var(--radius); }
@@ -223,7 +246,7 @@ input[type="range"] { width: 100%; min-height: 36px; accent-color: var(--cured-r
 /* Наборы, выдержка и лавка */
 .scenarios-grid, .bento-3, .delivery-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .scenario-card, .bento-card { display: flex; flex-direction: column; gap: 16px; min-width: 0; padding: 24px; border: 1px solid var(--bone-line); border-radius: var(--radius); background: var(--fat-white); }
-.scenario-card { transition: border-color .18s, box-shadow .18s, transform .18s; }
+.scenario-card { transition: border-color var(--dur-control) var(--ease-cut), box-shadow var(--dur-control) var(--ease-cut), transform var(--dur-control) var(--ease-cut); }
 .scenario-card:hover { border-color: var(--cured-ruby); box-shadow: var(--lift-shadow); transform: translateY(-2px); }
 .scenario-label { font: 600 .8125rem/1.4 var(--font-sans); color: var(--cured-ruby); }
 .scenario-name, .bento-title { font: 700 1.55rem/1.2 var(--font-serif); letter-spacing: -.025em; }
@@ -452,6 +475,126 @@ label.delivery-option-btn { cursor: pointer; }
 .contact-link:first-child small { color: var(--bone-line); }
 .contact-link:first-child:hover { background: var(--cured-ruby-hover); }
 .contact-link:first-child:focus-visible { outline-offset: 3px; }
+
+/* =========================================================================
+   Движение и детали. Скрытое до первого кадра живёт только под
+   [data-motion="on"]: слой движения ставит атрибут сам, а без JavaScript и в
+   профиле «меньше движения» правил не действует — текст существует с первой
+   отрисовки, а не после анимации.
+   ========================================================================= */
+@keyframes nh-rise { from { opacity: 0; transform: translateY(var(--reveal-shift)); } to { opacity: 1; transform: none; } }
+@keyframes nh-light { 0%, 100% { opacity: .5; transform: translate3d(0, 0, 0) scale(1); } 50% { opacity: .78; transform: translate3d(-2%, 1.6%, 0) scale(1.05); } }
+@keyframes nh-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.028) translateY(-.6%); } }
+@keyframes nh-sheen { from { transform: translateX(-130%) skewX(-14deg); } to { transform: translateX(240%) skewX(-14deg); } }
+@keyframes nh-rule { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes nh-pop { 0% { transform: scale(.94); } 60% { transform: scale(1.045); } 100% { transform: scale(1); } }
+/* Варианты вырезания. Прозрачность здесь не гаснет, а сразу равна единице: узел скрыт
+   геометрией, а не растворением, — так срез читается как лезвие, а не как затухание.
+   Сторона, которая едет, стартует с «100% минус bleed», чтобы в нулевом кадре ширина
+   видимой полосы была ровно ноль: inset(100%) оставил бы на краю тонкую полосу текста. */
+@keyframes nh-mask { from { opacity: 1; clip-path: inset(var(--reveal-bleed) calc(100% - var(--reveal-bleed)) var(--reveal-bleed) var(--reveal-bleed)); } to { opacity: 1; clip-path: inset(var(--reveal-bleed)); } }
+@keyframes nh-clip { from { opacity: 1; clip-path: inset(calc(100% - var(--reveal-bleed)) var(--reveal-bleed) var(--reveal-bleed) var(--reveal-bleed)); transform: translateY(calc(var(--reveal-shift) * .5)); } to { opacity: 1; clip-path: inset(var(--reveal-bleed)); transform: none; } }
+/* Первый кадр и последний совпадают: под «меньше движения» глобальный медиазапрос
+   обрывает анимацию на 100%, и состояние обязано остаться нейтральным. */
+
+/* Скрыт до первого кадра только под слоем движения. Состояние показа слой пишет в
+   инлайновые кастомные свойства (--reveal-name, --reveal-i), а правила остаются здесь:
+   длительность, кривая и шаг лесенки не могут разъехаться с токенами шкалы. */
+[data-motion="on"] [data-reveal] { opacity: 0; animation-name: var(--reveal-name, none); animation-duration: var(--dur-enter); animation-timing-function: var(--ease-cut); animation-delay: calc(var(--reveal-i, 0) * var(--stagger)); animation-fill-mode: both; }
+/* Должно стоять после базового правила: специфичность та же, решает порядок.
+   Ход у среза длиннее — одна сторона проходит всю ширину узла, а не 18px. */
+[data-motion="on"] [data-reveal-into] { animation-duration: var(--dur-wipe); }
+.is-pop { animation: nh-pop var(--dur-control) var(--ease-settle); }
+
+/* Зерно бумаги поверх страницы: ни одного клика и ни одного фокуса не перехватывает. */
+body::after { content: ''; position: fixed; inset: 0; z-index: 99; pointer-events: none; opacity: .05; background-image: var(--grain); background-size: 180px 180px; }
+
+/* Первый экран: тёплый свет за прилавком, дыхание ножа на макро-кадре и линейка под локацией.
+   Оба слоя декоративные и обязаны проходить насквозь: псевдоэлемент участвует в
+   hit-testing, и без pointer-events он забирает клик у того, что под ним. */
+.hero-light { position: relative; }
+.hero-light::before { content: ''; position: absolute; z-index: -1; pointer-events: none; inset: -14% auto auto -16%; width: min(62vw, 760px); aspect-ratio: 1 / 1; border-radius: 50%; background: radial-gradient(closest-side, var(--surface-tint), transparent); animation: nh-light var(--dur-ambient) linear infinite; }
+.hero-location { display: inline-flex; align-items: center; gap: 10px; }
+.hero-location::before { content: ''; width: 28px; height: 1px; flex-shrink: 0; background: var(--cured-ruby); transform-origin: left; animation: nh-rule var(--dur-enter) var(--ease-cut) both; }
+.hero-photo { position: relative; }
+.hero-photo::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(155deg, transparent 52%, var(--scrim)); opacity: .13; }
+[data-motion="on"] .hero-photo img { animation: nh-breathe var(--dur-ambient) var(--ease-cut) infinite; transform-origin: 56% 42%; }
+/* Параллакс первого экрана: кадр едет навстречу прокрутке медленнее, колонка текста —
+   быстрее, и они расходятся в разные стороны. Свойство translate, а не transform:
+   анимация transform стоит на дышащем кадре внутри, а в каскаде любое анимированное
+   значение перебивает обычное объявление — статичное смещение просто не доехало бы.
+   Как отдельное свойство оно складывается с дыханием само. */
+[data-motion="on"] .hero-copy { translate: 0 clamp(calc(var(--parallax-limit) * -1), calc(var(--hero-shift, 0px) * var(--parallax-copy)), var(--parallax-limit)); }
+[data-motion="on"] .hero-sign { translate: 0 clamp(calc(var(--parallax-limit) * -1), calc(var(--hero-shift, 0px) * var(--parallax-sign)), var(--parallax-limit)); }
+
+/* Кнопки: блик по основному действию и стрелка, уходящая вперёд под курсором. */
+.btn-primary::after, .add-btn::after, .story-action-btn::after { content: ''; position: absolute; inset: -20%; pointer-events: none; background: linear-gradient(105deg, transparent 38%, var(--fat-white) 50%, transparent 62%); opacity: .2; transform: translateX(-130%) skewX(-14deg); }
+[data-motion="on"] .btn-primary:hover:not(:disabled)::after, [data-motion="on"] .add-btn:hover:not(:disabled)::after, [data-motion="on"] .story-action-btn:hover:not(:disabled)::after { animation: nh-sheen var(--dur-enter) var(--ease-cut); }
+/* Свет под основным действием: ореол собран из того же рубинового тонирования, что и
+   нажатие, поэтому свечение не вводит в палитру новый цвет. Появляется не только под
+   курсором, но и по фокусу — клавиатуре тоже должно быть видно, куда она пришла. */
+[data-motion="on"] .btn-primary, [data-motion="on"] .add-btn { box-shadow: 0 0 0 0 var(--tap-tint); }
+[data-motion="on"] .btn-primary:hover:not(:disabled), [data-motion="on"] .add-btn:hover:not(:disabled),
+[data-motion="on"] .btn-primary:focus-visible, [data-motion="on"] .add-btn:focus-visible { box-shadow: 0 0 24px 3px var(--tap-tint); }
+.arrow, .arrow-up { transition: translate var(--dur-control) var(--ease-cut); }
+.btn-primary:hover .arrow, .btn-secondary:hover .arrow, .bento-btn:hover .arrow, .add-btn:hover .arrow, .story-action-btn:hover .arrow { translate: 3px 0; }
+.arrow-rev { translate: 0; }
+.btn-primary:hover .arrow-rev, .btn-secondary:hover .arrow-rev, .bento-btn:hover .arrow-rev { translate: -3px 0; }
+
+/* Кадр этикетки: блик по стеклу витрины и лёгкий наезд на срез. */
+.card-media img, .story-art img { transition: transform var(--dur-enter) var(--ease-cut); }
+.card-media::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 32%, var(--fat-white) 48%, transparent 64%); opacity: .5; transform: translateX(-120%) skewX(-12deg); }
+[data-motion="on"] .product-card:hover .card-media img, [data-motion="on"] .scenario-card:hover .card-media img { transform: scale(1.035); }
+[data-motion="on"] .product-card:hover .card-media::after, [data-motion="on"] .scenario-card:hover .card-media::after { animation: nh-sheen var(--dur-enter) var(--ease-cut); }
+
+/* Вкладки: одна черта ходит между разделами вместо семи миганий рамки. */
+.site-tabs { position: relative; }
+.tab-underline { position: absolute; left: 0; bottom: 0; width: var(--tab-w, 0); height: 2px; background: var(--cured-ruby); transform: translateX(var(--tab-x, 0)); opacity: 0; transition: transform var(--dur-enter) var(--ease-cut), width var(--dur-enter) var(--ease-cut), opacity var(--dur-control) var(--ease-cut); }
+.site-tabs[data-tabs-ready] .tab-underline { opacity: 1; }
+.site-tabs[data-tabs-ready] button[aria-selected="true"] { border-color: transparent; }
+
+/* Шапка: полоса прочитанного и тень, когда страница ушла от верха. */
+.site-header::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--cured-ruby); transform: scaleX(var(--scroll, 0)); transform-origin: left; }
+.site-header[data-scrolled] { box-shadow: var(--lift-shadow); }
+
+/* Линейка выдержки: шаг — два месяца каталога, высота штриха — сколько позиций
+   с такой выдержкой. Высота приезжает единственным инлайновым свойством
+   `--aging-count`, посчитанным из lib/catalog.json, поэтому геометрия не расходится
+   с полкой. */
+.aging-ruler { display: grid; gap: 14px; margin-top: 32px; padding: 24px; border: 1px solid var(--bone-line); border-radius: var(--radius); background: var(--fat-white); }
+.ruler-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
+.ruler-title { color: var(--cured-ruby); font: 700 1.05rem/1.3 var(--font-serif); }
+.ruler-note { font-size: .75rem; color: var(--graphite-muted); max-width: 52ch; }
+.ruler-track { display: flex; align-items: flex-end; gap: 6px; margin: 0; padding: 0 0 10px; list-style: none; border-bottom: 1px solid var(--cured-ruby); overflow-x: auto; scrollbar-width: thin; scroll-padding-inline: 6px; }
+.ruler-cell { display: grid; justify-items: center; gap: 8px; flex: 0 0 auto; width: 46px; }
+.ruler-tick { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; width: 100%; min-height: 76px; padding-top: 4px; border-radius: var(--radius); text-decoration: none; color: var(--cured-ruby); transition: background-color var(--dur-control) var(--ease-cut); }
+.ruler-tick:hover, .ruler-tick:focus-visible { background: var(--paper-salt); }
+.ruler-stroke { width: 12px; border-radius: var(--radius); background: var(--surface-tint); border: 1px solid var(--bone-line); height: calc(6px + var(--aging-count, 1) * 6px); transition: background-color var(--dur-control) var(--ease-cut), border-color var(--dur-control) var(--ease-cut); }
+.ruler-tick:hover .ruler-stroke, .ruler-tick:focus-visible .ruler-stroke { background: var(--cured-ruby); border-color: var(--cured-ruby); }
+[data-motion="on"] .ruler-tick:hover .ruler-stroke { animation: nh-pop var(--dur-control) var(--ease-settle); }
+.ruler-count { font-size: .8125rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ruler-blank { display: block; width: 12px; height: 6px; border-radius: var(--radius); background: var(--bone-line); }
+.ruler-month { font-size: .6875rem; color: var(--graphite-muted); font-variant-numeric: tabular-nums; }
+.ruler-cell.is-major .ruler-month { color: var(--cured-ruby); font-weight: 600; }
+.ruler-foot { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: .75rem; color: var(--graphite-muted); }
+
+/* Шкала весов: стрелка терминала едет по тем же границам, что и ползунок. Дуга
+   нормирована pathLength=100, поэтому заливка — это проценты шкалы, а не пиксели. */
+.scale-gauge { display: grid; justify-items: center; gap: 4px; }
+.gauge-dial { width: min(100%, 260px); height: auto; }
+.gauge-needle { transform: rotate(var(--needle, -60deg)); transform-box: view-box; transform-origin: 100px 88px; transition: transform var(--dur-control) var(--ease-settle); }
+.gauge-track, .gauge-arc { fill: none; stroke-width: 5; stroke-linecap: round; }
+.gauge-track { stroke: var(--graphite-muted); }
+.gauge-arc { stroke: var(--paper-salt); stroke-dasharray: 100; stroke-dashoffset: calc(100 - var(--gauge-fill, 0)); transition: stroke-dashoffset var(--dur-control) var(--ease-settle); }
+.gauge-tick { stroke: var(--graphite-muted); stroke-width: 2; }
+.gauge-stem { stroke: var(--paper-salt); stroke-width: 2.5; stroke-linecap: round; }
+.gauge-hub { fill: var(--paper-salt); }
+.gauge-caption { display: flex; justify-content: space-between; gap: 12px; width: min(100%, 236px); font-size: .75rem; color: var(--bone-line); font-variant-numeric: tabular-nums; }
+.magnet-btn { transition: background-color var(--dur-control) var(--ease-cut), color var(--dur-control) var(--ease-cut), border-color var(--dur-control) var(--ease-cut); }
+/* Чипы отделов меняют местами заливку и надпись: без перехода это щёлчок, а не нажатие.
+   Тот же набор токенов, что у чипов веса, — контролы одного ряда должны ощущаться одинаково. */
+.dept-tabs button { transition: background-color var(--dur-control) var(--ease-cut), color var(--dur-control) var(--ease-cut), border-color var(--dur-control) var(--ease-cut), transform var(--dur-press) var(--ease-settle); }
+.dept-tabs button:active:not(:disabled) { transform: scale(.97); }
 
 @media (min-width: 680px) {
   .container { padding-inline: 32px; }

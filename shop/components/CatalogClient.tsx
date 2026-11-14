@@ -4,20 +4,12 @@ import { useEffect, useId, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Product } from '@/lib/types';
 import { CATEGORY_TITLES, DEPT_ORDER, type CatalogPreview } from '@/lib/products';
+import { AGING_BANDS, agingMatches } from '@/lib/aging';
 import ProductCard from './ProductCard';
 import { ProductArt } from './Art';
+import { popElement } from './Motion';
+import { revealProps, revealInto } from '@/lib/reveal';
 
-const AGING = [{ value: '8-12', label: '8–12\u00A0мес.' }, { value: '14-18', label: '14–18\u00A0мес.' }, { value: '20-22', label: '20–22\u00A0мес.' }, { value: '24', label: '24+ мес.' }];
-function ageMatches(months: number | null, value: string) {
-  if (!value || value === 'all') return true;
-  if (!months) return false;
-  if (value === '24' || value === '24+') return months >= 24;
-  if (/^\d+-\d+$/.test(value)) {
-    const [min, max] = value.split('-').map(Number);
-    return months >= min && months <= max;
-  }
-  return months === Number(value);
-}
 function normalize(value: string) { return value.toLocaleLowerCase('ru').replace(/ё/g, 'е').trim(); }
 function alignDepartment(bar: HTMLDivElement | null, target: HTMLElement | null) {
   if (!bar || !target) return;
@@ -72,12 +64,12 @@ export default function CatalogClient({ products, previews, serverReservedPieceI
     const haystack = normalize(`${product.title} ${product.description} ${CATEGORY_TITLES[product.category].title} ${product.agingMonths ?? ''}`);
     return words.every((word) => haystack.includes(word));
   }), [products, words]);
-  const matches = searched.filter((product) => ageMatches(product.agingMonths, aging));
+  const matches = searched.filter((product) => agingMatches(product.agingMonths, aging));
   const searchedPreviews = useMemo(() => previews.filter((preview) => {
     const haystack = normalize(`${preview.title} ${preview.description} ${CATEGORY_TITLES[preview.category].title} ${preview.agingMonths ?? ''}`);
     return words.every((word) => haystack.includes(word));
   }), [previews, words]);
-  const previewMatches = searchedPreviews.filter((preview) => ageMatches(preview.agingMonths, aging));
+  const previewMatches = searchedPreviews.filter((preview) => agingMatches(preview.agingMonths, aging));
   const countFor = (cat: string) => matches.filter((product) => product.category === cat).length + previewMatches.filter((preview) => preview.category === cat).length;
   const departments = DEPT_ORDER.filter((department) => products.some((product) => product.category === department.cat) || previews.some((preview) => preview.category === department.cat));
   const firstMatch = departments.find((department) => countFor(department.cat) > 0);
@@ -87,7 +79,7 @@ export default function CatalogClient({ products, previews, serverReservedPieceI
   const currentPreviews = previewMatches.filter((preview) => preview.category === category);
   const applicable = searched.filter((product) => product.category === category);
   const applicablePreviews = searchedPreviews.filter((preview) => preview.category === category);
-  const ageOptions = AGING.filter((option) => [...applicable, ...applicablePreviews].some((entry) => ageMatches(entry.agingMonths, option.value)));
+  const ageOptions = AGING_BANDS.filter((option) => [...applicable, ...applicablePreviews].some((entry) => agingMatches(entry.agingMonths, option.value)));
   const filtered = Boolean(q || aging !== 'all');
   function reset() { update({ q: '', aging: '', category: '' }); searchRef.current?.focus(); }
 
@@ -125,7 +117,7 @@ export default function CatalogClient({ products, previews, serverReservedPieceI
         {departments.map((department) => {
           const count = countFor(department.cat);
           return <button key={department.cat} type="button" aria-pressed={category === department.cat} disabled={Boolean(q) && !count}
-            onFocus={(event) => alignDepartment(departmentsRef.current, event.currentTarget)} onClick={() => update({ category: department.cat, aging: '' })}>{CATEGORY_TITLES[department.cat].title}<span className="dept-count">{count}</span></button>;
+            onFocus={(event) => alignDepartment(departmentsRef.current, event.currentTarget)} onClick={(event) => { popElement(event.currentTarget); update({ category: department.cat, aging: '' }); }}>{CATEGORY_TITLES[department.cat].title}<span className="dept-count">{count}</span></button>;
         })}
       </div>
       {q && <p className="catalog-hint" role="status">По всей лавке найдено: {matches.length + previewMatches.length}. {items.length + currentPreviews.length > 0 ? `Показана категория «${CATEGORY_TITLES[category].title}». Другие совпадения — в категориях выше.` : 'Попробуйте другое название или сбросьте фильтры.'}</p>}
@@ -143,9 +135,9 @@ export default function CatalogClient({ products, previews, serverReservedPieceI
 
 function PreviewCard({ preview, Heading }: { preview: CatalogPreview; Heading: 'h3' | 'h4' }) {
   return (
-    <article className="product-card" data-preview-id={preview.id}>
+    <article className="product-card" data-preview-id={preview.id} {...revealProps}>
       <div className="product-card-intro">
-        <div className="card-media"><ProductArt product={preview} /></div>
+        <div className="card-media" {...revealInto('clip')}><ProductArt product={preview} /></div>
         <div className="card-header-row"><Heading className="card-title">{preview.title}</Heading></div>
         <div className="card-meta">{preview.agingMonths ? `${preview.agingMonths}\u00A0мес. выдержки` : CATEGORY_TITLES[preview.category].short}</div>
         {preview.description && <p className="card-desc">{preview.description}</p>}

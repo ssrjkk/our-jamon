@@ -3,6 +3,7 @@ import { verifyTbankNotification } from '@/lib/tbank';
 import { getOrder, mutateOrder } from '@/lib/orders';
 import { paymentIdsOf } from '@/lib/payment-registry';
 import { syncOrderToOneC } from '@/lib/onec';
+import { logServerNotice } from '@/lib/server-log';
 
 export async function POST(req: NextRequest) {
   let value: unknown;
@@ -22,8 +23,19 @@ export async function POST(req: NextRequest) {
   // PaymentId сюда не входит: банк сообщает его и в тех уведомлениях, чей Init-ответ магазин
   // не успел прочитать (таймаут, 5xx с уже выписанным id). Требовать «знакомый id» означало
   // вечное 409 по фактически списанным деньгам.
-  if (!order || order.demo || !paymentId || order.total === null
-    || !Number.isSafeInteger(amount) || amount !== order.total * 100) return NextResponse.json({ error: 'Payment does not match order' }, { status: 409 });
+  const mismatch = !order ? `заказа ${body.OrderId} нет в базе`
+    : order.demo ? 'заказ создан в демо-режиме'
+    : !paymentId ? 'уведомление без PaymentId'
+    : order.total === null ? 'у заказа нет итоговой суммы'
+    : !Number.isSafeInteger(amount) ? `неразборная сумма ${String(body.Amount)}`
+    : amount !== order.total * 100 ? `${amount} коп. не совпало с итогом заказа ${order.total * 100} коп.`
+    : null;
+  if (mismatch || !order) {
+    // Подпись уже сошлась, значит банк сообщил о деньгах, которым мы не нашли пары. Отказ
+    // остаётся отказом, но без строки в журнале лавка про такие деньги никогда не узнает.
+    logServerNotice('tbank-notify', `подписанное уведомление отклонено (${mismatch}): платёж ${paymentId || 'без id'}, статус ${body.Status}`);
+    return NextResponse.json({ error: 'Payment does not match order' }, { status: 409 });
+  }
   const success = body.Success === true || body.Success === 'true';
   let changed = false;
   const updated = await mutateOrder(order.id, (current) => {

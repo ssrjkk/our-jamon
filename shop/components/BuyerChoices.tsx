@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { revealInto } from '@/lib/reveal';
 
 const CHOICES = [
   { id: 'self', label: 'Для себя', photos: [
@@ -17,7 +18,7 @@ export function ChoicePhotos() {
   return <>
     <p className="photo-choice-hint">На небольшом экране фотографии можно листать в сторону.</p>
     <div className="photo-choice-gallery" role="region" aria-label="Фотографии подборок из лавки" tabIndex={0}>
-      {CHOICES.map((choice) => <article key={choice.id} className="photo-choice-group" data-choice-category={choice.id}>
+      {CHOICES.map((choice) => <article key={choice.id} className="photo-choice-group" data-choice-category={choice.id} {...revealInto('clip')}>
         <h3 className="photo-choice-title">{choice.label}</h3>
         <div className="photo-choice-images">{choice.photos.map((photo) => <figure key={photo.src}>
           <img src={photo.src} alt={photo.alt} width="720" height="1280" loading="lazy" decoding="async" />
@@ -30,7 +31,7 @@ export function ChoicePhotos() {
 
 export default function BuyerChoices() {
   return <section className="section" aria-labelledby="buyer-choices-heading"><div className="container">
-    <div className="section-head"><h2 id="buyer-choices-heading" className="section-title">Выбор покупателей</h2><p className="section-subtitle">Для себя, к общему столу или на подарок — настоящие подборки из нашей лавки.</p></div>
+    <div className="section-head" {...revealInto('mask')}><h2 id="buyer-choices-heading" className="section-title">Выбор покупателей</h2><p className="section-subtitle">Для себя, к общему столу или на подарок — настоящие подборки из нашей лавки.</p></div>
     <ChoicePhotos />
     <div className="photo-choice-footer"><p>На фото — примеры выбора. Состав, наличие и стоимость подберём отдельно под ваш запрос.</p><div className="hero-cta-row"><Link href="/catalog" className="btn-primary">Выбрать в каталоге</Link><a href="tel:+79068960099" className="btn-secondary">Уточнить подборку</a></div></div>
   </div></section>;

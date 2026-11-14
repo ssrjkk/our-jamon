@@ -78,6 +78,25 @@ export default function AdminClient() {
     return () => controller.abort();
   }, [load]);
 
+  // Заказ, который лавка замечает только после нажатия «Обновить заказы», — это потерянная
+  // оплата: покупатель ждёт звонка, а менеджер его не делает. Открытая панель опрашивает
+  // список сама. Тик пропускается, пока идёт любое действие или вкладка скрыта, а
+  // возвращение на панель вызывает загрузку сразу, не дожидаясь следующего интервала.
+  useEffect(() => {
+    if (!authed) return;
+    const poll = () => {
+      if (document.visibilityState !== 'visible' || loading || sessionPending.current || actionPending.current || busyId !== null) return;
+      void load();
+    };
+    const timer = setInterval(poll, 20000);
+    const onVisible = () => { if (document.visibilityState === 'visible') poll(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [authed, busyId, loading, load]);
+
   // Во время запроса поле ввода отключено, и focus() на нём молча не работает:
   // переносим возврат фокуса на рендер после снятия sessionBusy.
   useEffect(() => {

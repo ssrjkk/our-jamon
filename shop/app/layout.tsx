@@ -6,6 +6,7 @@ import { isDemoMode, siteUrl } from '@/lib/config';
 import { CartProvider } from '@/components/CartContext';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
+import MotionLayer from '@/components/Motion';
 import './globals.css';
 
 // The logo is outlined; web headings use Playfair until a licensed Pizza Hut font is supplied.
@@ -82,6 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Suspense fallback={null}><DemoNotice /></Suspense>
           {children}
           <SiteFooter />
+          <MotionLayer />
         </CartProvider>
       </body>
     </html>

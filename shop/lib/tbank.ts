@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { equalSecrets } from './admin';
 import { isDemoMode } from './config';
+import { logServerError } from './server-log';
 import { CartItemResolved } from './types';
 
 const TBANK_INIT_URL = 'https://securepay.tinkoff.ru/v2/Init';
@@ -72,7 +73,10 @@ export async function createTbankPayment(options: {
       || !('PaymentURL' in data) || typeof data.PaymentURL !== 'string' || !/^https:\/\//.test(data.PaymentURL)
       || !('PaymentId' in data) || !['string', 'number'].includes(typeof data.PaymentId)) return { ok: false, error: 'payment_unavailable', ...(reported ? { paymentId: reported } : {}) };
     return { ok: true, paymentUrl: data.PaymentURL, paymentId: String(data.PaymentId) };
-  } catch {
+  } catch (error) {
+    // Банк не отвечал, TLS встал или таймаут истёк — покупатель видит один и тот же
+    // отказ, поэтому различие сохраняется только в журнале сервера.
+    logServerError('tbank-init', error);
     return { ok: false, error: 'payment_unavailable' };
   }
 }

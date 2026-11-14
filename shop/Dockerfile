@@ -24,4 +24,7 @@ COPY --from=builder --chown=node:node /app/public ./public
 USER node
 VOLUME ["/app/data"]
 EXPOSE 3000
+# Готовность проверяет сам оркестратор: контейнер с упавшей базой или не поднявшимся
+# сервером не должен притворяться живым перед reverse-proxy и мониторингом.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 CMD ["node", "server.js"]

@@ -32,6 +32,7 @@ Browser tests use installed Google Chrome and an isolated SQLite database under 
 | `ADMIN_PASSWORD` | Administrator secret, at least 16 characters |
 | `ORDERS_DB_PATH` | Persistent SQLite file; default `data/orders.sqlite` |
 | `ORDERS_LEGACY_PATH` | Optional legacy JSON to import; otherwise `orders.json` beside the database |
+| `RESERVATION_TTL_HOURS` | Whole hours an unpaid order holds a piece; default 24 |
 | `ONEC_API_URL`, `ONEC_TOKEN` | Live catalog endpoint and optional Bearer token |
 | `TBANK_TERMINAL_KEY`, `TBANK_PASSWORD` | Live acquiring credentials |
 | `TBANK_TAXATION`, `TBANK_VAT` | Actual fiscal settings agreed with the bank and seller |
@@ -48,6 +49,20 @@ A signed notification marks an order paid when the terminal signature verifies a
 
 Payment links are copied and passed to customers manually. Automatic messenger delivery and CDEK point booking are not implemented; the interface does not claim otherwise.
 
+### Rate limiting and the reverse proxy
+
+`POST /api/cart` (60 requests/minute), `POST /api/orders` (20/minute) and `POST /api/admin/login` (10 failed passwords/15 minutes plus a shared 30/hour bucket) answer `429` with `Retry-After`. The bucket key is the address the proxy writes into `X-Forwarded-For`; a request without any proxy header has no known address and is not throttled, so several tabs or one NAT are never blocked together. That means the limits only exist when the proxy in front of the shop sets `X-Forwarded-For` (or `X-Real-IP`) to the real client — behind nginx, `proxy_set_header X-Forwarded-For $remote_addr;`. Only the last hop is counted: everything to its left is written by the client and cannot buy extra quota. The administrator login bucket is fed by failed attempts only, so a correct password never spends it.
+
+A piece held by an unpaid order returns to the storefront `RESERVATION_TTL_HOURS` after the last write to that order, not after the order was created: weight confirmation restarts the clock, a forgotten checkout releases the piece. Expired reservations are dropped on any read or write, so no separate cron process is needed. A paid order keeps its piece until it is cancelled.
+
+The open administrator panel refreshes its order list by itself: every 20 seconds and immediately when the tab becomes visible again. A tick is skipped while any action is running, so polling never overwrites an in-flight weight confirmation or cancel.
+
+### Health endpoint
+
+`GET /api/health` is public and answers `200` while the order database is readable, `503` when it is not; `Cache-Control: no-store` keeps each check fresh. The body contains only the mode, the database state and how the catalog is filled (`origin`, `notice`, `checkedAt`) — no orders, names, phones or file paths. `Dockerfile` points its `HEALTHCHECK` at this route, so a container with an unreadable database is reported unhealthy instead of pretending to be alive. Reasons for a failure stay in the server log.
+
+Server-side refusals that the storefront must not explain (`503` from cart, order creation, order update, payment initialization, a signed bank notification with no matching order) are written to the server log under a scope (`[cart]`, `[tbank-notify]`, …) with the original error; the customer keeps receiving the generic message.
+
 ## Storage and deployment
 
 SQLite uses transactions, WAL and a unique piece reservation. An existing legacy JSON is imported once and remains untouched; invalid legacy data fails instead of resetting orders. Keep the SQLite file on a persistent local disk. Use SQLite's backup API, or stop the server before copying the database and WAL; do not copy a changing database independently. This deployment is for one host, not a stateless multi-region platform.
@@ -61,7 +76,17 @@ The image uses Node 24, runs as a non-root user and does not bundle order data o
 
 ## По-русски
 
-По умолчанию магазин работает в явном демо-режиме без реальных платежей и отправки в 1С. Для рабочего режима нужны настоящая выгрузка и цены, реквизиты, согласованные тарифы и настройки эквайринга; вводите секреты локально, а не в переписке.
+Магазин по умолчанию работает в живом режиме: `SHOP_MODE=demo` нужно выставить явно, иначе лавка ждёт настоящую выгрузку 1С, реквизиты и настройки эквайринга. Для рабочего режима нужны реальные цены, согласованные тарифы и реквизиты продавца; секреты вводите локально, а не в переписке.
+
+Публичные ручки `POST /api/cart` (60 в минуту), `POST /api/orders` (20 в минуту) и вход администратора (10 неверных паролей за 15 минут плюс общий счётчик на 30 в час) отвечают `429` с `Retry-After`. Окно считается по адресу из `X-Forwarded-For` — берётся только последний адрес в цепочке, всё левее написала сама сторона, отправившая запрос. Без заголовка от прокси адрес неизвестен, и лимит не применяется: несколько вкладок одного покупателя или целый NAT не окажутся заблокированными. Значит лимиты работают только тогда, когда прокси перед магазином проставляет `X-Forwarded-For` (у nginx — `proxy_set_header X-Forwarded-For $remote_addr;`). Общий счётчик входа пополняется только неудачными попытками, поэтому верный пароль его не расходует.
+
+Кусок остаётся за неоплаченным заказом `RESERVATION_TTL_HOURS` часов, считая от последней записи в этот заказ: согласование веса даёт покупателю новое время, а забытый заказ освобождает полку сам, без отдельного планировщика. Просрочка снимается при любом обращении к базе. Оплаченный заказ удерживает кусок до отмены.
+
+Открытая админка обновляет список заказов сама — каждые 20 секунд и сразу при возврате на вкладку. Такт пропускается, пока идёт любое действие, поэтому опрос не перезаписывает подтверждение веса или отмену, которые менеджер ещё не закончил.
+
+`GET /api/health` — публичная ручка готовности: `200`, пока читается база заказов, и `503`, если нет; ответ всегда с `Cache-Control: no-store`. Наружу выходят только режим работы, состояние базы и источник каталога (`origin`, `notice`, `checkedAt`) — без заказов, имён, телефонов и путей к файлам. На неё же смотрит `HEALTHCHECK` в Dockerfile, поэтому контейнер с нерабочей базой не притворяется живым.
+
+Отказ, о котором покупатель не должен знать подробностей (503 корзины, создания и правки заказа, сбой банка, подписанное уведомление без пары), записывается в журнал сервера с областью (`[cart]`, `[tbank-notify]` и т. д.) и исходной причиной; на витрине остаётся общий вежливый текст.
 
 Имя, телефон и адрес заказа доступны только по его секретной ссылке/защищённой cookie или администратору. Веса и неизвестная стоимость доставки подтверждаются одним действием. Если у позиции цена за штуку, а не за килограмм, подтверждение веса её не меняет.
 

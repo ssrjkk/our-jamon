@@ -6,6 +6,8 @@ import { CheckoutError, initializeOrderPayment } from '@/lib/checkout';
 import { deliveryCostFor } from '@/lib/delivery';
 import { weightPriceOf } from '@/lib/price';
 import { isDemoMode, requestOriginAllowed } from '@/lib/config';
+import { guardAttempts } from '@/lib/rate-limit';
+import { logServerError } from '@/lib/server-log';
 import { syncOrderToOneC } from '@/lib/onec';
 import { isAdmin } from '@/lib/admin';
 
@@ -76,8 +78,12 @@ export async function PATCH(req: NextRequest, { params }: Context) {
     }
     return NextResponse.json({ error: 'Неизвестное действие.' }, { status: 400 });
   } catch (error) {
-    if (error instanceof CheckoutError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof CheckoutError) {
+      if (error.status >= 500) logServerError('order-update', error);
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     if (error instanceof OrderConflict) return NextResponse.json({ error: error.message }, { status: 409 });
+    logServerError('order-update', error);
     return NextResponse.json({ error: 'Не удалось обновить заказ.' }, { status: 503 });
   }
 }
@@ -93,6 +99,10 @@ export async function POST(req: NextRequest, { params }: Context) {
   if (!order) return NextResponse.json({ error: 'Заказ не найден.' }, { status: 404 });
   try {
     if (body.action === 'retry-payment') {
+      // Повтор — это звонок в банк и запись в базу. Зависшая у покупателя кнопка не
+      // должна превращаться в очередь инициаций с одного адреса.
+      const limited = guardAttempts('payment-retry', req.headers, 10, 60000);
+      if (limited) return limited;
       const updated = await initializeOrderPayment(id, process.env.SHOP_URL || req.nextUrl.origin);
       return NextResponse.json({ ok: Boolean(updated?.paymentUrl && !updated.paymentError) });
     }
@@ -104,6 +114,10 @@ export async function POST(req: NextRequest, { params }: Context) {
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof OrderConflict ? error.message : 'Оплата временно недоступна.' }, { status: error instanceof OrderConflict ? 409 : 503 });
+    if (error instanceof OrderConflict) return NextResponse.json({ error: error.message }, { status: 409 });
+    // Покупатель уже нажал «Оплатить» и получил отказ: без записи в журнале лавка не
+    // узнает, отказал ли банк, истёк ли таймаут или упала база.
+    logServerError('order-payment', error);
+    return NextResponse.json({ error: 'Оплата временно недоступна.' }, { status: 503 });
   }
 }

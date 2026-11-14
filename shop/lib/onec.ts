@@ -1,4 +1,5 @@
 import { isDemoMode } from './config';
+import { logServerError } from './server-log';
 import { mutateOrder } from './orders';
 import { Order } from './types';
 
@@ -17,7 +18,10 @@ export async function pushOrderToOneC(order: Order): Promise<{ ok: boolean; demo
       signal: AbortSignal.timeout(10000),
     });
     return response.ok ? { ok: true } : { ok: false, error: `one_c_http_${response.status}` };
-  } catch {
+  } catch (error) {
+    // На заказе остаётся код причины, а чем именно умер запрос — таймаутом, TLS или
+    // отсутствием маршрута — видно только в журнале.
+    logServerError('onec-push', error);
     return { ok: false, error: 'one_c_unavailable' };
   }
 }

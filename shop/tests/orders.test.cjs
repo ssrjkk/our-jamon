@@ -4,7 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
-const { createSystem, root } = require('./helpers.cjs');
+const sqlite = require('node:sqlite');
+const { createSystem, captureServerLog, root } = require('./helpers.cjs');
 
 const password = 'test-only-admin-passphrase';
 const bankPassword = 'test-only-bank-passphrase';
@@ -671,4 +672,152 @@ test('выгрузка 1С без необязательных полей ост
   const refused = await loadCatalog();
   assert.equal(refused.origin, 'built-in', 'выгрузка без названий прошла как годная');
   assert.match(refused.notice, /invalid product data/);
+}));
+
+// Срок резерва (находка №3): часы отсчитываются от последней записи заказа, поэтому
+// тест двигает штамп второй связью к тому же файлу — ждать сутки никто не будет.
+function ageReservation(pieceId, hours) {
+  const db = new sqlite.DatabaseSync(process.env.ORDERS_DB_PATH);
+  db.prepare('UPDATE reservations SET reserved_at = ? WHERE piece_id = ?')
+    .run(new Date(Date.now() - hours * 3600000).toISOString(), pieceId);
+  db.close();
+}
+
+function pieceFixture() {
+  return { productId: 'nf-00000213', kind: 'piece', pieceId1c: 'nf-00000213-230' };
+}
+
+// Сборка заказа без обращения к базе: тест старой схемы обязан наполнить таблицы сам,
+// иначе магазин создаст современную схему раньше, чем проверка увидит прошлое.
+function storedPieceOrder(s, id, status) {
+  const products = withPiece(s.load('lib/products.ts').PRODUCTS, 'nf-00000213-230', 230);
+  const items = s.load('lib/orders.ts').resolveCart([pieceFixture()], new Set(), products).items;
+  const now = new Date().toISOString();
+  return { id, accessToken: crypto.randomBytes(16).toString('hex'), createdAt: now, consentedAt: now, demo: true,
+    customer: { name: 'Test customer', phone: '+79991234567' }, delivery: { id: 'pickup', name: 'Самовывоз', cost: 0 },
+    messenger: 'SMS', items, itemsSum: items.reduce((sum, item) => sum + item.price, 0), total: items.reduce((sum, item) => sum + item.price, 0), status };
+}
+
+test('забытый заказ освобождает кусок по сроку, а запись хозяина перезапускает часы', () => withSystem(async s => {
+  const { saveOrder, reservedPieceIds, updateOrder } = s.load('lib/orders.ts');
+  // Заказ появился десять часов назад: штамп резерва обязан браться от последнего дела,
+  // а не от времени создания, иначе просрочка считается по устаревшей дате.
+  const stale = { ...await storedPieceOrder(s, 'NH-TTL-A', 'awaiting_payment'), createdAt: new Date(Date.now() - 10 * 3600000).toISOString() };
+  await saveOrder(stale);
+  assert.deepEqual([...await reservedPieceIds()], ['nf-00000213-230']);
+  await assert.rejects(saveOrder(await storedPieceOrder(s, 'NH-TTL-B', 'awaiting_payment')), /зарезервирован/i);
+  ageReservation('nf-00000213-230', 23);
+  assert.deepEqual([...await reservedPieceIds()], ['nf-00000213-230'], 'кусок ушёл раньше суточного срока');
+  // Любое действие по заказу пересохраняет резерв со свежим штампом: согласование веса
+  // хозяином не должно обрывать отсчёт, и наоборот — забытый заказ досидит свои сутки.
+  await updateOrder('NH-TTL-A', { status: 'awaiting_payment' });
+  const rows = new sqlite.DatabaseSync(process.env.ORDERS_DB_PATH);
+  const stamps = rows.prepare('SELECT reserved_at FROM reservations').all().map((row) => Date.parse(row.reserved_at));
+  rows.close();
+  assert.equal(stamps.length, 1);
+  assert.ok(stamps.every((stamp) => Date.now() - stamp < 60000), 'запись по заказу не перезапустила часы резерва');
+  await assert.rejects(saveOrder(await storedPieceOrder(s, 'NH-TTL-B', 'awaiting_payment')), /зарезервирован/i);
+  ageReservation('nf-00000213-230', 25);
+  assert.deepEqual([...await reservedPieceIds()], [], 'сутки спустя кусок остался за забытым заказом');
+  await saveOrder(await storedPieceOrder(s, 'NH-TTL-C', 'awaiting_payment'));
+  assert.deepEqual([...await reservedPieceIds()], ['nf-00000213-230'], 'освободившийся кусок не удалось взять снова');
+}));
+
+test('оплаченный заказ держит кусок, отмена и просрочка несогласованного освобождают', () => withSystem(async s => {
+  const { saveOrder, reservedPieceIds, updateOrder } = s.load('lib/orders.ts');
+  await saveOrder(await storedPieceOrder(s, 'NH-TTL-PAID', 'paid'));
+  ageReservation('nf-00000213-230', 100);
+  assert.deepEqual([...await reservedPieceIds()], ['nf-00000213-230'], 'оплаченный кусок отпущен по сроку: покупатель ждёт хамон, которого уже нет на полке');
+  await assert.rejects(saveOrder(await storedPieceOrder(s, 'NH-TTL-LATE', 'awaiting_payment')), /зарезервирован/i, 'чужой оплаченный кусок освободился для нового заказа');
+  await updateOrder('NH-TTL-PAID', { status: 'cancelled' });
+  assert.deepEqual([...await reservedPieceIds()], [], 'отмена не сняла резерв');
+
+  await saveOrder(await storedPieceOrder(s, 'NH-TTL-CONF', 'awaiting_confirmation'));
+  ageReservation('nf-00000213-230', 25);
+  assert.deepEqual([...await reservedPieceIds()], [], 'несогласованный заказ пережил свой срок');
+}));
+
+test('срок резерва берётся из RESERVATION_TTL_HOURS, а неверное значение — отказ', () => withSystem(async s => {
+  const { saveOrder, reservedPieceIds } = s.load('lib/orders.ts');
+  await saveOrder(await storedPieceOrder(s, 'NH-TTL-TWO', 'awaiting_payment'));
+  ageReservation('nf-00000213-230', 1.5);
+  assert.deepEqual([...await reservedPieceIds()], ['nf-00000213-230'], 'кусок отпущен раньше срока из настройки');
+  ageReservation('nf-00000213-230', 2.5);
+  assert.deepEqual([...await reservedPieceIds()], [], 'настройка на два часа не применена');
+  await saveOrder(await storedPieceOrder(s, 'NH-TTL-THREE', 'awaiting_payment'));
+  ageReservation('nf-00000213-230', 1);
+  assert.deepEqual([...await reservedPieceIds()], ['nf-00000213-230'], 'резерв истёр раньше срока из настройки');
+  for (const value of ['0', '-5', '2.5', 'сутки', 'NaN']) {
+    process.env.RESERVATION_TTL_HOURS = value;
+    await assert.rejects(reservedPieceIds(), /RESERVATION_TTL_HOURS/, `значение «${value}» принято молча`);
+  }
+  process.env.RESERVATION_TTL_HOURS = '';
+  assert.deepEqual([...await reservedPieceIds()], ['nf-00000213-230'], 'пустое значение не вернулось к суткам');
+}, { env: { RESERVATION_TTL_HOURS: '2' } }));
+
+test('база до срока резерва получает штамп времени из заказа', () => withSystem(async s => {
+  const file = process.env.ORDERS_DB_PATH;
+  const hoursAgo = (hours) => new Date(Date.now() - hours * 3600000).toISOString();
+  const stale = { ...storedPieceOrder(s, 'NH-TTL-OLD', 'awaiting_payment'), createdAt: hoursAgo(30) };
+  const raw = new sqlite.DatabaseSync(file);
+  raw.exec('CREATE TABLE orders (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, payload TEXT NOT NULL CHECK(json_valid(payload)))');
+  raw.exec('CREATE TABLE reservations (piece_id TEXT PRIMARY KEY, order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE)');
+  raw.prepare('INSERT INTO orders (id, created_at, payload) VALUES (?, ?, ?)').run(stale.id, stale.createdAt, JSON.stringify(stale));
+  raw.prepare('INSERT INTO reservations (piece_id, order_id) VALUES (?, ?)').run('nf-00000213-230', stale.id);
+  raw.close();
+  const { reservedPieceIds, saveOrder, readOrders } = s.load('lib/orders.ts');
+  assert.deepEqual([...await reservedPieceIds()], [], 'просроченный резерв старой базы не выпускается');
+  const check = new sqlite.DatabaseSync(file);
+  const columns = check.prepare('PRAGMA table_info(reservations)').all().map((row) => String(row.name));
+  check.close();
+  assert.ok(columns.includes('reserved_at'), 'колонка срока не появилась при открытии старой базы');
+  assert.equal((await readOrders()).length, 1, 'старые заказы не пережили достройку схемы');
+  await saveOrder(await storedPieceOrder(s, 'NH-TTL-AFTER', 'awaiting_payment'));
+  assert.deepEqual([...await reservedPieceIds()], ['nf-00000213-230'], 'освободившийся после миграции кусок не берётся новым заказом');
+}));
+
+// Резерв без штампа — только наследие старой базы: выпускать его по часам нечем, поэтому
+// просрочку он переживает, а датировку ему ставит миграция схемы.
+test('резерв без штампа времени не выпускается молча', () => withSystem(async s => {
+  const { saveOrder, reservedPieceIds } = s.load('lib/orders.ts');
+  await saveOrder(await storedPieceOrder(s, 'NH-TTL-NOSTAMP', 'awaiting_payment'));
+  const rows = new sqlite.DatabaseSync(process.env.ORDERS_DB_PATH);
+  rows.prepare('UPDATE reservations SET reserved_at = ? WHERE piece_id = ?').run('', 'nf-00000213-230');
+  rows.prepare('UPDATE orders SET created_at = ? WHERE id = ?').run(new Date(Date.now() - 30 * 3600000).toISOString(), 'NH-TTL-NOSTAMP');
+  rows.close();
+  assert.deepEqual([...await reservedPieceIds()], ['nf-00000213-230'], 'пустой штамп посчитан просрочкой: кусок снят с резерва без даты');
+}));
+
+// Просрочка снимается и при записи нового заказа, а не только при чтении резервов:
+// покупатель жмёт «оформить» не дождавшись, пока витрина опросит полку.
+test('оформление заказа забирает кусок у просроченного бронирования без чтения резервов', () => withSystem(async s => {
+  const { saveOrder, reservedPieceIds } = s.load('lib/orders.ts');
+  await saveOrder(await storedPieceOrder(s, 'NH-TTL-DEAD', 'awaiting_payment'));
+  ageReservation('nf-00000213-230', 25);
+  await saveOrder(await storedPieceOrder(s, 'NH-TTL-ALIVE', 'awaiting_payment'));
+  const rows = new sqlite.DatabaseSync(process.env.ORDERS_DB_PATH);
+  const owner = rows.prepare('SELECT order_id FROM reservations WHERE piece_id = ?').get('nf-00000213-230');
+  rows.close();
+  assert.equal(owner?.order_id, 'NH-TTL-ALIVE', 'запись заказа не выпускает просрочку: кусок остался за мёртвым заказом');
+  assert.deepEqual([...await reservedPieceIds()], ['nf-00000213-230']);
+}));
+
+// Подписанное уведомление без пары — это деньги, о которых лавка иначе не узнает (№9).
+test('журнал: подписанное уведомление без пары объяснено причиной', () => withSystem(async s => {
+  live(s);
+  const order = await createOrder(s);
+  const notify = s.load('app/api/tbank/notify/route.ts');
+  let wrongAmount, unknownOrder, noPaymentId;
+  const lines = await captureServerLog(async () => {
+    wrongAmount = await notify.POST(s.request(signedNotification(order, 'CONFIRMED', { Amount: 1 })));
+    unknownOrder = await notify.POST(s.request(signedNotification({ ...order, id: 'NH-NOWHERE' }, 'CONFIRMED')));
+    noPaymentId = await notify.POST(s.request(signedNotification(order, 'CONFIRMED', { PaymentId: '' })));
+  });
+  for (const response of [wrongAmount, unknownOrder, noPaymentId]) assert.equal(response.status, 409);
+  const logged = lines.filter((line) => line.startsWith('[tbank-notify]'));
+  assert.equal(logged.length, 3, 'отказ по подписанному уведомлению не оставил следа в журнале');
+  assert.ok(logged.some((line) => line.includes('не совпало с итогом заказа 45000 коп.')), 'расхождение суммы не названо');
+  assert.ok(logged.some((line) => line.includes('заказа NH-NOWHERE нет в базе')), 'несуществующий заказ не назван');
+  assert.ok(logged.some((line) => line.includes('уведомление без PaymentId') && line.includes('платёж без id')), 'пустой PaymentId не назван');
+  assert.ok(!JSON.stringify([wrongAmount.body, unknownOrder.body, noPaymentId.body]).includes('45000'), 'причина отказа ушла банку');
 }));

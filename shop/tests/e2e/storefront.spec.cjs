@@ -540,6 +540,34 @@ test('ошибка входа в админку возвращает фокус 
   await expect(page.locator('#admin-pass')).toBeFocused();
 });
 
+// Открытая панель заказов обязана замечать новый заказ сама (находка №5): заказ,
+// который виден только после нажатия «Обновить заказы», — это потерянная оплата.
+// Событие visibilitychange здесь — единственный способ проверить немедленную
+// перезагрузку без ожидания таймера: в headless Chrome фон вкладок не скрывается,
+// поэтому state остаётся «visible» и обработчик обязан сработать.
+test('возврат на вкладку админки подтягивает заказы без ожидания таймера', async ({ page, request }) => {
+  await loginAdmin(page);
+  const before = await page.locator('.admin-order-card').count();
+  const order = await createOrder(request, [{ productId: PACK, kind: 'pack', qty: 1 }]);
+  await expect(page.locator('.admin-order-card').filter({ hasText: order.orderId })).toHaveCount(0, 'панель уже видела заказ до всякого события');
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await expect(page.locator('.admin-order-card').filter({ hasText: order.orderId })).toBeVisible();
+  await expect(page.locator('.admin-order-card')).toHaveCount(before + 1);
+});
+
+// Тот же обещанный срок живёт в таймере: 20 с между опросами. Реальное ожидание
+// остаётся в одном проекте — в трёх подряд тест стоил бы минуту машинного времени.
+test('открытая админка принимает новый заказ на тике таймера, никто ничего не нажимает', async ({ page, request }, info) => {
+  test.skip(info.project.name !== 'desktop', 'ожидание реального тика таймера проверяется один раз');
+  test.setTimeout(90000);
+  await loginAdmin(page);
+  const refresh = page.getByRole('button', { name: /Обновить заказы/ });
+  await expect(refresh).toBeVisible();
+  const order = await createOrder(request, [{ productId: PACK, kind: 'pack', qty: 1 }]);
+  await expect(page.locator('.admin-order-card').filter({ hasText: order.orderId }),
+    'заказ не появился за два интервала опроса, хотя никто не нажимал обновление').toBeVisible({ timeout: 45000 });
+});
+
 test('якорь отдела приземляется ниже липких полос, а не под шапку', async ({ page }) => {
   // Переход по #dept-* обязан показать заголовок отдела: без scroll-margin-top раздел
   // вставал нулевой координатой под липкой шапкой, и покупатель видел логотип вместо отдела.

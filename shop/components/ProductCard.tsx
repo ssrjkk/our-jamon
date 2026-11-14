@@ -8,6 +8,7 @@ import { weightPriceOf, formatGrams, CUT_WEIGHT_MIN_G, CUT_WEIGHT_MAX_G, CUT_RAN
 import { useCart, formatRub, formatWeightLabel } from './CartContext';
 import { ProductArt } from './Art';
 import { flyTokenToCart } from './Animations';
+import { revealProps, revealInto } from '@/lib/reveal';
 
 interface Props { product: Product; serverReservedPieceIds: string[]; detail?: boolean; headingLevel?: 'h3' | 'h4' }
 
@@ -68,9 +69,9 @@ export default function ProductCard({ product, serverReservedPieceIds, detail = 
   }
 
   return (
-    <article className={'product-card' + (detail ? ' product-detail-card' : '')} data-product-id={product.id}>
+    <article className={'product-card' + (detail ? ' product-detail-card' : '')} data-product-id={product.id} {...revealProps}>
       <div className="product-card-intro">
-        <div className="card-media"><ProductArt product={product} /></div>
+        <div className="card-media" {...revealInto('clip')}><ProductArt product={product} /></div>
         <div className="card-header-row"><Heading className="card-title">{detail ? product.title : <Link href={`/product/${product.id}`}>{product.title}</Link>}</Heading></div>
         <div className="card-meta">{product.agingMonths ? `${product.agingMonths}\u00A0мес. выдержки` : CATEGORY_TITLES[product.category].short}</div>
         {product.description && <p className="card-desc">{product.description}</p>}
