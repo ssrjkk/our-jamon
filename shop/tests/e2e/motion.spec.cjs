@@ -903,3 +903,510 @@ test.describe('меньше движения', () => {
 
   проверкиОбаПрофиля();
 });
+
+// =========================================================================
+// Паритность движения на Pages.
+// Статическая витрина собирается вне Next: у неё свой инлайновый слой, и
+// unit-гейт сверяет по ней только текст — токены и @keyframes. Здесь меряется
+// то, что знает лишь браузер: легла ли черта под вкладку, доехала ли стрелка
+// шкалы, показан ли узел, который слой обещал показать. Замеры общие с Next
+// (кадр, черта, шапка, лесенка), различаются адрес и способ открыть панель.
+// Страницу отдаёт tests/static-server.cjs по E2E_STATIC_URL; STATIC_MUTATE правит
+// только отдачу в памяти сервера, поэтому мутационные пробы не трогают файл.
+// =========================================================================
+function адресСтатики() {
+  const база = process.env.E2E_STATIC_URL;
+  if (!база) throw new Error('E2E_STATIC_URL не выставлен: гейт не знает, где стоит статическая витрина');
+  return `${база}/index.html`;
+}
+
+/**
+ * Панель на Pages открывается кликом по вкладке, а прокрутка плавая: без ожидания
+ * остановки кадр мерялся бы на середине пути и часть узлов ещё не была бы размечена.
+ * Тот же порядок, что и в Next-проверках, только вместо маршрута — вкладка ряда.
+ */
+async function открываемПанель(page, вкладка) {
+  await page.evaluate((имя) => document.querySelector(`.site-tabs [data-tab="${имя}"]`).click(), вкладка);
+  await expect.poll(() => page.evaluate((имя) => !document.getElementById(имя).hidden, вкладка),
+    { message: `вкладка «${вкладка}» не открыла свою панель` }).toBe(true);
+  // Переход плавый, и «прокрутка остановилась» само по себе ничего не гарантирует: кадр
+  // снимается в начале пути, когда панель ещё не въехала. Ждём прибытия — верх панели встаёт
+  // на её scroll-margin-top. Если дальше ехать некуда (панель в самом конце документа),
+  // считаем панель приехавшей на пределе прокрутки.
+  await expect.poll(() => page.evaluate((имя) => {
+    const панель = document.getElementById(имя);
+    const цель = parseFloat(getComputedStyle(панель).scrollMarginTop || '0') || 0;
+    const верх = панель.getBoundingClientRect().top;
+    if (Math.abs(верх - цель) <= 2) return 'да';
+    if (window.scrollY >= document.documentElement.scrollHeight - window.innerHeight - 1) return 'предел';
+    return `едет ${Math.round(верх)}`;
+  }, вкладка), { timeout: 15000, message: `панель «${вкладка}» на Pages не встала под шапку после перехода` })
+    .toMatch(/^(да|предел)$/);
+  await page.evaluate(дваКадра);
+}
+
+const вкладкиСтатики = (page) => page.evaluate(() => [...document.querySelectorAll('.site-tabs [role="tab"]')]
+  .map((кнопка) => кнопка.dataset.tab));
+
+/** Стрелка и дуга весов на Pages: те же величины, что меряются на Next, но по местным id. */
+const шкалаСтатики = () => {
+  const поле = document.getElementById('demo-scale-range');
+  const матрица = new DOMMatrix(getComputedStyle(document.querySelector('.gauge-needle')).transform);
+  const дуга = getComputedStyle(document.querySelector('.gauge-arc')).strokeDashoffset;
+  const число = (значение) => {
+    const найдено = /(-?[\d.]+)(?:px)?/.exec(значение);
+    return найдено ? +(+найдено[1]).toFixed(2) : NaN;
+  };
+  const цифра = (текст) => Number(`${текст}`.replace(/[^\d]/g, ''));
+  // Подпись шкалы печатается тем же formatWeightLabel, что и вес в карточках: 2000 г
+  // приходит как «2 кг». В граммы переводится здесь, иначе гейт сверял бы строку с числом
+  // и падал на форматировании, а не на настоящем расхождении подписи с ползунком.
+  const грамма = (текст) => {
+    const число = Number(`${текст}`.replace(/[^\d.,]/g, '').replace(',', '.'));
+    return /кг/.test(`${текст}`) ? Math.round(число * 1000) : число;
+  };
+  return {
+    min: Number(поле.min), max: Number(поле.max), value: Number(поле.value),
+    угол: +(Math.atan2(матрица.b, матрица.a) * 180 / Math.PI).toFixed(2),
+    дуга: число(дуга),
+    подпись: [...document.querySelectorAll('.gauge-caption span')].map((span) => грамма(span.textContent)),
+    текст: [...document.querySelectorAll('.gauge-caption span')].map((span) => span.textContent.trim()),
+    вес: document.getElementById('demo-scale-weight').textContent.trim(),
+    цена: цифра(document.getElementById('demo-scale-price').textContent),
+  };
+};
+
+/** Число из значения translate: смещение по Y — последнее число строки («0px -21.195px»). */
+const изTranslate = (значение) => {
+  const части = `${значение}`.split(/\s+/).map(parseFloat).filter(Number.isFinite);
+  return части.length ? части[части.length - 1] : 0;
+};
+
+test.describe('Pages: движение включено', () => {
+  test.use({ reducedMotion: 'no-preference' });
+
+  test('слой движения на Pages встаёт на всех панелях и не роняет скрипт', async ({ page }) => {
+    const журнал = [];
+    page.on('pageerror', (ошибка) => журнал.push(String(ошибка).slice(0, 200)));
+    await page.goto(адресСтатики());
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.motion),
+      { message: 'страница на Pages так и не сказала, какой профиль движения применён' }).toBe('on');
+    const вкладки = await вкладкиСтатики(page);
+    expect(вкладки.length, 'на Pages нечего сверять: ряд вкладок пуст').toBeGreaterThanOrEqual(7);
+    for (const вкладка of вкладки) {
+      await открываемПанель(page, вкладка);
+      expect(await page.evaluate(() => document.documentElement.dataset.motion),
+        `профиль движения сломался на вкладке «${вкладка}»`).toBe('on');
+    }
+    // Слой на Pages — один инлайновый скрипт: любая брошенная ошибка выключает всё
+    // движение молча; глазами это видно, а гейт о нём не узнает.
+    expect(журнал, `на Pages слой движения упал: ${журнал.join(' | ')}`).toEqual([]);
+  });
+
+  test('черта под вкладкой на Pages лежит ровно под выбранной и уезжает за кликом', async ({ page }) => {
+    await page.goto(адресСтатики());
+    const вкладки = await вкладкиСтатики(page);
+    expect(вкладки.length, 'на Pages нечего сверять: ряд вкладок пуст').toBeGreaterThanOrEqual(7);
+    const замеры = [];
+    for (const вкладка of вкладки) {
+      await открываемПанель(page, вкладка);
+      // Без data-tabs-ready черта стоит в нуле с нулевой шириной: атрибут ставит тот же
+      // draw(), что рисует полосу, поэтому ждать надо именно его, а не таймаут.
+      await expect.poll(() => page.evaluate(() => document.querySelector('.site-tabs').hasAttribute('data-tabs-ready')),
+        { message: `полоса под вкладкой не появилась на «${вкладка}»` }).toBe(true);
+      // Черта доезжает до вкладки по переходу, а не прыгает: снятая сразу после клика, она
+      // в середине пути (замер 2026-11-14: −26,4px на первом кадре и −0,16px через 300 мс,
+      // при этом --tab-x уже равен offsetLeft). Останавливаем именно черту.
+      await expect.poll(async () => {
+        const доехала = await page.evaluate(черта);
+        return Math.max(Math.abs(доехала.сдвиг), Math.abs(доехала.ширина)) <= 0.6
+          ? 'точно' : `«${доехала.имя}»: сдвиг ${доехала.сдвиг}px, ширина ${доехала.ширина}px`;
+      }, { timeout: 20000, message: `черта на Pages не легла под вкладку «${вкладка}»` }).toBe('точно');
+      замеры.push({ вкладка, ...(await page.evaluate(черта)) });
+    }
+    // Замер 2026-11-14: разброс по восьми вкладкам на трёх вьюпортах — ±0.5px; ширину
+    // ряда задаёт дробное max(16px, calc((100vw - 1216px) / 2)), по нулям сойтись не может.
+    for (const замер of замеры) {
+      expect(Math.abs(замер.сдвиг), `черта под «${замер.имя}» смещена на ${замер.сдвиг}px`).toBeLessThanOrEqual(0.6);
+      expect(Math.abs(замер.ширина), `черта под «${замер.имя}» длиннее кнопки на ${замер.ширина}px`).toBeLessThanOrEqual(0.6);
+    }
+    expect(new Set(замеры.map((замер) => замер.имя)).size,
+      'черта не уезжает за кликом: выбрана одна и та же вкладка').toBe(замеры.length);
+  });
+
+  test('каждая панель на Pages размечена лесенкой и показывается целиком', async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'покрытие панелей лесенкой сверяем на одном вьюпорте');
+    await page.goto(адресСтатики());
+    const сводка = [];
+    for (const вкладка of await вкладкиСтатики(page)) {
+      await открываемПанель(page, вкладка);
+      const замер = await page.evaluate(([EDGE_RATIO, id]) => {
+        const узлы = [...document.querySelectorAll(`#${id} [data-reveal]`)].filter((node) => node.offsetParent);
+        return {
+          всего: узлы.length,
+          вКадре: узлы.filter((node) => node.getBoundingClientRect().top < window.innerHeight * EDGE_RATIO).length,
+          ступени: узлы.map((node) => Number(node.style.getPropertyValue('--reveal-i') || 0)),
+          варианты: [...new Set(узлы.map((node) => node.getAttribute('data-reveal-into') || 'rise'))].sort(),
+        };
+      }, [EDGE, вкладка]);
+      сводка.push({ вкладка, ...замер });
+      expect(замер.всего, `на панели «${вкладка}» на Pages нет ни одного узла под показ — лесёнки там нет`)
+        .toBeGreaterThanOrEqual(3);
+      expect(замер.вКадре, `на панели «${вкладка}» на Pages после перехода нечего показывать в кадре`)
+        .toBeGreaterThan(1);
+      // Слой прячет узел отметкой, поэтому непоказанное внутри кадра — дыра в разметке,
+      // а не «ещё не доехало»: прокрутка к моменту замера уже остановлена.
+      expect((await page.evaluate(кадр, EDGE)).застрявшие,
+        `на панели «${вкладка}» на Pages остались скрытые узлы внутри кадра`).toEqual([]);
+      // Хвост панели показывается только после прокрутки: ниже кадра узел обязан оставаться
+      // спрятанным, поэтому мерить «целиком» честнее всего на самом дне документа.
+      await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
+      await page.evaluate(дваКадра);
+      // Показ считан по-настоящему, только если узел и стал непрозрачным, и перестал быть
+      // вырезанным: у законченного среза остаётся bleed-значение clip-path, и наивная
+      // проверка «clip-path !== none» считала бы показанный узел спрятанным.
+      await expect.poll(() => page.evaluate((id) => [...document.querySelectorAll(`#${id} [data-reveal]`)]
+        .filter((node) => node.offsetParent)
+        .flatMap((node) => {
+          const причина = getComputedStyle(node).opacity !== '1' ? 'прозрачность'
+            : !window.выехалЦеликом(node) ? `вырез ${getComputedStyle(node).clipPath}` : '';
+          return причина ? [`${`${node.className || node.tagName}`.slice(0, 30)}: ${причина}`] : [];
+        }), вкладка),
+      { timeout: 20000, message: `панель «${вкладка}» на Pages не доехала до целиком показанного` }).toEqual([]);
+    }
+    expect(Math.max(...сводка.flatMap((панель) => панель.ступени)),
+      'задержка лесенки на Pages превысила обещанный предел в семь ступеней').toBeLessThanOrEqual(7);
+    expect(сводка.filter((панель) => Math.max(...панель.ступени) > 0).length,
+      `лесенка не разгоняется ни на одной панели: ${сводка.map((п) => `${п.вкладка}=${Math.max(...п.ступени)}`).join(', ')}`)
+      .toBeGreaterThan(0);
+    expect([...new Set(сводка.flatMap((панель) => панель.варианты))].sort().join(','),
+      'на Pages дошли не все варианты появления — резак заголовка или шторка кадра потерялись')
+      .toBe('clip,mask,rise');
+    console.log(`панели на Pages (размечено/в кадре, ступень, варианты): ${сводка
+      .map((п) => `${п.вкладка} ${п.всего}/${п.вКадре} ступ=${Math.max(...п.ступени)} [${п.варианты.join(' ')}]`)
+      .join(' · ')}`);
+  });
+
+  test('шкала веса на Pages: стрелка и дуга едут за ползунком, сумма растёт за весом', async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'геометрию шкалы сверяем на одном вьюпорте');
+    await page.goto(адресСтатики());
+    await открываемПанель(page, 'weight-system');
+    await expect(page.locator('.scale-gauge')).toBeVisible();
+    const база = await page.evaluate(шкалаСтатики);
+    expect(база.min, 'у весового ползунка на Pages нет нижнего предела').toBeGreaterThan(0);
+    expect(база.max, 'у весового ползунка на Pages нет верхнего предела').toBeGreaterThan(база.min);
+    // Подпись под дугой — те же границы, что принимает ползунок: покупатель сверяет стрелку с ней.
+    expect(база.подпись, 'подпись шкалы на Pages разошлась с границами ползунка').toEqual([база.min, база.max]);
+
+    const цены = [];
+    for (const [доля, ожидаемыйУгол] of [[0, -60], [0.5, 0], [1, 60], [0.75, 30]]) {
+      const grams = Math.round(база.min + (база.max - база.min) * доля);
+      await page.locator('#demo-scale-range').fill(String(grams));
+      // Стрелка и дуга едут по токену перехода, поэтому ждём остановки самих значений.
+      await expect.poll(() => page.evaluate(шкалаСтатики), {
+        timeout: 8000,
+        message: `стрелка на Pages не доехала до ${ожидаемыйУгол} градуса при ${grams} г`,
+      }).toMatchObject({
+        value: grams,
+        угол: expect.closeTo(ожидаемыйУгол, 1),
+        дуга: expect.closeTo(100 - доля * 100, 1),
+      });
+      const замер = await page.evaluate(шкалаСтатики);
+      expect(/\d/.test(замер.вес), `вес ${grams} г не прилетел в растёр на Pages`).toBe(true);
+      цены.push({ grams, цена: замер.цена });
+    }
+    const поВозрастанию = [...цены].sort((a, b) => a.grams - b.grams);
+    for (let индекс = 1; индекс < поВозрастанию.length; индекс += 1) {
+      expect(поВозрастанию[индекс].цена, `сумма на Pages не растёт за весом: ${поВозрастанию[индекс - 1].grams} г → ${поВозрастанию[индекс].grams} г`)
+        .toBeGreaterThan(поВозрастанию[индекс - 1].цена);
+    }
+
+    // Посадка цифр по чипу живёт только в работающем профиле: класс ставится в обработчике
+    // клика и снимается по animationend, поэтому мерить его надо тем же кликом.
+    const чип = await page.locator('.magnet-btn').first().evaluate((node) => {
+      node.click();
+      return { посадка: node.classList.contains('is-pop'), pressed: node.getAttribute('aria-pressed') };
+    });
+    expect(чип.посадка, 'чип веса на Pages не оставил посадки цифр').toBe(true);
+    expect(чип.pressed, 'чип веса на Pages не показал, что его выбрали').toBe('true');
+  });
+
+  test('штрих линейки на Pages растёт с числом позиций и не обещает сетке больше, чем она отдаёт', async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'линейку выдержки сверяем на одном вьюпорте');
+    await page.goto(адресСтатики());
+    await открываемПанель(page, 'aging');
+    const линейка = await page.evaluate(() => ({
+      делений: document.querySelectorAll('#aging .ruler-cell').length,
+      шаг: Number((/Шаг — (\d+)/.exec(document.getElementById('ruler-note').textContent) || [])[1]),
+      штрихи: [...document.querySelectorAll('#aging .ruler-tick')].map((tick) => ({
+        месяц: tick.getAttribute('data-ruler-aging'),
+        цифра: Number(tick.querySelector('.ruler-count').textContent),
+        подпись: Number((/— (\d+)/.exec(tick.getAttribute('aria-label')) || [])[1]),
+        стиль: Number(tick.querySelector('.ruler-stroke').style.getPropertyValue('--aging-count')),
+        высота: Math.round(parseFloat(getComputedStyle(tick.querySelector('.ruler-stroke')).height)),
+      })),
+    }));
+    expect(линейка.делений, 'на Pages линейка выдержки не отрисовала делений').toBeGreaterThanOrEqual(6);
+    expect(линейка.штрихи.length, 'на Pages линейка обещает пустоту: ни одного штриха').toBeGreaterThanOrEqual(6);
+    expect(линейка.шаг, 'подпись шага линейки на Pages не разошлась с рядом').toBeGreaterThan(0);
+    for (const штрих of линейка.штрихи) {
+      // Экран читает число, скринридер — подпись, высота — третья копия того же числа:
+      // расхождение означает, что линейка врёт хотя бы одному из них.
+      expect(штрих.подпись, `подпись штриха ${штрих.месяц} мес. разошлась с числом на экране`).toBe(штрих.цифра);
+      expect(штрих.стиль, `высота штриха ${штрих.месяц} мес. растёт не из числа позиций`).toBe(штрих.цифра);
+      expect(штрих.высота, `штрих ${штрих.месяц} мес. нарисован не по числу позиций`)
+        .toBeCloseTo(6 + штрих.цифра * 6, 0);
+    }
+
+    // Честность обещания: пока фильтр держится, сетка не вправе показать больше позиций,
+    // чем пообещал штрих. Отдел без такой выдержки сбрасывает фильтр — там штрих обязан
+    // перестать быть нажатым, иначе подпись «на полке есть» осталась бы над пустой сеткой.
+    const отделы = await page.evaluate(() => [...document.querySelectorAll('#dept-tabs [data-dept]')]
+      .map((кнопка) => кнопка.getAttribute('data-dept')).slice(0, 5));
+    expect(отделы.length, 'на Pages нечего сверять: ряд отделов пуст').toBeGreaterThanOrEqual(3);
+    let применённых = 0;
+    for (const штрих of линейка.штрихи.filter((_, индекс) => индекс % 3 === 0)) {
+      await page.evaluate((месяц) => document.querySelector(`#aging .ruler-tick[data-ruler-aging="${месяц}"]`).click(), штрих.месяц);
+      await expect.poll(() => page.evaluate((месяц) => document
+        .querySelector(`#aging .ruler-tick[data-ruler-aging="${месяц}"]`).getAttribute('aria-pressed'), штрих.месяц)).toBe('true');
+      for (const отдел of отделы) {
+        const замер = await page.evaluate(([dept, месяц]) => {
+          document.querySelector(`#dept-tabs [data-dept="${dept}"]`).click();
+          return {
+            карт: document.querySelectorAll('#catalog .product-card').length,
+            нажат: document.querySelector(`#aging .ruler-tick[data-ruler-aging="${месяц}"]`).getAttribute('aria-pressed'),
+          };
+        }, [отдел, штрих.месяц]);
+        if (замер.нажат === 'true') {
+          применённых += 1;
+          expect(замер.карт, `штрих ${штрих.месяц} мес. обещает ${штрих.цифра} позиций, а сетка отдела ${отдел} показывает ${замер.карт}`)
+            .toBeLessThanOrEqual(штрих.цифра);
+        }
+      }
+      await открываемПанель(page, 'aging');
+    }
+    expect(применённых, 'фильтр по штриху линейки на Pages не сработал ни разу: проверка была бы пустой')
+      .toBeGreaterThan(0);
+
+    // Движение штриха: подъём по наведению обязан жить только в работающем профиле.
+    await page.evaluate(() => document.getElementById('aging-ruler').scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await page.evaluate(дваКадра);
+    await page.mouse.move(4, 4);
+    const штрихБокс = await page.locator('#aging .ruler-tick').first().boundingBox();
+    await page.mouse.move(штрихБокс.x + штрихБокс.width / 2, штрихБокс.y + штрихБокс.height / 2);
+    expect(await page.evaluate(() => {
+      const tick = document.querySelector('#aging .ruler-tick');
+      return { наведении: tick.matches(':hover'), имя: getComputedStyle(tick.querySelector('.ruler-stroke')).animationName };
+    }), 'штрих линейки на Pages не отзывается на наведение').toEqual({ наведении: true, имя: 'nh-pop' });
+  });
+
+  test('карточка на Pages поднимается по translate, а не по transform, и даёт блик', async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'наведение на карточку сверяем на одном вьюпорте');
+    await page.goto(адресСтатики());
+    await открываемПанель(page, 'catalog');
+    const card = page.locator('#catalog .product-card').first();
+    await card.scrollIntoViewIfNeeded();
+    await page.mouse.move(4, 4);
+    const покой = await card.evaluate((node) => ({
+      подъём: getComputedStyle(node).translate,
+      наезд: getComputedStyle(node.querySelector('.card-media img')).transform,
+    }));
+    const box = await card.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await expect.poll(() => card.evaluate((node) => getComputedStyle(node.querySelector('.card-media'), '::after').animationName),
+      { timeout: 5000, message: 'блик по фотографии на Pages не пошёл' }).toBe('nh-sheen');
+    // Подъём едет по переходу: снятый в первом кадре он выглядит недоехавшим
+    // (замер 2026-11-14: −1,54px вместо −2px), поэтому ждём остановленного значения.
+    await expect.poll(() => card.evaluate((node) => getComputedStyle(node).translate),
+      { timeout: 5000, message: 'карточка на Pages не поднялась под курсором до обещанных двух пикселей' })
+      .toBe('0px -2px');
+    const наведение = await card.evaluate((node) => ({
+      подъём: getComputedStyle(node).translate,
+      наезд: getComputedStyle(node.querySelector('.card-media img')).transform,
+      переход: getComputedStyle(node).transitionProperty.split(', '),
+    }));
+    expect(покой.подъём, 'карточка на Pages поднята в покое').toBe('none');
+    expect(покой.наезд, 'фотография на Pages наезжает на срез в покое').toBe('none');
+    expect(наведение.подъём, 'карточка на Pages не поднимается под курсором').toBe('0px -2px');
+    // Подъём обязан жить на translate: законченный показ держит transform: none своим
+    // fill-mode, и смещение на transform под курсором не доехало бы.
+    expect(наведение.переход, 'у подъёма карточки на Pages нет перехода по translate').toContain('translate');
+    expect(наведение.переход.filter((имя) => имя === 'transform'),
+      'подъём карточки на Pages вернулся на transform и не доедет под курсором').toEqual([]);
+    expect(Number((/matrix\(([\d.]+)/.exec(наведение.наезд) || [0, '1'])[1]),
+      'фотография на Pages не наезжает под курсором').toBeGreaterThanOrEqual(1.03);
+    const кнопка = page.locator('#catalog .add-btn:not([disabled])').first();
+    // Ореол основного действия живёт под :focus-visible, а не под курсором: клавиатура
+    // обязана доехать до кнопки Tab'ом, иначе гейт мерил бы не то правило. Программный
+    // focus() здесь не годится — модальность последнего ввода мышиная, и :focus-visible
+    // на кнопке не загорается.
+    await кнопка.evaluate((node) => { window.__цель = node; node.blur(); });
+    await expect.poll(async () => {
+      const статус = await page.evaluate(() => {
+        const узел = window.__цель;
+        return document.activeElement === узел && узел.matches(':focus-visible') ? 'да' : 'ищем';
+      });
+      if (статус === 'да') return 'да';
+      await page.keyboard.press('Tab');
+      return статус;
+    }, { timeout: 30000, intervals: [40], message: 'фокус с клавиатуры не дошёл до основного действия на карточке' })
+      .toBe('да');
+    await expect.poll(() => кнопка.evaluate((node) => getComputedStyle(node).boxShadow),
+      { timeout: 5000, message: 'основное действие на Pages не прогревается под клавиатурным фокусом' })
+      .toMatch(/24px 3px/);
+  });
+
+  test('параллакс первого экрана на Pages: колонка и кадр расходятся и встают в предел', async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'параллакс сверяем на одном вьюпорте');
+    await page.goto(адресСтатики());
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.motion)).toBe('on');
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.evaluate(дваКадра);
+    const позиция = () => page.evaluate(() => ({
+      отметка: Number(document.documentElement.style.getPropertyValue('--hero-shift').replace('px', '')),
+      предел: getComputedStyle(document.documentElement).getPropertyValue('--parallax-limit').trim(),
+      текст: getComputedStyle(document.querySelector('.hero-copy')).translate,
+      кадр: getComputedStyle(document.querySelector('.hero-art')).translate,
+      высота: window.innerHeight,
+    }));
+    const наверху = await позиция();
+    expect(наверху.предел, 'на Pages не объявлен предел параллакса').toBe('40px');
+    // На самом верху смещения нет: правило живёт при любом профиле, поэтому сверяется
+    // число, а не слово «none» — под движением значение есть, но оно нулевое («0px»).
+    expect(изTranslate(наверху.текст), `на Pages колонка текста смещена на самом верху: ${наверху.текст}`).toBe(0);
+    expect(изTranslate(наверху.кадр), `на Pages кадр смещён на самом верху: ${наверху.кадр}`).toBe(0);
+
+    await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }));
+    await page.evaluate(дваКадра);
+    const впути = await позиция();
+    expect(впути.отметка, 'отметка прокрутки первого экрана на Pages не поехала').toBe(600);
+    expect(Math.sign(изTranslate(впути.текст)), 'колонка текста на Pages едет не навстречу кадру').toBe(-1);
+    expect(Math.sign(изTranslate(впути.кадр)), 'кадр на Pages едет не навстречу тексту').toBe(1);
+    expect(Math.abs(изTranslate(впути.текст)) / 600, 'смещение колонки на Pages не выложено множителем из CSS')
+      .toBeGreaterThan(0);
+    expect(Math.abs(изTranslate(впути.кадр)), 'смещение кадра на Pages не вышло из отметки прокрутки').toBeGreaterThan(0);
+
+    await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' }));
+    await page.evaluate(дваКадра);
+    const внизу = await позиция();
+    expect(внизу.отметка, 'отметка параллакса на Pages поехала дальше первого экрана').toBe(внизу.высота);
+    expect(Math.abs(изTranslate(внизу.текст)), 'колонка текста на Pages прошла предел параллакса').toBeLessThanOrEqual(40);
+    expect(Math.abs(изTranslate(внизу.кадр)), 'кадр на Pages прошёл предел параллакса').toBeLessThanOrEqual(40);
+    expect(Math.abs(изTranslate(внизу.текст)), 'колонка текста на Pages не дошла до предела').toBeCloseTo(40, 0);
+    expect(Math.abs(изTranslate(внизу.кадр)), 'кадр на Pages не дошёл до предела').toBeCloseTo(40, 0);
+  });
+
+  test('шапка на Pages: полоса прочитанного и тень идут за прокруткой', async ({ page }) => {
+    await page.goto(адресСтатики());
+    await page.locator('.site-header').waitFor();
+    await page.evaluate(дваКадра);
+    const наверху = await page.evaluate(() => ({
+      доля: Number(getComputedStyle(document.documentElement).getPropertyValue('--scroll')),
+      черта: +new DOMMatrix(getComputedStyle(document.querySelector('.site-header'), '::after').transform).a.toFixed(3),
+      тень: document.querySelector('.site-header').hasAttribute('data-scrolled'),
+    }));
+    expect(наверху.доля, 'полоса прочитанного на Pages стартовала не с нуля').toBe(0);
+    expect(наверху.черта, 'полоса прочитанного на Pages отрисована не по доле прокрутки').toBe(0);
+    expect(наверху.тень, 'тень шапки на Pages появилась на самом верху страницы').toBe(false);
+
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2));
+    await page.evaluate(дваКадра);
+    expect(await page.evaluate(() => Number(getComputedStyle(document.documentElement).getPropertyValue('--scroll'))),
+      'полоса прочитанного на Pages не растёт при прокрутке').toBeGreaterThan(0.05);
+    expect(await page.locator('.site-header').getAttribute('data-scrolled'),
+      'тень шапки на Pages не появилась после прокрутки').not.toBeNull();
+
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.evaluate(дваКадра);
+    expect(await page.evaluate(() => Number(getComputedStyle(document.documentElement).getPropertyValue('--scroll'))),
+      'полоса прочитанного на Pages не доходит до конца страницы').toBeGreaterThanOrEqual(0.99);
+  });
+});
+
+test.describe('Pages: меньше движения', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('под «меньше движения» Pages показывает всё сразу и не запускает ни одной анимации', async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'профиль движения сверяем на одном вьюпорте');
+    await page.goto(адресСтатики());
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.motion)).toBe('reduced');
+    for (const вкладка of await вкладкиСтатики(page)) {
+      await открываемПанель(page, вкладка);
+      const замер = await page.evaluate((id) => {
+        const узлы = [...document.querySelectorAll(`#${id} [data-reveal]`)].filter((node) => node.offsetParent);
+        return {
+          всего: узлы.length,
+          скрытые: узлы.map((node) => getComputedStyle(node).opacity).filter((значение) => значение !== '1').length,
+          отмеченные: узлы.filter((node) => node.style.getPropertyValue('--reveal-name')).length,
+          анимации: узлы.map((node) => getComputedStyle(node).animationName).filter((имя) => имя !== 'none').length,
+          вырезы: узлы.map((node) => getComputedStyle(node).clipPath).filter((значение) => значение !== 'none').length,
+        };
+      }, вкладка);
+      expect(замер.всего, `на панели «${вкладка}» на Pages нечего показывать`).toBeGreaterThan(1);
+      expect(замер.скрытые, `под «меньше движения» на панели «${вкладка}» остались невидимые узлы`).toBe(0);
+      expect(замер.отмеченные, `под «меньше движения» слой на Pages всё равно размечает показ`).toBe(0);
+      expect(замер.анимации, `под «меньше движения» на панели «${вкладка}» осталась анимация появления`).toBe(0);
+      expect(замер.вырезы, `под «меньше движения» на панели «${вкладка}» узел остался вырезанным`).toBe(0);
+    }
+    // Заглушка режет длительность до микросекунд, поэтому движок обязан не держать
+    // ни одной анимации в состоянии running — иначе «меньше движения» осталось бы словом.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.evaluate(дваКадра);
+    expect(await page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').length),
+      'под «меньше движения» на Pages что-то продолжает двигаться').toBe(0);
+
+    await открываемПанель(page, 'catalog');
+    const card = page.locator('#catalog .product-card').first();
+    await card.scrollIntoViewIfNeeded();
+    const box = await card.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    expect(await card.evaluate((node) => ({
+      блик: getComputedStyle(node.querySelector('.card-media'), '::after').animationName,
+      наезд: getComputedStyle(node.querySelector('.card-media img')).transform,
+    })), 'под «меньше движения» карточка на Pages всё равно бликует и наезжает')
+      .toEqual({ блик: 'none', наезд: 'none' });
+    expect(await page.locator('#catalog .add-btn:not([disabled])').first().evaluate((node) => getComputedStyle(node).boxShadow),
+      'под «меньше движения» кнопка на Pages всё равно светится ореолом').toBe('none');
+
+    await открываемПанель(page, 'aging');
+    await page.evaluate(() => document.getElementById('aging-ruler').scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await page.mouse.move(4, 4);
+    const штрихБокс = await page.locator('#aging .ruler-tick').first().boundingBox();
+    await page.mouse.move(штрихБокс.x + штрихБокс.width / 2, штрихБокс.y + штрихБокс.height / 2);
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector('#aging .ruler-stroke')).animationName),
+      'под «меньше движения» штрих линейки на Pages всё равно подпрыгивает').toBe('none');
+
+    await открываемПанель(page, 'weight-system');
+    expect(await page.locator('.magnet-btn').first().evaluate((node) => {
+      node.click();
+      return node.classList.contains('is-pop');
+    }), 'под «меньше движения» посадка цифр на Pages всё равно добавляется').toBe(false);
+  });
+
+  test('под «меньше движения» первый экран на Pages не уезжает от прокрутки', async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'профиль движения сверяем на одном вьюпорте');
+    await page.goto(адресСтатики());
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.motion)).toBe('reduced');
+    await page.locator('.hero-copy').waitFor();
+    const позиция = () => page.evaluate(() => ({
+      отметка: document.documentElement.style.getPropertyValue('--hero-shift'),
+      текст: document.querySelector('.hero-copy').getBoundingClientRect().top + window.scrollY,
+      кадр: document.querySelector('.hero-art').getBoundingClientRect().top + window.scrollY,
+      смещение: [document.querySelector('.hero-copy'), document.querySelector('.hero-art')]
+        .map((node) => getComputedStyle(node).translate),
+    }));
+    const наверху = await позиция();
+    await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }));
+    // Слой считает смещение в любом профиле (progress() не смотрит на reduce), поэтому
+    // проверка осмысленна ровно пока отметка живёт: удерживает узлы на месте только
+    // правило [data-motion="on"].
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--hero-shift'))).toBe('600px');
+    const внизу = await позиция();
+    expect(внизу.смещение.filter((значение) => значение !== 'none'),
+      'под «меньше движения» параллакс первого экрана на Pages всё равно применился').toEqual([]);
+    expect(Math.abs(внизу.текст - наверху.текст), 'колонка текста на Pages уехала от прокрутки под «меньше движения»')
+      .toBeLessThan(0.75);
+    expect(Math.abs(внизу.кадр - наверху.кадр), 'кадр на Pages уехал от прокрутки под «меньше движения»')
+      .toBeLessThan(0.75);
+  });
+});

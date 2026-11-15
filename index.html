@@ -48,6 +48,25 @@
   --scrim-story: rgba(36, 27, 23, 0.8);
   --lift-shadow: 0 10px 28px rgba(36, 27, 23, 0.1);
   --tap-tint: rgba(91, 40, 36, 0.16);
+  /* Движение: одна шкала длительностей и две кривые — те же числа, что в shop/app/globals.css.
+     Две витрины обязаны двигаться одинаково, поэтому шкала не своя, а общая. */
+  --dur-press: .12s;
+  --dur-control: .22s;
+  --dur-enter: .45s;
+  --dur-wipe: calc(var(--dur-enter) * 1.6);
+  --dur-ambient: 26s;
+  --stagger: 70ms;
+  --ease-cut: cubic-bezier(.22, .61, .36, 1);
+  --ease-settle: cubic-bezier(.34, 1.42, .64, 1);
+  --reveal-shift: 18px;
+  /* Край маски выведен за границу узла: inset(0) срезал бы рамку, скругление и тень. */
+  --reveal-bleed: -.25em;
+  /* Параллакс первого экрана: множители при --hero-shift (0…один экран) и предел.
+     Знаки противоположные — текст и кадр расходятся, а не едут одной плашкой. */
+  --parallax-copy: -.045;
+  --parallax-sign: .07;
+  --parallax-limit: 40px;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 .14 0 0 0 0 .10 0 0 0 0 .08 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html {
@@ -86,6 +105,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 /* ПОЛОСА О ДИСТРИБЬЮТОРСТВЕ */
 .distributor-bar { background-color: var(--cured-ruby); color: var(--paper-salt); font-size: 0.8125rem; line-height: 1.45; }
 .distributor-bar-inner { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 8px; padding-block: 9px; text-align: center; }
+@media (max-width: 560px) { .distributor-bar { font-size: 0.75rem; line-height: 1.4; } .distributor-bar-inner { padding-block: 7px; } }
 .distributor-bar strong { font-weight: 600; }
 .distributor-bar span { color: var(--bone-line); }
 
@@ -127,13 +147,13 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .stories-section { padding: 20px 0 8px; }
 .stories-strip { display: flex; gap: 18px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: none; }
 .stories-strip::-webkit-scrollbar { display: none; }
-.story-bubble { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; min-width: 76px; }
+.story-bubble { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 100px; padding: 0 8px 4px; }
 .story-ring { width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--cured-ruby); padding: 3px; transition: transform 0.15s ease; }
 .story-ring.is-seen { border-color: var(--bone-line); }
 .story-bubble:active .story-ring { transform: scale(0.96); }
 .story-art { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; background-color: var(--surface-tint); overflow: hidden; }
 .story-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%; }
-.story-label { font-size: 0.75rem; color: var(--graphite-muted); text-align: center; max-width: 84px; }
+.story-label { font-size: 0.6875rem; line-height: 1.25; color: var(--graphite-muted); text-align: center; min-height: 2.5em; }
 .stories-player { position: fixed; inset: 0; z-index: 80; background-color: var(--scrim-story); display: none; align-items: center; justify-content: center; padding: 16px; }
 .stories-player.is-open { display: flex; }
 .stories-frame { position: relative; width: 100%; max-width: 380px; max-height: calc(100dvh - 32px); overflow-y: auto; background-color: var(--paper-salt); border: 1px solid var(--bone-line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 16px; }
@@ -142,7 +162,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .story-bars span i { position: absolute; inset: 0; background-color: var(--cured-ruby); transform: scaleX(0); transform-origin: left; }
 .story-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .story-head-title { font-family: var(--font-serif); font-size: 1.15rem; font-weight: 700; }
-.story-close { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bone-line); border-radius: var(--radius); font-size: 0.875rem; background-color: var(--fat-white); }
+.story-close { min-width: 44px; min-height: 44px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bone-line); border-radius: var(--radius); font-size: 0.875rem; background-color: var(--fat-white); }
 .story-visual { position: relative; min-height: 220px; background-color: var(--surface-tint); border-radius: var(--radius); overflow: hidden; }
 .story-visual img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%; }
 .story-text { font-size: 0.9375rem; color: var(--graphite-muted); line-height: 1.55; min-height: 3.1em; }
@@ -186,9 +206,11 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 @media (min-width: 680px) { .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1080px) { .catalog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .product-card, .catalog-preview-card { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; gap: 20px; background-color: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); padding: 24px; transition: background-color 0.18s ease, border-color 0.18s ease; }
-.product-card:hover, .catalog-preview-card:hover { background-color: var(--surface-tint); }
+.product-card:hover, .catalog-preview-card:hover { background-color: var(--surface-tint); border-color: var(--cured-ruby); box-shadow: var(--lift-shadow); translate: 0 -2px; }
 .catalog-preview-card { min-width: 0; }
 .card-media.has-photo { padding: 0; display: block; }
+.card-media.has-plate { padding: 0; display: block; aspect-ratio: 1 / 1; }
+.card-media.has-plate img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .product-photo { width: 100%; display: grid; place-items: center; aspect-ratio: 1 / 1; background-color: var(--surface-tint); }
 .product-photo img { width: 100%; height: 100%; object-fit: contain; }
 .product-photo-note { padding: 10px 12px; font-size: .75rem; color: var(--graphite-muted); background: var(--fat-white); }
@@ -212,13 +234,15 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 /* Единственный формат: строка вместо группы из одной радиокнопки. */
 .option-static { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0; font-size: 0.8125rem; font-weight: 500; }
 .custom-cut-note { font-size: 0.8125rem; padding: 8px 10px; background-color: var(--paper-salt); border-left: 2px solid var(--cured-ruby); border-radius: var(--radius); color: var(--hoof-graphite); min-height: 38px; display: flex; align-items: center; line-height: 1.45; }
+.custom-cut-note.quiet { padding: 0; background: none; border-left: none; border-radius: 0; min-height: 0; font-size: .75rem; color: var(--graphite-muted); }
+.custom-cut-note.quiet.is-error { color: var(--error-red); font-weight: 500; }
 .bulk-slider-box { padding: 10px 12px; background-color: var(--paper-salt); border: 1px solid var(--bone-line); border-radius: var(--radius); display: flex; flex-direction: column; gap: 8px; }
 .bulk-slider-box input[type="range"] { width: 100%; accent-color: var(--brine-olive); height: 28px; cursor: pointer; }
 .tolerance-hint { font-size: 0.75rem; color: var(--graphite-muted); }
 .card-footer { border-top: 1px solid var(--bone-line); padding-top: 14px; display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
 .price-stack { display: flex; flex-direction: column; flex: 1 1 150px; gap: 4px; }
 .price-label { font-size: 0.75rem; color: var(--graphite-muted); }
-.price-value { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; min-width: 7ch; display: inline-block; }
+.price-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; min-width: 7ch; display: inline-block; color: var(--cured-ruby); }
 .add-btn { min-height: 44px; padding: 10px 14px; background-color: var(--cured-ruby); color: var(--fat-white); font-size: 0.8125rem; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 10px; flex: 1 1 150px; min-width: 0; border-radius: var(--radius); transition: background-color 0.15s ease, transform 0.15s ease; }
 .add-btn:hover:not([disabled]) { background-color: var(--cured-ruby-hover); }
 .add-btn:active:not([disabled]) { transform: scale(0.97); }
@@ -255,7 +279,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .bento-period { font-size: 0.875rem; font-weight: 600; color: var(--cured-ruby); }
 .bento-title { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 700; line-height: 1.15; }
 .bento-list { list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; color: var(--graphite-muted); flex: 1; }
-.bento-btn { min-height: 44px; padding: 0 14px; border: 1px solid var(--cured-ruby); color: var(--cured-ruby); background-color: transparent; font-size: 0.875rem; font-weight: 500; text-align: left; border-radius: var(--radius); transition: background-color 0.15s ease, color 0.15s ease; }
+.bento-btn { min-height: 48px; padding: 8px 14px; line-height: 1.25; border: 1px solid var(--cured-ruby); color: var(--cured-ruby); background-color: transparent; font-size: 0.875rem; font-weight: 500; text-align: left; border-radius: var(--radius); transition: background-color 0.15s ease, color 0.15s ease; }
 .bento-btn:hover { background-color: var(--cured-ruby); color: var(--fat-white); }
 .tyrosine-callout { margin-top: 16px; padding: 20px 24px; background-color: var(--surface-tint); border: 1px solid var(--bone-line); border-radius: var(--radius); display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
 .tyrosine-callout strong { font-family: var(--font-serif); font-size: 1.2rem; }
@@ -279,6 +303,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .footer-supplier .footer-slogan { font-family: var(--font-serif); font-size: 0.9375rem; color: var(--cured-ruby); }
 
 .contact-widget { --contact-bottom: max(16px, env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 899px) { .contact-widget { --contact-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
 .contact-trigger { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); bottom: var(--contact-bottom); z-index: 35; display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; border: 1px solid var(--cured-ruby); border-radius: var(--radius); background: var(--paper-salt); color: var(--cured-ruby); box-shadow: var(--lift-shadow); font: 500 .875rem/1.4 var(--font-sans); }
 .contact-trigger:hover { background: var(--fat-white); }
 .contact-widget[inert], [inert] .contact-widget { visibility: hidden; }
@@ -308,7 +333,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .mobile-bar-label { font-size: 0.75rem; color: var(--bone-line); }
 #mobile-bar-summary { font-weight: 600; font-size: 0.9375rem; }
 @media (min-width: 900px) { .mobile-bottom-bar { display: none; } }
-.mobile-bar-btn { min-height: 44px; padding: 0 18px; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.875rem; border-radius: var(--radius); }
+.mobile-bar-btn { min-height: 44px; padding: 0 18px; line-height: 1.2; background-color: var(--cured-ruby); color: var(--fat-white); font-weight: 500; font-size: 0.875rem; border-radius: var(--radius); }
 
 /* КОРЗИНА */
 .cart-backdrop { position: fixed; inset: 0; z-index: 50; background-color: var(--scrim); opacity: 0; pointer-events: none; transition: opacity 0.28s ease; }
@@ -321,7 +346,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .cart-head { padding: 18px 20px; background-color: var(--fat-white); border-bottom: 1px solid var(--bone-line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .cart-head-title { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; }
 .cart-head-sub { font-size: 0.75rem; color: var(--graphite-muted); }
-.cart-close { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bone-line); border-radius: var(--radius); font-size: 0.8125rem; background-color: var(--paper-salt); }
+.cart-close { min-width: 44px; min-height: 44px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bone-line); border-radius: var(--radius); font-size: 0.8125rem; background-color: var(--paper-salt); }
 .cart-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; flex: 1; }
 .cart-items-list { display: flex; flex-direction: column; gap: 10px; }
 .cart-item-row { background-color: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); padding: 12px 14px; overflow: hidden; }
@@ -354,7 +379,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .delivery-option-btn { min-height: 48px; padding: 8px 10px; border: 1px solid var(--bone-line); background-color: var(--fat-white); text-align: left; font-size: 0.8125rem; display: flex; flex-direction: column; justify-content: center; border-radius: var(--radius); }
 .delivery-option-btn[aria-checked="true"], .delivery-option-btn:has(input:checked) { border-color: var(--cured-ruby); background-color: var(--paper-salt); color: var(--cured-ruby); }
 .delivery-option-btn .deliv-cost { font-size: 0.75rem; opacity: 0.8; }
-.btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 14px; border: 1px solid var(--cured-ruby); color: var(--cured-ruby); background-color: var(--paper-salt); font-size: .8125rem; font-weight: 600; border-radius: var(--radius); text-decoration: none; }
+.btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 14px; border: 1px solid var(--cured-ruby); color: var(--cured-ruby); background-color: var(--paper-salt); font-size: .8125rem; font-weight: 600; border-radius: var(--radius); text-decoration: none; }
 .messenger-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .messenger-chip { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bone-line); background-color: var(--fat-white); font-size: 0.8125rem; font-weight: 500; border-radius: var(--radius); }
 .messenger-chip[aria-pressed="true"] { background-color: var(--brine-olive); border-color: var(--brine-olive); color: var(--fat-white); }
@@ -396,8 +421,8 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .hero-art { width: 100%; }
 .scenarios-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 820px) { .scenarios-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.scenario-card { background-color: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); padding: 26px; display: flex; flex-direction: column; gap: 12px; transition: border-color 0.15s ease, box-shadow 0.18s ease, transform 0.18s ease; }
-.scenario-card:hover { border-color: var(--cured-ruby); box-shadow: var(--lift-shadow); transform: translateY(-2px); }
+.scenario-card { background-color: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); padding: 26px; display: flex; flex-direction: column; gap: 12px; }
+.scenario-card:hover { border-color: var(--cured-ruby); box-shadow: var(--lift-shadow); translate: 0 -2px; }
 .scenario-label { font: 600 .8125rem/1.4 var(--font-sans); color: var(--cured-ruby); }
 .scenario-name { font-family: var(--font-serif); font-weight: 700; font-size: 1.3rem; }
 .scenario-list { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 0.9375rem; color: var(--graphite-muted); flex: 1; }
@@ -445,7 +470,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
   .photo-choice-hint { display: none; }
 }
 .card-feedback { min-height: 1.5em; font-size: .75rem; color: var(--cured-ruby); }
-.site-demo-notice { padding: 12px 0; border-bottom: 1px solid var(--bone-line); background: var(--surface-tint); color: var(--cured-ruby); font-size: .75rem; }
+.site-demo-notice { padding: 7px 0; border-bottom: 1px solid var(--bone-line); background: var(--surface-tint); color: var(--cured-ruby); font-size: .75rem; }
 .skip-link { position: fixed; top: 8px; left: 16px; z-index: 100; padding: 12px; background: var(--fat-white); border-radius: var(--radius); transform: translateY(-150%); }
 .skip-link:focus { transform: none; }
 .footer-site-links { flex-direction: row; flex-wrap: wrap; gap: 12px 20px; margin-top: 18px; }
@@ -484,7 +509,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .catalog-search { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; width: min(100%, 440px); }
 .catalog-search label { display: flex; flex-direction: column; gap: 6px; font-size: .8125rem; flex: 1; min-width: 180px; }
 .catalog-search input { width: 100%; }
-.search-status { color: var(--graphite-muted); font-size: .8125rem; margin: 12px 0; }
+.search-status { color: var(--graphite-muted); font-size: .75rem; margin: 10px 0; }
 .catalog-controls { display: flex; flex-direction: column; gap: 8px; }
 .filter-btn:disabled { opacity: .45; cursor: not-allowed; }
 .dept-tabs button[aria-selected="true"] { background: var(--cured-ruby); color: var(--fat-white); border-color: var(--cured-ruby); font-weight: 700; }
@@ -493,12 +518,9 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .dept-head { padding-top: 0; border-bottom: 1px solid var(--bone-line); padding-bottom: 12px; }
 .dept-note { padding-top: 14px; }
 .card-engraving { width: 110px; height: 112px; object-fit: contain; }
-.age-stamp { width: 92px; height: 92px; flex-shrink: 0; border: 1px solid var(--cured-ruby); outline: 1px solid var(--bone-line); outline-offset: 4px; border-radius: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--cured-ruby); text-align: center; }
-.age-stamp strong { font: 700 2.25rem/1 var(--font-serif); }
-.age-stamp span { font-size: .625rem; letter-spacing: .08em; margin-top: 5px; }
 .product-origin { font-size: .8125rem; color: var(--cured-ruby); text-align: right; max-width: 13ch; }
-.custom-weight-field { display: flex; flex-direction: column; gap: 6px; font-size: .8125rem; }
-.custom-weight-field input { width: 100%; }
+.custom-weight-field { display: flex; align-items: center; gap: 12px; font-size: .8125rem; font-weight: 500; color: var(--graphite-muted); }
+.custom-weight-field input { width: 132px; flex: 0 0 132px; min-height: 44px; padding: 6px 12px; }
 .demo-notice { padding: 12px 14px; border-left: 2px solid var(--cured-ruby); border-radius: var(--radius); background: var(--surface-tint); color: var(--graphite-muted); font-size: .8125rem; }
 .cart-quantity { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .cart-quantity button { min-width: 44px; min-height: 44px; border: 1px solid var(--bone-line); border-radius: var(--radius); background: var(--paper-salt); }
@@ -510,8 +532,116 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .bento-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (min-width: 900px) and (max-width: 1199px) { .main-nav { gap: 12px; } .main-nav a { font-size: .8125rem; } .brand-logo { width: 150px; } }
 @media (max-width: 767px) { .hero-light { padding: 24px 0 32px; } .hero-light-grid { gap: 20px; } .hero-copy { gap: 14px; } .hero-big { font-size: clamp(2.1rem, 9vw, 2.65rem); max-width: 18ch; } .section { padding: 36px 0; } .product-card, .catalog-preview-card { padding: 18px; } .catalog-intro { gap: 16px; } .bento-3 { grid-template-columns: 1fr; } }
-@media (max-width: 480px) { .header-inner { gap: 6px; } .menu-group { gap: 2px; } .menu-toggle { padding: 0 8px; margin-left: -8px; } .menu-toggle-label { display: none; } .brand-logo { width: 132px; height: auto; } .cart-trigger { padding: 0 8px; gap: 6px; font-size: .8125rem; } .site-tabs button { padding: 10px 12px; font-size: .8125rem; } .hero-cta-row { width: 100%; } .hero-light .hero-cta-row { gap: 8px; } .hero-light .hero-cta-row a { flex: 1 1 0; min-width: 0; padding: 12px; font-size: .8125rem; } .delivery-radio-grid { grid-template-columns: 1fr; } .scale-panel { padding: 16px; } .cart-head, .cart-body, .cart-foot { padding-left: 16px; padding-right: 16px; } }
+@media (max-width: 480px) { .header-inner { gap: 6px; } .menu-group { gap: 2px; } .menu-toggle { padding: 0 8px; margin-left: -8px; } .menu-toggle-label { display: none; } .brand-logo { width: 132px; height: auto; } .cart-trigger { padding: 0 8px; gap: 6px; font-size: .8125rem; } .site-tabs button { padding: 10px 12px; font-size: .8125rem; } .hero-cta-row { width: 100%; } .hero-light .hero-cta-row { gap: 8px; } .hero-light .hero-cta-row a { flex: 0 1 auto; min-width: 0; padding: 12px; font-size: .8125rem; } .delivery-radio-grid { grid-template-columns: 1fr; } .scale-panel { padding: 16px; } .cart-head, .cart-body, .cart-foot { padding-left: 16px; padding-right: 16px; } }
 
+/* =========================================================================
+   Движение и детали — тот же слой, что в shop/app/globals.css и
+   shop/components/Motion.tsx. Скрытое до первого кадра живёт только под
+   [data-motion="on"]: атрибут ставит скрипт, поэтому без JavaScript и в профиле
+   «меньше движения» текст существует с первой отрисовки, а не после анимации.
+   ========================================================================= */
+@keyframes nh-rise { from { opacity: 0; transform: translateY(var(--reveal-shift)); } to { opacity: 1; transform: none; } }
+@keyframes nh-light { 0%, 100% { opacity: .5; transform: translate3d(0, 0, 0) scale(1); } 50% { opacity: .78; transform: translate3d(-2%, 1.6%, 0) scale(1.05); } }
+@keyframes nh-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.028) translateY(-.6%); } }
+@keyframes nh-sheen { from { transform: translateX(-130%) skewX(-14deg); } to { transform: translateX(240%) skewX(-14deg); } }
+@keyframes nh-rule { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes nh-pop { 0% { transform: scale(.94); } 60% { transform: scale(1.045); } 100% { transform: scale(1); } }
+/* Варианты вырезания: прозрачность сразу единица — узел скрыт геометрией, а не
+   растворением. Едущая сторона стартует с «100% минус bleed», чтобы в нулевом кадре
+   видимая полоса была ровно ноль. Первый и последний кадр нейтральны к обрыву. */
+@keyframes nh-mask { from { opacity: 1; clip-path: inset(var(--reveal-bleed) calc(100% - var(--reveal-bleed)) var(--reveal-bleed) var(--reveal-bleed)); } to { opacity: 1; clip-path: inset(var(--reveal-bleed)); } }
+@keyframes nh-clip { from { opacity: 1; clip-path: inset(calc(100% - var(--reveal-bleed)) var(--reveal-bleed) var(--reveal-bleed) var(--reveal-bleed)); transform: translateY(calc(var(--reveal-shift) * .5)); } to { opacity: 1; clip-path: inset(var(--reveal-bleed)); transform: none; } }
+/* Состояние показа слой пишет в инлайновые свойства (--reveal-name, --reveal-i),
+   длительность и шаг лесенки остаются здесь и не могут разъехаться с токенами. */
+[data-motion="on"] [data-reveal] { opacity: 0; animation-name: var(--reveal-name, none); animation-duration: var(--dur-enter); animation-timing-function: var(--ease-cut); animation-delay: calc(var(--reveal-i, 0) * var(--stagger)); animation-fill-mode: both; }
+/* После базового правила: специфичность та же, решает порядок. Ход среза длиннее. */
+[data-motion="on"] [data-reveal-into] { animation-duration: var(--dur-wipe); }
+.is-pop { animation: nh-pop var(--dur-control) var(--ease-settle); }
+/* Зерно бумаги поверх страницы: ни клика, ни фокуса не перехватывает. */
+body::after { content: ''; position: fixed; inset: 0; z-index: 99; pointer-events: none; opacity: .05; background-image: var(--grain); background-size: 180px 180px; }
+/* Первый экран. В отличие от Next у здешнего .hero-light есть собственный фон, а
+   отрицательный z-index ушёл бы под него и свет стал бы невидимым: поэтому свет лежит
+   нулём, а содержимое поднято единицей. Линейка под локацией ограничена первым экраном —
+   класс .hero-kicker носит и счётчик витрины, которому черта не нужна. */
+.hero-light { position: relative; }
+.hero-light::before { content: ''; position: absolute; z-index: 0; pointer-events: none; inset: -14% auto auto -16%; width: min(62vw, 760px); aspect-ratio: 1 / 1; border-radius: 50%; background: radial-gradient(closest-side, var(--surface-tint), transparent); animation: nh-light var(--dur-ambient) linear infinite; }
+.hero-light-grid { position: relative; z-index: 1; }
+.hero-light .hero-kicker { display: inline-flex; align-items: center; gap: 10px; }
+.hero-light .hero-kicker::before { content: ''; width: 28px; height: 1px; flex-shrink: 0; background: var(--cured-ruby); transform-origin: left; animation: nh-rule var(--dur-enter) var(--ease-cut) both; }
+.hero-art { position: relative; }
+.hero-art::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(155deg, transparent 52%, var(--scrim)); opacity: .13; }
+[data-motion="on"] .hero-art img { animation: nh-breathe var(--dur-ambient) var(--ease-cut) infinite; transform-origin: 56% 42%; }
+/* Параллакс на свойстве translate, а не transform: анимация transform стоит на дышащем
+   кадре внутри, и в каскаде анимированное значение перебило бы статичное смещение. */
+[data-motion="on"] .hero-copy { translate: 0 clamp(calc(var(--parallax-limit) * -1), calc(var(--hero-shift, 0px) * var(--parallax-copy)), var(--parallax-limit)); }
+[data-motion="on"] .hero-art { translate: 0 clamp(calc(var(--parallax-limit) * -1), calc(var(--hero-shift, 0px) * var(--parallax-sign)), var(--parallax-limit)); }
+/* Кнопки: блик по основному действию, ореол и стрелка, уходящая вперёд под курсором. */
+.btn-primary, .btn-secondary, .bento-btn, .add-btn, .story-action-btn, .scale-add-btn { position: relative; overflow: hidden; transition: background-color var(--dur-control) var(--ease-cut), color var(--dur-control) var(--ease-cut), box-shadow var(--dur-enter) var(--ease-cut), transform var(--dur-press) var(--ease-settle); }
+.btn-primary::after, .add-btn::after, .story-action-btn::after { content: ''; position: absolute; inset: -20%; pointer-events: none; background: linear-gradient(105deg, transparent 38%, var(--fat-white) 50%, transparent 62%); opacity: .2; transform: translateX(-130%) skewX(-14deg); }
+[data-motion="on"] .btn-primary:hover:not(:disabled)::after, [data-motion="on"] .add-btn:hover:not(:disabled)::after, [data-motion="on"] .story-action-btn:hover:not(:disabled)::after { animation: nh-sheen var(--dur-enter) var(--ease-cut); }
+/* Ореол собран из того же рубинового тонирования, что и нажатие, и виден не только
+   под курсором, но и по фокусу — клавиатуре тоже должно быть видно, куда она пришла. */
+[data-motion="on"] .btn-primary, [data-motion="on"] .add-btn { box-shadow: 0 0 0 0 var(--tap-tint); }
+[data-motion="on"] .btn-primary:hover:not(:disabled), [data-motion="on"] .add-btn:hover:not(:disabled),
+[data-motion="on"] .btn-primary:focus-visible, [data-motion="on"] .add-btn:focus-visible { box-shadow: 0 0 24px 3px var(--tap-tint); }
+.arrow, .arrow-up { transition: translate var(--dur-control) var(--ease-cut); }
+.btn-primary:hover .arrow, .btn-secondary:hover .arrow { translate: 3px 0; }
+.btn-primary:hover .arrow-up, .contact-link:hover .arrow-up { translate: 2px -2px; }
+/* Карточка витрины: подъём на translate, а не на transform — законченный показ держит
+   transform: none своим fill-mode, и смещение на transform под курсором не доехало бы.
+   Перечисляем переход токенами вместо прежних «.18s ease»: ряд контролов одного
+   масштаба обязан ощущаться одинаково. */
+.product-card, .catalog-preview-card { transition: background-color var(--dur-control) var(--ease-cut), border-color var(--dur-control) var(--ease-cut), box-shadow var(--dur-control) var(--ease-cut), translate var(--dur-control) var(--ease-cut); }
+.scenario-card { transition: border-color var(--dur-control) var(--ease-cut), box-shadow var(--dur-control) var(--ease-cut), translate var(--dur-control) var(--ease-cut); }
+/* Кадр этикетки: блик по стеклу витрины и лёгкий наезд на срез. */
+.card-media img, .story-art img { transition: transform var(--dur-enter) var(--ease-cut); }
+.card-media::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 32%, var(--fat-white) 48%, transparent 64%); opacity: .5; transform: translateX(-120%) skewX(-12deg); }
+[data-motion="on"] .product-card:hover .card-media img, [data-motion="on"] .catalog-preview-card:hover .card-media img { transform: scale(1.035); }
+[data-motion="on"] .product-card:hover .card-media::after, [data-motion="on"] .catalog-preview-card:hover .card-media::after { animation: nh-sheen var(--dur-enter) var(--ease-cut); }
+/* Вкладки: одна черта ходит между разделами вместо восьми миганий рамки. Полоса уже
+   sticky — это позиционированный элемент, и position: relative здесь сбросил бы липкость. */
+.tab-underline { position: absolute; left: 0; bottom: 0; width: var(--tab-w, 0); height: 2px; background: var(--cured-ruby); transform: translateX(var(--tab-x, 0)); opacity: 0; transition: transform var(--dur-enter) var(--ease-cut), width var(--dur-enter) var(--ease-cut), opacity var(--dur-control) var(--ease-cut); }
+.site-tabs[data-tabs-ready] .tab-underline { opacity: 1; }
+.site-tabs[data-tabs-ready] button[aria-selected="true"] { border-bottom-color: transparent; }
+/* Шапка: полоса прочитанного и тень, когда страница ушла от верха. */
+.site-header::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--cured-ruby); transform: scaleX(var(--scroll, 0)); transform-origin: left; }
+.site-header[data-scrolled] { box-shadow: var(--lift-shadow); }
+/* Линейка выдержки: высота штриха — сколько позиций витрины с такой выдержкой.
+   Число приезжает единственным инлайновым свойством --aging-count, посчитанным из
+   того же массива, по которому фильтр каталога отдаёт список. */
+.aging-ruler { display: grid; gap: 14px; margin-top: 32px; padding: 24px; border: 1px solid var(--bone-line); border-radius: var(--radius); background: var(--fat-white); }
+.ruler-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
+.ruler-title { color: var(--cured-ruby); font: 700 1.05rem/1.3 var(--font-serif); }
+.ruler-note { font-size: .75rem; color: var(--graphite-muted); max-width: 52ch; }
+.ruler-track { display: flex; align-items: flex-end; gap: 6px; margin: 0; padding: 0 0 10px; list-style: none; border-bottom: 1px solid var(--cured-ruby); overflow-x: auto; scrollbar-width: thin; scroll-padding-inline: 6px; }
+.ruler-cell { display: grid; justify-items: center; gap: 8px; flex: 0 0 auto; width: 46px; }
+.ruler-tick { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; width: 100%; min-height: 76px; padding-top: 4px; border-radius: var(--radius); text-decoration: none; color: var(--cured-ruby); transition: background-color var(--dur-control) var(--ease-cut); }
+.ruler-tick:hover, .ruler-tick:focus-visible { background: var(--paper-salt); }
+.ruler-stroke { width: 12px; border-radius: var(--radius); background: var(--surface-tint); border: 1px solid var(--bone-line); height: calc(6px + var(--aging-count, 1) * 6px); transition: background-color var(--dur-control) var(--ease-cut), border-color var(--dur-control) var(--ease-cut); }
+.ruler-tick:hover .ruler-stroke, .ruler-tick:focus-visible .ruler-stroke, .ruler-tick[aria-pressed="true"] .ruler-stroke { background: var(--cured-ruby); border-color: var(--cured-ruby); }
+[data-motion="on"] .ruler-tick:hover .ruler-stroke { animation: nh-pop var(--dur-control) var(--ease-settle); }
+.ruler-count { font-size: .8125rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ruler-blank { display: block; width: 12px; height: 6px; border-radius: var(--radius); background: var(--bone-line); }
+.ruler-month { font-size: .6875rem; color: var(--graphite-muted); font-variant-numeric: tabular-nums; }
+.ruler-cell.is-major .ruler-month { color: var(--cured-ruby); font-weight: 600; }
+.ruler-foot { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: .75rem; color: var(--graphite-muted); }
+/* Шкала весов: стрелка едет по тем же границам, что и ползунок. Дуга нормирована
+   pathLength=100, поэтому заливка — проценты шкалы, а не пиксели. */
+.scale-gauge { display: grid; justify-items: center; gap: 4px; }
+.gauge-dial { width: min(100%, 260px); height: auto; }
+.gauge-needle { transform: rotate(var(--needle, -60deg)); transform-box: view-box; transform-origin: 100px 88px; transition: transform var(--dur-control) var(--ease-settle); }
+.gauge-track, .gauge-arc { fill: none; stroke-width: 5; stroke-linecap: round; }
+.gauge-track { stroke: var(--graphite-muted); }
+.gauge-arc { stroke: var(--paper-salt); stroke-dasharray: 100; stroke-dashoffset: calc(100 - var(--gauge-fill, 0)); transition: stroke-dashoffset var(--dur-control) var(--ease-settle); }
+.gauge-tick { stroke: var(--graphite-muted); stroke-width: 2; }
+.gauge-stem { stroke: var(--paper-salt); stroke-width: 2.5; stroke-linecap: round; }
+.gauge-hub { fill: var(--paper-salt); }
+.gauge-caption { display: flex; justify-content: space-between; gap: 12px; width: min(100%, 236px); font-size: .75rem; color: var(--bone-line); font-variant-numeric: tabular-nums; }
+.magnet-btn { transition: background-color var(--dur-control) var(--ease-cut), color var(--dur-control) var(--ease-cut), border-color var(--dur-control) var(--ease-cut); }
+/* Чипы отделов и фильтр выдержки: без перехода смена заливки — щёлчок, а не нажатие. */
+.dept-tabs button, .filter-btn { transition: background-color var(--dur-control) var(--ease-cut), color var(--dur-control) var(--ease-cut), border-color var(--dur-control) var(--ease-cut), transform var(--dur-press) var(--ease-settle); }
+.dept-tabs button:active:not(:disabled), .filter-btn:active:not(:disabled) { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce) { .flying-token { display: none; } }
 </style>
 </head>
 <body>
@@ -570,7 +700,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
   </div>
 </nav>
 
-<aside class="site-demo-notice" aria-label="Демонстрационный режим"><div class="container"><strong>Демо-витрина.</strong> Заказы и платежи здесь не отправляются. Не вводите реальные персональные данные.</div></aside>
+<aside class="site-demo-notice" aria-label="Демонстрационный режим"><div class="container"><strong>Демо-витрина.</strong> Заказы и платежи не отправляются.</div></aside>
 
 <main id="top" tabindex="-1">
 
@@ -582,7 +712,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
           <h1 class="hero-big">Хамон — главный герой нашей лавки.</h1>
           <p class="hero-sub">Подберем вкус для каждого</p>
           <div class="hero-cta-row">
-            <a href="#catalog" class="btn-primary">Выбрать хамон</a>
+            <a href="#catalog" class="btn-primary">Выбрать хамон <span class="arrow" aria-hidden="true"></span></a>
             <a href="#shop" class="btn-secondary">Найти лавку</a>
           </div>
           <p class="hero-detail">Куски · нарезка · целые ноги. Вт–вс, 10:30–20:30</p>
@@ -605,6 +735,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
         <button type="button" role="tab" data-tab="aging" aria-selected="false">Про выдержку</button>
         <button type="button" role="tab" data-tab="weight-system" aria-selected="false">Как считаем вес</button>
         <button type="button" role="tab" data-tab="delivery" aria-selected="false">Доставка</button>
+        <span class="tab-underline" aria-hidden="true"></span>
       </div>
       <section id="catalog" class="site-panel section" style="border-top:none;">
     <div class="container">
@@ -644,20 +775,20 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 
     <section id="scenarios" class="site-panel section" hidden style="border-top:none;">
       <div class="container">
-        <div class="section-head"><h2 class="section-title">Подборки из лавки</h2><p class="section-subtitle">Для себя, к столу и на подарок — реальные фотографии сочетаний.</p><p class="photo-choice-intro">Содержимое подбираем индивидуально. Состав и наличие уточняйте в лавке.</p></div>
+        <div class="section-head" data-reveal data-reveal-into="mask"><h2 class="section-title">Подборки из лавки</h2><p class="section-subtitle">Для себя, к столу и на подарок — реальные фотографии сочетаний.</p><p class="photo-choice-intro">Содержимое подбираем индивидуально. Состав и наличие уточняйте в лавке.</p></div>
         <div class="photo-choice-gallery" tabindex="0" role="region" aria-label="Фотографии подборок из лавки" aria-describedby="scenarios-photo-hint"></div>
         <p id="scenarios-photo-hint" class="photo-choice-hint">Листайте вбок или используйте стрелки клавиатуры.</p>
-        <div class="section-head scenario-catalog-head"><h2 class="section-title">Готовые наборы из каталога</h2><p>Состав и цены наборов ниже относятся только к каталогу и не описывают подборки на фотографиях выше.</p></div>
+        <div class="section-head scenario-catalog-head" data-reveal data-reveal-into="mask"><h2 class="section-title">Готовые наборы из каталога</h2><p>Состав и цены наборов ниже относятся только к каталогу и не описывают подборки на фотографиях выше.</p></div>
         <div class="scenarios-grid" id="scenarios-grid"></div></div></section>
 
     <section id="aging" class="site-panel section" hidden>
     <div class="container">
-      <div class="section-head">
+      <div class="section-head" data-reveal data-reveal-into="mask">
         <h2 class="section-title">Выдержка от 8 до 24 месяцев</h2>
         <p class="section-subtitle">Срок созревания определяет плотность мякоти, сладость жира и глубину орехового послевкусия.</p>
       </div>
       <div class="bento-3">
-        <article class="bento-card">
+        <article class="bento-card" data-reveal>
           <div>
             <div class="bento-period">8–12 месяцев</div>
             <h3 class="bento-title">Деликатный вкус</h3>
@@ -669,7 +800,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
           </ul>
           <button type="button" class="bento-btn" data-aging-link="8-12">Показать хамон этой выдержки</button>
         </article>
-        <article class="bento-card">
+        <article class="bento-card" data-reveal>
           <div>
             <div class="bento-period">14–18 месяцев</div>
             <h3 class="bento-title">Выразительный характер</h3>
@@ -681,7 +812,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
           </ul>
           <button type="button" class="bento-btn" data-aging-link="14-18">Показать хамон этой выдержки</button>
         </article>
-        <article class="bento-card">
+        <article class="bento-card" data-reveal>
           <div><div class="bento-period">20–22 месяца</div><h3 class="bento-title">Глубокий вкус</h3></div>
           <ul class="bento-list">
             <li><strong>Текстура:</strong> плотная мякоть и тающий жир.</li>
@@ -690,7 +821,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
           </ul>
           <button type="button" class="bento-btn" data-aging-link="20-22">Показать хамон этой выдержки</button>
         </article>
-        <article class="bento-card">
+        <article class="bento-card" data-reveal>
           <div>
             <div class="bento-period">24 месяцев и дольше</div>
             <h3 class="bento-title">Долгая выдержка</h3>
@@ -703,7 +834,12 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
           <button type="button" class="bento-btn" data-aging-link="24">Показать хамон этой выдержки</button>
         </article>
       </div>
-      <div class="tyrosine-callout">
+      <div class="aging-ruler" id="aging-ruler" data-reveal hidden>
+        <div class="ruler-head"><p class="ruler-title">Что лежит на полке</p><p class="ruler-note" id="ruler-note"></p></div>
+        <ol class="ruler-track" id="ruler-track" aria-label="Позиции витрины по месяцам выдержки"></ol>
+        <p class="ruler-foot">Пустое деление — выдержка, которой сейчас на полке нет.</p>
+      </div>
+      <div class="tyrosine-callout" data-reveal>
         <strong>Что означают белые точки на срезе хамона</strong>
         <p>При длительном созревании в мякоти могут появляться кристаллы тирозина — аминокислоты. Они связаны с естественными процессами выдержки.</p>
       </div>
@@ -712,12 +848,12 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 
     <section id="weight-system" class="site-panel section-dark" hidden>
     <div class="container">
-      <div class="section-head">
+      <div class="section-head" data-reveal data-reveal-into="mask">
         <h2 class="section-title">Как считаем вес куска</h2>
         <p class="section-subtitle">Все куски хамона приходят разного веса. Мы взвешиваем каждый кусок при приёмке и заносим в учётную систему, поэтому цена считается по фактическому весу до рубля.</p>
       </div>
       <div class="scale-bento">
-        <div class="scale-panel">
+        <div class="scale-panel" data-reveal>
           <div class="form-field">
             <label for="demo-scale-product">Что взвешиваем</label>
             <select class="form-input" id="demo-scale-product"></select>
@@ -736,6 +872,22 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
               <span id="demo-scale-price" class="readout-digits highlight">—</span>
             </div>
           </div>
+          <div class="scale-gauge" id="demo-scale-gauge" aria-hidden="true">
+            <svg class="gauge-dial" viewBox="0,0,200,100" role="presentation" focusable="false">
+              <path class="gauge-track" d="M49.8,59A58,58,0,0,1,150.2,59" pathLength="100"></path>
+              <path class="gauge-arc" d="M49.8,59A58,58,0,0,1,150.2,59" pathLength="100"></path>
+              <line class="gauge-tick" x1="100" y1="42" x2="100" y2="36" transform="rotate(-60,100,88)"></line>
+              <line class="gauge-tick" x1="100" y1="42" x2="100" y2="36" transform="rotate(-30,100,88)"></line>
+              <line class="gauge-tick" x1="100" y1="42" x2="100" y2="36"></line>
+              <line class="gauge-tick" x1="100" y1="42" x2="100" y2="36" transform="rotate(30,100,88)"></line>
+              <line class="gauge-tick" x1="100" y1="42" x2="100" y2="36" transform="rotate(60,100,88)"></line>
+              <g class="gauge-needle">
+                <line class="gauge-stem" x1="100" y1="88" x2="100" y2="46"></line>
+                <circle class="gauge-hub" cx="100" cy="88" r="5"></circle>
+              </g>
+            </svg>
+            <p class="gauge-caption"><span id="demo-scale-min"></span><span id="demo-scale-max"></span></p>
+          </div>
           <div class="scale-range-wrap">
             <label class="scale-range-label" for="demo-scale-range" id="demo-scale-hint">Выберите желаемый вес. Расчёт предварительный.</label>
             <input id="demo-scale-range" type="range" min="50" max="2000" step="1" value="300">
@@ -743,7 +895,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
           <div class="magnet-chips" role="group" aria-label="Быстрый выбор веса" id="demo-scale-chips"></div>
           <button type="button" id="scale-add-btn" class="scale-add-btn">Добавить порцию в корзину</button>
         </div>
-        <div class="scale-panel scale-info-panel">
+        <div class="scale-panel scale-info-panel" data-reveal>
           <h3>Желаемый вес — ориентир, не обещание</h3>
           <p>Укажите вес отреза от 50 до 2 000 г: расчёт идёт по цене за килограмм из витрины.</p>
           <p>Фактический вес, наличие и окончательную стоимость покупки согласует лавка до оплаты.</p>
@@ -755,24 +907,24 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 
     <section id="delivery" class="site-panel section" hidden style="border-top:none;">
     <div class="container">
-      <div class="section-head">
+      <div class="section-head" data-reveal data-reveal-into="mask">
         <h2 class="section-title">Доставка из Санкт-Петербурга и оплата</h2>
         <p class="section-subtitle">Сроки, способ доставки и стоимость согласуйте с лавкой до оплаты. В этой демоверсии доставка не рассчитывается и не заказывается.</p>
       </div>
       <div class="delivery-grid">
-        <div class="bento-card">
+        <div class="bento-card" data-reveal>
           <h3 class="bento-title">Яндекс Доставка и Drivee по СПб</h3>
           <p>Для доставки до двери укажите адрес. Возможность отправки, срок и стоимость согласуются с лавкой до оплаты — автоматического вызова курьера здесь нет.</p>
         </div>
-        <div class="bento-card">
+        <div class="bento-card" data-reveal>
           <h3 class="bento-title">СДЭК — пункты выдачи</h3>
           <p>Укажите адрес или код реального пункта выдачи, который выбрали самостоятельно. Возможность отправки и стоимость согласуются до оплаты; карта ПВЗ и служба доставки к демоверсии не подключены.</p>
         </div>
-        <div class="bento-card">
+        <div class="bento-card" data-reveal>
           <h3 class="bento-title">Самовывоз с Сытного рынка</h3>
           <p>Сытнинская улица, 4П, фуд-аллея рынка «Сытный». Вторник–воскресенье, 10:30–20:30. Уточните наличие по телефону +7 (906) 896-00-99 перед поездкой.</p>
         </div>
-        <div class="bento-card">
+        <div class="bento-card" data-reveal>
           <h3 class="bento-title">Сначала согласование, затем оплата</h3>
           <p>Уточните у лавки итоговый вес, доставку и доступный способ оплаты. Эта страница не принимает деньги и не отправляет заявки. Для реальной покупки свяжитесь с лавкой: <a href="tel:+79068960099">+7 (906) 896-00-99</a>.</p>
         </div>
@@ -785,25 +937,25 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 
     <section id="shop" class="site-panel section" hidden aria-labelledby="shop-heading">
       <div class="container shop-visit-grid">
-        <figure class="shop-interior"><img src="brand/shop-interior.webp" width="720" height="1280" loading="lazy" decoding="async" alt="Интерьер лавки «Наш Хамон»: стеклянная витрина и светящаяся вывеска с окороком на красной стене"><figcaption>Наша лавка на Сытном рынке. Фото интерьера; актуальные товары и цены — в каталоге.</figcaption></figure>
-        <div class="shop-visit-copy"><p class="bento-period">Санкт-Петербург · Сытный рынок</p><h2 id="shop-heading" class="section-title">Наша лавка</h2><p class="section-subtitle">Та самая вывеска. Настоящая витрина. Приходите выбрать свой хамон.</p>
+        <figure class="shop-interior" data-reveal data-reveal-into="clip"><img src="brand/shop-interior.webp" width="720" height="1280" loading="lazy" decoding="async" alt="Интерьер лавки «Наш Хамон»: стеклянная витрина и светящаяся вывеска с окороком на красной стене"><figcaption>Наша лавка на Сытном рынке. Фото интерьера; актуальные товары и цены — в каталоге.</figcaption></figure>
+        <div class="shop-visit-copy" data-reveal><p class="bento-period">Санкт-Петербург · Сытный рынок</p><h2 id="shop-heading" class="section-title">Наша лавка</h2><p class="section-subtitle">Та самая вывеска. Настоящая витрина. Приходите выбрать свой хамон.</p>
           <dl class="shop-facts"><div><dt>Где мы</dt><dd>Сытнинская улица, 4П<br>Фуд-аллея рынка «Сытный»</dd></div><div><dt>Когда открыты</dt><dd>Вторник–воскресенье<br><span class="tabular">10:30–20:30</span></dd></div><div><dt>Связаться с лавкой</dt><dd><a href="tel:+79068960099" class="tabular">+7 (906) 896-00-99</a><br><a href="mailto:619896@mail.ru">619896@mail.ru</a></dd></div></dl>
           <p class="hero-detail">Перед поездкой уточните наличие нужного товара по телефону.</p><div class="hero-cta-row"><a href="https://yandex.ru/maps/-/CXq~AInl" target="_blank" rel="noopener noreferrer" class="btn-primary">Маршрут в Яндекс Картах <span class="arrow-up" aria-hidden="true"></span></a><a href="#about" class="btn-secondary">О нас <span class="arrow" aria-hidden="true"></span></a></div>
         </div>
       </div>
       <div class="container shop-supplier-strip">
-        <figure><img src="brand/supplier-sliced-macro.webp" width="1230" height="530" style="max-width:615px" loading="lazy" decoding="async" alt="Вакуумная нарезка хамона в фирменной упаковке поставщика «Дом Хамона» на золотой подложке"><figcaption>Витрина поставщика «Дом Хамона» · Коломна. Фото из брендбука бренда.</figcaption></figure>
-        <figure><img src="brand/supplier-leg-tag.webp" width="740" height="600" style="max-width:370px" loading="lazy" decoding="async" alt="Нога хамона с картонной биркой выдержки «10 Madrid» поставщика «Дом Хамона»"><figcaption>Нога с биркой выдержки поставщика.</figcaption></figure>
+        <figure data-reveal data-reveal-into="clip"><img src="brand/supplier-sliced-macro.webp" width="1230" height="530" style="max-width:615px" loading="lazy" decoding="async" alt="Вакуумная нарезка хамона в фирменной упаковке поставщика «Дом Хамона» на золотой подложке"><figcaption>Витрина поставщика «Дом Хамона» · Коломна. Фото из брендбука бренда.</figcaption></figure>
+        <figure data-reveal data-reveal-into="clip"><img src="brand/supplier-leg-tag.webp" width="740" height="600" style="max-width:370px" loading="lazy" decoding="async" alt="Нога хамона с картонной биркой выдержки «10 Madrid» поставщика «Дом Хамона»"><figcaption>Нога с биркой выдержки поставщика.</figcaption></figure>
       </div>
     </section>
     <section id="about" class="site-panel section" hidden>
-      <div class="container"><div class="section-head"><p class="bento-period">Наш Хамон · Сытный рынок</p><h2 class="section-title">О нас</h2><p class="section-subtitle">Небольшая лавка с главным героем — хамоном. Мы на фуд-аллее Сытного рынка в Санкт-Петербурге.</p></div>
-        <div class="about-facts-grid"><article><h3 class="bento-title">Что в лавке</h3><p>Хамон куском и в нарезке, целые ноги и палеты. Рядом — оливки, выдержанные сыры, антипасти, хамонеры и нож для нарезки. Конкретные товары и цены смотрите в каталоге.</p><a href="#catalog">Открыть каталог <span class="arrow" aria-hidden="true"></span></a></article><article><h3 class="bento-title">Как выбираем вес</h3><p>Средний кусок и желаемый отрез имеют предварительный расчёт: фактический вес и сумму нужно подтвердить до оплаты. Упаковки и подставки имеют цену за выбранный вариант. Демо-корзина не бронирует товары.</p><a href="#weight-system">Как считаем вес <span class="arrow" aria-hidden="true"></span></a></article><article><h3 class="bento-title">Как связаться</h3><p>Наличие, получение и условия покупки уточняйте по телефону <a href="tel:+79068960099">+7 (906) 896-00-99</a> или в <a href="https://t.me/mvn_ge" target="_blank" rel="noopener noreferrer">Telegram лавки</a>. Срок и стоимость доставки согласуются до оплаты.</p><a href="#shop">Адрес и часы работы <span class="arrow" aria-hidden="true"></span></a></article></div>
+      <div class="container"><div class="section-head" data-reveal data-reveal-into="mask"><p class="bento-period">Наш Хамон · Сытный рынок</p><h2 class="section-title">О нас</h2><p class="section-subtitle">Небольшая лавка с главным героем — хамоном. Мы на фуд-аллее Сытного рынка в Санкт-Петербурге.</p></div>
+        <div class="about-facts-grid"><article data-reveal><h3 class="bento-title">Что в лавке</h3><p>Хамон куском и в нарезке, целые ноги и палеты. Рядом — оливки, выдержанные сыры, антипасти, хамонеры и нож для нарезки. Конкретные товары и цены смотрите в каталоге.</p><a href="#catalog">Открыть каталог <span class="arrow" aria-hidden="true"></span></a></article><article data-reveal><h3 class="bento-title">Как выбираем вес</h3><p>Средний кусок и желаемый отрез имеют предварительный расчёт: фактический вес и сумму нужно подтвердить до оплаты. Упаковки и подставки имеют цену за выбранный вариант. Демо-корзина не бронирует товары.</p><a href="#weight-system">Как считаем вес <span class="arrow" aria-hidden="true"></span></a></article><article data-reveal><h3 class="bento-title">Как связаться</h3><p>Наличие, получение и условия покупки уточняйте по телефону <a href="tel:+79068960099">+7 (906) 896-00-99</a> или в <a href="https://t.me/mvn_ge" target="_blank" rel="noopener noreferrer">Telegram лавки</a>. Срок и стоимость доставки согласуются до оплаты.</p><a href="#shop">Адрес и часы работы <span class="arrow" aria-hidden="true"></span></a></article></div>
       </div>
     </section>
     <section id="buyer-choices" class="site-panel section" hidden>
       <div class="container">
-        <div class="section-head"><p class="bento-period">Подборки из лавки</p><h2 class="section-title">Выбор покупателей</h2><p class="section-subtitle">Реальные фотографии сочетаний: для себя, к столу и на подарок.</p><p class="photo-choice-intro">Содержимое подбираем индивидуально, состав и наличие уточняйте в лавке. На фото — примеры сочетаний, а не готовые наборы из каталога.</p></div>
+        <div class="section-head" data-reveal data-reveal-into="mask"><p class="bento-period">Подборки из лавки</p><h2 class="section-title">Выбор покупателей</h2><p class="section-subtitle">Реальные фотографии сочетаний: для себя, к столу и на подарок.</p><p class="photo-choice-intro">Содержимое подбираем индивидуально, состав и наличие уточняйте в лавке. На фото — примеры сочетаний, а не готовые наборы из каталога.</p></div>
         <div id="buyer-choices-grid" class="photo-choice-gallery" tabindex="0" role="region" aria-label="Фотографии примеров выбора" aria-describedby="buyer-choices-photo-hint"></div>
         <p id="buyer-choices-photo-hint" class="photo-choice-hint">Листайте вбок или используйте стрелки клавиатуры.</p>
       </div>
@@ -1376,9 +1528,24 @@ function productArt(product) {
       (product.imageCaption ? '<p class="product-photo-note">' + escapeHtml(product.imageCaption) + '</p>' : '');
   }
   var ages = productAges(product);
+  if (ages.length === 1) {
+    // Внутренний размер 800: карточка на сетке может быть шире 400 — гейт не даёт фото растягиваться.
+    return '<img class="age-plate" src="' + agingPlateSrc(ages[0]) + '" alt="" width="800" height="800" loading="lazy" decoding="async">';
+  }
   return '<img class="card-engraving" src="brand/logo-stacked.svg" alt="" width="110" height="89" loading="lazy">' +
-    (ages.length === 1 ? '<div class="age-stamp"><strong>' + ages[0] + '</strong><span>МЕСЯЦЕВ</span><span>ВЫДЕРЖКИ</span></div>' :
-      '<span class="product-origin">' + escapeHtml(categoryTitle(product.category)) + '</span>');
+    '<span class="product-origin">' + escapeHtml(categoryTitle(product.category)) + '</span>';
+}
+// Ярлык выдержки: у кусков и нарезок без фото из прайса кадр рисуется числом срока.
+// Бумага темнеет с выдержкой — линейка читается как ряд, а не как заглушка.
+function agingPlateSrc(months) {
+  var paper = months >= 20 ? '#EBDCBE' : months >= 14 ? '#F0E4CA' : '#F4EDDE';
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 400 400">'
+    + '<rect width="400" height="400" fill="' + paper + '"/>'
+    + '<g stroke="#E7DEC9" stroke-width="1.5"><line x1="58" y1="72" x2="342" y2="72"/><line x1="58" y1="328" x2="342" y2="328"/></g>'
+    + '<text x="200" y="238" text-anchor="middle" font-family="Georgia, serif" font-size="122" font-weight="700" fill="#5B2824">' + months + '</text>'
+    + '<text x="200" y="276" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#6E6155">месяцев выдержки</text>'
+    + '</svg>';
+  return 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
 
 // =========================================================================
@@ -1399,9 +1566,15 @@ var DEPT_ORDER = [
   { cat: "certificate", id: "dept-certificate", title: "Сертификаты", note: "Подарочный сертификат. Сумму согласуем при оформлении." }
 ];
 function matchesAge(product, age) {
-  if (age === 'all') return true;
+  if (!age || age === 'all') return true;
   return productAges(product).some(function (months) {
-    return age === '8-12' ? months >= 8 && months <= 12 : age === '14-18' ? months >= 14 && months <= 18 : age === '20-22' ? months >= 20 && months <= 22 : months >= 24;
+    if (age === '24' || age === '24+') return months >= 24;
+    if (/^\d+-\d+$/.test(age)) {
+      var band = age.split('-');
+      return months >= Number(band[0]) && months <= Number(band[1]);
+    }
+    // Точное деление линейки: «12» значит ровно двенадцать месяцев, а не «и дольше».
+    return /^\d+$/.test(age) && months === Number(age);
   });
 }
 function matchesSearch(product) {
@@ -1483,12 +1656,13 @@ function cardHtml(product) {
     var optionsHtml;
     // Группа выбора имеет смысл только из двух и более вариантов: единственный формат показываем строкой.
     function optionMarkup(caption, ariaLabel, choices) {
-      var head = '<div class="selector-caption"><span>' + caption + '</span></div>';
+      // Единственный формат — не выбор: строка без заголовка группы, чтобы карточка дышала.
       if (choices.length < 2) {
-        return choices.length ? head + '<p class="option-static"><span>' + choices[0].label + '</span>' +
-          '<span class="chip-sub">' + choices[0].sub + '</span></p>' : head;
+        return choices.length ? '<p class="option-static"><span>' + choices[0].label + '</span>' +
+          '<span class="chip-sub">' + choices[0].sub + '</span></p>' : '';
       }
-      return head + '<div class="options-wrap" role="radiogroup" aria-label="' + ariaLabel + '">' +
+      return '<div class="selector-caption"><span>' + caption + '</span></div>' +
+        '<div class="options-wrap" role="radiogroup" aria-label="' + ariaLabel + '">' +
         choices.map(function (c) {
           return '<button type="button" class="option-chip' + (c.tabular ? ' tabular' : '') + '" role="radio" aria-checked="' + c.checked + '"' +
             (c.olive ? ' data-olive="true"' : '') +
@@ -1508,7 +1682,7 @@ function cardHtml(product) {
           '<input id="custom-weight-' + product.id + '" type="number" class="form-input tabular" min="50" max="2000" step="1" value="' +
           (state.customWeightByProduct[product.id] || '') + '" placeholder="Например, 300" data-action="custom-weight" data-product-id="' +
           product.id + '" aria-invalid="' + String(!active.canAdd) + '" aria-describedby="cut-note-' + product.id + '"></label>' : '') +
-        '<div class="custom-cut-note" id="cut-note-' + product.id + '" aria-live="polite">' +
+        '<div class="custom-cut-note quiet' + (custom && !active.canAdd ? ' is-error' : '') + '" id="cut-note-' + product.id + '" aria-live="polite">' +
         (custom ? (active.canAdd ? 'Подберём отрез по вашему запросу. Точный вес и сумму согласуем перед оплатой.' : 'Укажите целый вес от 50 до 2 000 г.')
           : 'Вес уточним при сборке. Итоговая сумма — по фактическому весу.') +
         '</div>';
@@ -1535,9 +1709,10 @@ function cardHtml(product) {
         bulkSlider;
     }
 
-    return '<article class="product-card' + (product.image && !product.preview ? ' has-photo' : '') + '" data-product-id="' + product.id + '">' +
+    var plate = !product.image && productAges(product).length === 1;
+    return '<article class="product-card' + (product.image && !product.preview ? ' has-photo' : '') + '" data-reveal data-product-id="' + product.id + '">' +
       '<div>' +
-      '<div class="card-media' + (product.image ? ' has-photo' : '') + '">' + productArt(product) +
+      '<div class="card-media' + (product.image ? ' has-photo' : plate ? ' has-plate' : '') + '" data-reveal data-reveal-into="clip">' + productArt(product) +
       (product.preview ? '' : '<div class="olive-stage" id="olive-stage-' + product.id + '" aria-hidden="true"></div>') + '</div>' +
       '<div class="card-header-row"><h3 class="card-title">' + escapeHtml(product.title) + '</h3>' +
       (product.category !== 'extras' && pricePer100 > 0 ? '<span class="rate-per-100">' + formatRub(pricePer100) + ' / 100\u00A0г</span>' : '') + '</div>' +
@@ -1559,8 +1734,8 @@ function cardHtml(product) {
 
 function previewCardHtml(preview) {
   var metaText = preview.agingMonths ? 'Выдержка ' + preview.agingMonths + '\u00A0мес.' : categoryTitle(preview.category);
-  return '<article class="catalog-preview-card" data-preview-id="' + escapeHtml(preview.id) + '">' +
-    '<div><div class="card-media' + (preview.image ? ' has-photo' : '') + '">' + productArt(preview) + '</div>' +
+  return '<article class="catalog-preview-card" data-reveal data-preview-id="' + escapeHtml(preview.id) + '">' +
+    '<div><div class="card-media' + (preview.image ? ' has-photo' : '') + '" data-reveal data-reveal-into="clip">' + productArt(preview) + '</div>' +
     '<div class="card-header-row"><h3 class="card-title">' + escapeHtml(preview.title) + '</h3></div>' +
     '<div class="card-meta tabular">' + metaText + '</div>' +
     (preview.description ? '<p class="card-desc">' + escapeHtml(preview.description) + '</p>' : '') + '</div>' +
@@ -1593,7 +1768,7 @@ function renderCatalog(revealMatches) {
   var status = document.getElementById('search-status');
   var matchedDepts = DEPT_ORDER.filter(function (d) { return visible.some(function (p) { return p.category === d.cat; }); });
   document.getElementById('catalog-count').textContent = catalogCountLabel(catalogEntries());
-  status.textContent = (state.search ? 'Найдено: ' + catalogCountLabel(visible) + ' во всей витрине' + (matchedDepts.length ? ' · ' + matchedDepts.map(function (d) { return d.title; }).join(', ') + '. Выберите отдел ниже.' : '. Попробуйте другое название или сбросьте поиск и фильтры.') : catalogCountLabel(catalogEntries()) + ' во всей витрине. Показан один отдел; цены взяты из прайса поставщика.') + ' Позиции без цены и наличия уточняет владелец лавки.';
+  status.textContent = (state.search ? 'Найдено: ' + catalogCountLabel(visible) + ' во всей витрине' + (matchedDepts.length ? ' · ' + matchedDepts.map(function (d) { return d.title; }).join(', ') + '. Выберите отдел ниже.' : '. Попробуйте другое название или сбросьте поиск и фильтры.') : catalogCountLabel(catalogEntries()) + ' во всей витрине · показан один отдел, цены по прайсу поставщика');
   document.getElementById('clear-search-btn').hidden = !state.search && state.filterAging === 'all';
   grid.setAttribute('role', 'tabpanel');
   grid.setAttribute('aria-labelledby', 'tab-' + dept.id);
@@ -1638,6 +1813,51 @@ function renderDeptTabs(visible) {
   document.getElementById('aging-filter-row').hidden = !applicable.some(function (p) { return productAges(p).length; });
   document.querySelectorAll('[data-filter-aging]').forEach(function (b) {
     b.disabled = !applicable.some(function (p) { return matchesAge(p, b.dataset.filterAging); });
+  });
+}
+
+// Линейка выдержки — порт shop/lib/aging.ts. Считается по тому же массиву, что и
+// фильтр витрины (catalogEntries: и с ценой, и «уточняются»), иначе цифра над штрихом
+// обещала бы один список, а деление открывало другой. Хвост «24+» — одно деление на
+// всё, что от 24 месяцев: столько же отдаёт фильтр «24».
+function agingScale(entries) {
+  var values = entries.map(function (entry) { return entry.agingMonths; }).filter(function (months) { return typeof months === 'number' && months > 0; });
+  if (!values.length) return { cells: [], step: 0, total: 0 };
+  var min = Math.min.apply(null, values);
+  var max = Math.max.apply(null, values);
+  var step = values.every(function (months) { return (months - min) % 2 === 0; }) ? 2 : 1;
+  var counts = {};
+  values.forEach(function (months) { counts[months] = (counts[months] || 0) + 1; });
+  var cells = [];
+  for (var months = min; months <= max; months += step) {
+    if (months >= 24) {
+      cells.push({ months: 24, count: values.filter(function (value) { return value >= 24; }).length, value: '24', label: '24+' });
+      break;
+    }
+    cells.push({ months: months, count: counts[months] || 0, value: String(months), label: String(months) });
+  }
+  return { cells: cells, step: step, total: values.length };
+}
+function renderAgingRuler() {
+  var ruler = document.getElementById('aging-ruler');
+  var track = document.getElementById('ruler-track');
+  var scale = agingScale(catalogEntries());
+  if (!scale.cells.length) { ruler.hidden = true; return; }
+  document.getElementById('ruler-note').textContent = 'Шаг — ' + scale.step + '\u00A0мес. Цифра над штрихом — сколько позиций витрины имеют такую выдержку.';
+  track.innerHTML = scale.cells.map(function (cell) {
+    var tick = cell.count
+      ? '<button type="button" class="ruler-tick" data-ruler-aging="' + cell.value + '" aria-pressed="false" aria-label="Выдержка ' + cell.label + '\u00A0мес. — ' + cell.count + '">' +
+        '<span class="ruler-count tabular">' + cell.count + '</span>' +
+        '<span class="ruler-stroke" style="--aging-count:' + cell.count + '" aria-hidden="true"></span></button>'
+      : '<span class="ruler-blank" aria-hidden="true"></span>';
+    return '<li class="ruler-cell' + (cell.months % 12 === 0 ? ' is-major' : '') + '">' + tick + '<span class="ruler-month tabular">' + cell.label + '</span></li>';
+  }).join('');
+  ruler.hidden = false;
+  syncRulerPressed();
+}
+function syncRulerPressed() {
+  document.querySelectorAll('[data-ruler-aging]').forEach(function (tick) {
+    tick.setAttribute('aria-pressed', String(tick.getAttribute('data-ruler-aging') === state.filterAging));
   });
 }
 
@@ -1977,6 +2197,8 @@ function closeMenu() { if (activeLayer && activeLayer.id === 'menu-drawer') clos
 // =========================================================================
 var scaleOptions = PRODUCTS.filter(function (product) { return product.kind === 'piece' && product.category === 'piece'; });
 var scaleChips = [100, 300, 500];
+var SCALE_MIN_G = 50;
+var SCALE_MAX_G = 2000;
 var currentScaleProduct = 'nf-00000213';
 var currentScaleGrams = 300;
 var scalePrice = calcPiecePrice(currentScaleGrams, scaleProduct().pricePerKg);
@@ -1993,8 +2215,15 @@ function initDemoScale() {
   var priceOut = document.getElementById('demo-scale-price');
   var chipsEl = document.getElementById('demo-scale-chips');
   var hintEl = document.getElementById('demo-scale-hint');
+  var gauge = document.getElementById('demo-scale-gauge');
 
   if (!scaleOptions.length) return;
+  // Границы стрелки, ползунка и подписи шкалы — одни и те же числа. Разъехались бы —
+  // стрелка упиралась бы в край там, где ползунок ещё едет.
+  range.min = String(SCALE_MIN_G);
+  range.max = String(SCALE_MAX_G);
+  document.getElementById('demo-scale-min').textContent = formatWeightLabel(SCALE_MIN_G);
+  document.getElementById('demo-scale-max').textContent = formatWeightLabel(SCALE_MAX_G);
   select.innerHTML = scaleOptions.map(function (product) {
     return '<option value="' + escapeHtml(product.id) + '"' + (product.id === currentScaleProduct ? ' selected' : '') + '>' +
       escapeHtml(product.title) + '</option>';
@@ -2006,7 +2235,11 @@ function initDemoScale() {
       return '<button type="button" class="magnet-btn tabular" data-demo-weight="' + weight + '" aria-pressed="false">Порция ' + weight + '\u00A0г</button>';
     }).join('');
     chipsEl.querySelectorAll('[data-demo-weight]').forEach(function (btn) {
-      btn.addEventListener('click', function () { setDemoWeight(btn.getAttribute('data-demo-weight')); });
+      btn.addEventListener('click', function () {
+        setDemoWeight(btn.getAttribute('data-demo-weight'));
+        popElement(priceOut);
+        popElement(btn);
+      });
     });
   }
 
@@ -2014,9 +2247,14 @@ function initDemoScale() {
     var product = scaleProduct();
     var weight = parseInt(rawWeight, 10);
     if (!Number.isInteger(weight)) return;
-    weight = Math.max(50, Math.min(2000, weight));
+    weight = Math.max(SCALE_MIN_G, Math.min(SCALE_MAX_G, weight));
     currentScaleGrams = weight;
     range.value = String(weight);
+    // Стрелка идёт по границам ползунка: сектор ±60° от вертикали, дуга нормирована
+    // pathLength="100", поэтому заполнение — те же проценты, что и доля веса.
+    var share = (weight - SCALE_MIN_G) / (SCALE_MAX_G - SCALE_MIN_G);
+    gauge.style.setProperty('--needle', (-60 + share * 120).toFixed(2) + 'deg');
+    gauge.style.setProperty('--gauge-fill', (share * 100).toFixed(2));
     weightOut.textContent = formatWeightLabel(weight);
     rateOut.textContent = formatRub(product.pricePerKg);
     var nextPrice = calcPiecePrice(weight, product.pricePerKg);
@@ -2028,7 +2266,11 @@ function initDemoScale() {
     hintEl.textContent = 'Без округления к соседнему куску: в заказ уйдёт указанный вами вес.';
   }
 
-  select.addEventListener('change', function () { currentScaleProduct = select.value; setDemoWeight(currentScaleGrams); });
+  select.addEventListener('change', function () {
+    currentScaleProduct = select.value;
+    setDemoWeight(currentScaleGrams);
+    popElement(priceOut);
+  });
   range.addEventListener('input', function (event) { setDemoWeight(event.target.value); });
   document.getElementById('scale-add-btn').addEventListener('click', function () {
     var product = scaleProduct();
@@ -2163,12 +2405,145 @@ function openStory(idx) {
 function closeStory() { if (activeLayer && activeLayer.id === 'stories-player') closeLayer(); }
 
 // =========================================================================
+// 10. СЛОЙ ДВИЖЕНИЯ (порт shop/components/Motion.tsx и индикатора SiteTabs)
+// =========================================================================
+var MOTION_EDGE = 0.92;
+var MOTION_MAX_STAGGER = 7;
+
+// Короткая посадка контрола. Класс снимается сам по animationend, поэтому повторное
+// нажатие не накапливает анимацию.
+function popElement(node, className) {
+  var name = className || 'is-pop';
+  if (!node || prefersReducedMotion()) return;
+  node.classList.remove(name);
+  // Перезапуск требует кадра без класса: без обращения к раскладке браузер считает, что ничего не изменилось.
+  void node.offsetWidth;
+  node.classList.add(name);
+  node.addEventListener('animationend', function () { node.classList.remove(name); }, { once: true });
+}
+
+function initMotionLayer() {
+  var root = document.documentElement;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var header = document.querySelector('.site-header');
+
+  function paint() {
+    // Прячем непоказанное только когда JS успел встать: без скрипта и в профиле
+    // «меньше движения» правила CSS не применяются и текст виден с первой отрисовки.
+    root.setAttribute('data-motion', reduce.matches ? 'reduced' : 'on');
+    if (reduce.matches) return;
+    var step = 0;
+    // Ступень лесенки считается на блок, а не на узел: у карточки показан и контейнер,
+    // и её фотография. Вложенный узел едет ступенью родителя, но только когда родитель
+    // размечается в этом же кадре — иначе он получил бы задержку отыгранной лесенки.
+    var rungs = new Map();
+    Array.from(document.querySelectorAll('[data-reveal]')).forEach(function (node) {
+      if (node.style.getPropertyValue('--reveal-name')) return;
+      if (!node.offsetParent) return;
+      var box = node.getBoundingClientRect();
+      // Ниже сгиба — дождётся прокрутки. Выше сгиба — уже пролетели мимо (панель
+      // открыли внизу страницы): такой узел показывается сразу и без задержки,
+      // иначе он остался бы невидимым навсегда.
+      if (box.top >= window.innerHeight * MOTION_EDGE) return;
+      var passed = box.bottom <= 0;
+      var parent = node.parentElement ? node.parentElement.closest('[data-reveal]') : null;
+      var inherited = parent ? rungs.get(parent) : undefined;
+      var delay = '0';
+      if (!passed) {
+        if (inherited === undefined) { delay = String(Math.min(step, MOTION_MAX_STAGGER)); step += 1; }
+        else delay = inherited;
+      }
+      node.style.setProperty('--reveal-i', delay);
+      node.style.setProperty('--reveal-name', 'nh-' + (node.getAttribute('data-reveal-into') || 'rise'));
+      rungs.set(node, delay);
+    });
+  }
+
+  function progress() {
+    var scrollable = root.scrollHeight - window.innerHeight;
+    root.style.setProperty('--scroll', scrollable > 0 ? String(Math.min(1, window.scrollY / scrollable)) : '0');
+    if (header) {
+      if (window.scrollY > 8) header.setAttribute('data-scrolled', '');
+      else header.removeAttribute('data-scrolled');
+    }
+    // Смещение первого экрана ограничено одним экраном и округлено до пикселя:
+    // множители и предел живут в CSS (--parallax-*).
+    root.style.setProperty('--hero-shift', Math.round(Math.min(window.scrollY, window.innerHeight)) + 'px');
+  }
+
+  var frame = 0;
+  function sync() {
+    if (frame) return;
+    frame = requestAnimationFrame(function () { frame = 0; paint(); progress(); });
+  }
+  sync();
+  window.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', sync);
+  window.addEventListener('nh-panel-change', sync);
+  reduce.addEventListener('change', sync);
+  // Сетка каталога пересобирается на каждый ввод: новые карточки тоже помечены
+  // data-reveal и без повторного скана остались бы скрытыми до первой прокрутки.
+  new MutationObserver(sync).observe(document.getElementById('top') || document.body, { childList: true, subtree: true });
+}
+
+function initTabUnderline() {
+  var bar = document.querySelector('.site-tabs');
+  if (!bar) return;
+  function draw() {
+    var node = bar.querySelector('[role="tab"][aria-selected="true"]');
+    // Полоса — потомок прокручиваемого ряда, поэтому мерим смещение внутри ряда,
+    // а не по экрану: иначе индикатор отставал бы от кнопки при прокрутке вкладок.
+    if (!node || node.offsetParent !== bar) return;
+    bar.style.setProperty('--tab-w', node.offsetWidth + 'px');
+    bar.style.setProperty('--tab-x', node.offsetLeft + 'px');
+    bar.setAttribute('data-tabs-ready', '');
+  }
+  draw();
+  if (window.ResizeObserver) new ResizeObserver(draw).observe(bar);
+  window.addEventListener('nh-panel-change', draw);
+  // Ширина кнопок зависит от брендового шрифта: после его подмены ряд может не
+  // изменить свою ширину, и наблюдатель размера не сработает.
+  document.fonts.ready.then(draw);
+}
+
+// =========================================================================
 // 11. ФИЛЬТРЫ, ФОРМА, МАСКА ТЕЛЕФОНА, ОТПРАВКА
 // =========================================================================
 function syncFilterButtonsUI() {
   document.querySelectorAll('[data-filter-aging]').forEach(function (btn) {
     btn.setAttribute('aria-pressed', String(btn.getAttribute('data-filter-aging') === state.filterAging));
   });
+  syncExactAgingChip();
+  syncRulerPressed();
+}
+
+// Штрих линейки задаёт точный месяц: «12» — ровно двенадцать, а не «и дольше».
+// В ряду фильтров такой кнопки нет, поэтому выбранный месяц показывается отдельной
+// кнопкой: иначе фильтр был бы применён, но не виден и не снимался бы одним нажатием.
+function syncExactAgingChip() {
+  var row = document.getElementById('aging-filter-row');
+  var chip = document.getElementById('aging-exact-chip');
+  var known = Array.from(row.querySelectorAll('[data-filter-aging]')).some(function (btn) {
+    return btn.getAttribute('data-filter-aging') === state.filterAging;
+  });
+  if (!/^\d+$/.test(state.filterAging) || known) { if (chip) chip.remove(); return; }
+  if (!chip) {
+    chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'filter-btn';
+    chip.id = 'aging-exact-chip';
+    chip.addEventListener('click', function () {
+      state.filterAging = 'all';
+      syncFilterButtonsUI();
+      renderCatalog(true);
+      var any = row.querySelector('[data-filter-aging="all"]');
+      if (any) any.focus();
+    });
+    row.appendChild(chip);
+  }
+  chip.textContent = state.filterAging + '\u00A0мес.';
+  chip.setAttribute('aria-pressed', 'true');
+  chip.setAttribute('aria-label', 'Фильтр: выдержка ровно ' + state.filterAging + '\u00A0мес. Нажмите, чтобы снять');
 }
 
 function updateSingleCardNumbers(productId) {
@@ -2282,6 +2657,9 @@ function activateTab(name) {
     b.setAttribute('aria-selected', String(selected)); b.tabIndex = selected ? 0 : -1;
   });
   TOP_TABS.forEach(function (id) { document.getElementById(id).hidden = id !== name; });
+  // Индикатор и слой движения мерят панель после смены hidden: до перерисовки
+  // её прямоугольник ещё нулевой, а прятать под невидимой панелью нельзя.
+  requestAnimationFrame(function () { window.dispatchEvent(new Event('nh-panel-change')); });
 }
 function navigateTarget(target, scrollTo, recordHistory, keepTabFocus) {
   var dept = DEPT_ORDER.find(function (d) { return d.id === target; });
@@ -2334,7 +2712,7 @@ function renderPhotoChoices() {
     ] }
   ];
   var markup = groups.map(function (group) {
-    return '<article class="photo-choice-group" data-choice-category="' + group.category + '"><h3 class="photo-choice-label">' + escapeHtml(group.label) + '</h3><div class="photo-choice-images">' + group.images.map(function (image) {
+    return '<article class="photo-choice-group" data-reveal data-reveal-into="clip" data-choice-category="' + group.category + '"><h3 class="photo-choice-label">' + escapeHtml(group.label) + '</h3><div class="photo-choice-images">' + group.images.map(function (image) {
       return '<img src="' + image.src + '" alt="' + escapeHtml(image.alt) + '" width="720" height="1280" loading="lazy">';
     }).join('') + '</div><p class="photo-choice-note">' + escapeHtml(group.note) + '</p></article>';
   }).join('');
@@ -2360,7 +2738,7 @@ function renderScenarios() {
   }
   grid.innerHTML = sets.map(function (entry) {
     var total = entry.items.reduce(function (sum, item) { return sum + item.pack.price; }, 0);
-    return '<article class="scenario-card" data-set-id="' + escapeHtml(entry.set.id) + '">' +
+    return '<article class="scenario-card" data-reveal data-set-id="' + escapeHtml(entry.set.id) + '">' +
       '<div><div class="scenario-label">' + escapeHtml(entry.set.kicker) + '</div>' +
       '<div class="scenario-name">' + escapeHtml(entry.set.title) + '</div>' +
       '<p class="card-desc">' + escapeHtml(entry.set.desc) + '</p>' +
@@ -2376,7 +2754,7 @@ function renderScenarios() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  loadPersistedState(); initProductSelections(); renderStoriesStrip(); renderCatalog(); updateCartUI(); renderScenarios(); renderPhotoChoices();
+  loadPersistedState(); initProductSelections(); renderStoriesStrip(); renderCatalog(); updateCartUI(); renderScenarios(); renderPhotoChoices(); renderAgingRuler();
   document.fonts.ready.then(keepActiveDeptVisible);
   window.addEventListener('resize', keepActiveDeptVisible);
   document.querySelectorAll('.site-tabs [role="tab"]').forEach(function (button) {
@@ -2415,6 +2793,8 @@ document.addEventListener('DOMContentLoaded', function () {
   initCheckoutForm();
 
   // Оркеcтрованное появление первого экрана (единственный «громкий» момент)
+  initMotionLayer();
+  initTabUnderline();
   
 
   // Панель отделов переехала в табы витрины (renderDeptTabs)
@@ -2435,6 +2815,16 @@ document.addEventListener('DOMContentLoaded', function () {
       state.activeDept = state.filterAging === '24' ? 'dept-leg' : 'dept-piece';
       syncFilterButtonsUI(); renderCatalog(); navigateTarget('catalog', true, true);
     });
+  });
+
+  // Штрих линейки открывает витрину ровно с тем месяцем, что стоит под штрихом
+  document.getElementById('ruler-track').addEventListener('click', function (e) {
+    var tick = e.target.closest('[data-ruler-aging]');
+    if (!tick) return;
+    state.search = ''; document.getElementById('catalog-search').value = '';
+    state.filterAging = tick.getAttribute('data-ruler-aging');
+    syncFilterButtonsUI(); renderCatalog(true); navigateTarget('catalog', true, true);
+    popElement(tick);
   });
 
   // Делегирование кликов в каталоге

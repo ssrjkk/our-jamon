@@ -495,10 +495,16 @@ test('линейка выдержки обещает ровно то, что о�
   try {
     const { agingScale, agingMatches, AGING_BANDS } = система.load('lib/aging.ts');
     const catalog = require(path.join(root, 'lib/catalog.json'));
-    const позиции = catalog.products.filter((п) => typeof п.agingMonths === 'number' && п.agingMonths > 0);
-    const шкала = agingScale(catalog.products);
+    // Панель «Выдержка» стоит над тем же списком, что и фильтр /catalog?aging=: позиции
+    // с ценой плюс «уточняются». Снять вторую половину — значит нарисовать штрих ниже,
+    // чем список, который откроет ссылка деления.
+    const исходник = fs.readFileSync(path.join(root, 'app/page.tsx'), 'utf8');
+    assert.match(исходник, /agingScale\(\[\.\.\.products, \.\.\.previews\]\)/,
+      'линейка собирается не по объединению товаров и позиций без цены — штрих отстаёт от фильтра');
+    const позиции = [...catalog.products, ...catalog.previews].filter((п) => typeof п.agingMonths === 'number' && п.agingMonths > 0);
+    const шкала = agingScale(позиции);
     assert.ok(позиции.length >= 20, `позиций с выдержкой ${позиции.length} — сверять нечего`);
-    assert.equal(шкала.total, позиции.length, 'agingScale считает не все позиции каталога');
+    assert.equal(шкала.total, позиции.length, 'agingScale считает не все позиции витрины');
     assert.ok([1, 2].includes(шкала.step), `шаг линейки ${шкала.step}: деление пошло не по месяцам`);
     const месяцы = позиции.map((п) => п.agingMonths);
     const хвост = AGING_BANDS[AGING_BANDS.length - 1];
@@ -530,4 +536,276 @@ test('линейка выдержки обещает ровно то, что о�
   } finally {
     система.cleanup();
   }
+});
+
+// 8. Паритность движения двух витрин. GitHub Pages отдаёт index.html без сборки и без
+// React: правка слоя на одной витрине ничего не ломает на другой, поэтому расхождение
+// видно только здесь — уехавшая деталь, молча слипшийся ховер или профиль «меньше
+// движения», который на Pages вдруг перестаёт быть пустым.
+function убратьКомментарии(текст) {
+  return текст.replace(/\/\*[\s\S]*?\*\//g, (блок) => блок.replace(/[^\n]/g, ' '));
+}
+
+const норма = (текст) => текст.replace(/\s+/g, ' ').trim();
+
+/**
+ * Границы блока движения: начало — с того комментария, конец — тем, чем блок обещан
+ * закрыться (у Next это next-медиазапрос, у Pages — конец стиля). Индексы считаем по
+ * исходнику, а режем очищенным текстом: они одной длины, иначе номер строки в отчёте
+ * врал бы о том, где лежит правка.
+ */
+function блокДвижения(исходник, чищеный, где, конецМаркер) {
+  const подпись = исходник.indexOf('Движение и детали');
+  assert.notEqual(подпись, -1, `${где}: нет блока «Движение и детали» — слой движения вырезан`);
+  const начало = исходник.lastIndexOf('/*', подпись);
+  assert.notEqual(начало, -1, `${где}: заголовок блока движения не привязан к комментарию`);
+  const конец = конецМаркер === null ? чищеный.length : чищеный.indexOf(конецМаркер, подпись);
+  assert.notEqual(конец, -1, `${где}: блок движения не ограничен тем, чем обещал быть закрыт`);
+  return чищеный.slice(начало, конец);
+}
+
+/** Ключевые кадры по имени: обе витрины пишут их одной строкой, поэтому рамка — вся строка. */
+function кадрыВ(текст) {
+  return new Map([...текст.matchAll(/^@keyframes\s+(nh-[\w-]+)\s*\{(.*)\}$/gm)].map((m) => [m[1], норма(m[2])]));
+}
+
+const правилаВ = (текст) => [...текст.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+  .map((m) => ({ sel: норма(m[1]), body: m[2] }))
+  .filter((правило) => !правило.sel.startsWith('@'));
+
+const переменныеВ = (текст) => new Set([...текст.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]));
+const определеноВ = (текст) => new Set([...текст.matchAll(/^\s*(--[\w-]+)\s*:/gm)].map((m) => m[1]));
+
+function значениеВ(текст, имя, где) {
+  const корневойБлок = /:root\s*\{([\s\S]*?)\n\}/.exec(текст);
+  assert.ok(корневойБлок, `${где}: нет блока :root`);
+  const m = new RegExp(`${имя}\\s*:\\s*([^;]+);`).exec(корневойБлок[1]);
+  return m && норма(m[1]);
+}
+
+/**
+ * Сырые длительности вне блока «меньше движения» — тот же детектор, что и в проверке 1.
+ * Исключение действует только если заглушка лежит внутри самого текста: у блока движения
+ * Pages её нет (она стоит в начале стиля), поэтому внутри блока не пролазит ничего.
+ */
+function сырыеДлительности(текст) {
+  const естьЗаглушка = текст.includes('@media (prefers-reduced-motion: reduce)');
+  const резерв = естьЗаглушка ? диапазон(текст, '@media (prefers-reduced-motion: reduce)') : [-1, -1];
+  return [...текст.matchAll(/\b((?:transition|animation)(?:-[a-z-]+)?)\s*:\s*([^;{}]+)/g)]
+    .filter((m) => /(?:^|[\s,(])[\d.]+m?s\b/.test(m[2]))
+    .filter((m) => m.index < резерв[0] || m.index >= резерв[1])
+    .map((m) => `${m[1]}: ${m[2].trim()}`);
+}
+
+/** Заглушка «меньше движения»: четыре свойства, все !important, длительности короче миллисекунды. */
+function проверитьЗаглушку(текст, где) {
+  const блок = текст.slice(...диапазон(текст, '@media (prefers-reduced-motion: reduce)'));
+  const m = /\*, \*::before, \*::after \{([^}]*)\}/.exec(блок);
+  assert.ok(m, `${где}: нет всеобъемлющей заглушки движения`);
+  for (const имя of ['animation-duration', 'transition-duration', 'scroll-behavior', 'animation-iteration-count']) {
+    assert.match(m[1], new RegExp(`${имя}: [^;]+ !important`), `${где}: ${имя} не выключено с !important`);
+  }
+  const длительность = /animation-duration:\s*([\d.]+)(m?s)/.exec(m[1]);
+  assert.ok(миллисекунды(`${длительность[1]}${длительность[2]}`) <= 1, `${где}: animation-duration ${длительность[1]}${длительность[2]} тяжелее миллисекунды`);
+}
+
+/** Подъём карточки на translate и без transform: конечный кадр показа держит transform, и обычное правило его перебить не может. */
+function проверитьКарточки(текст, где) {
+  const ховеры = правилаВ(текст).filter((правило) => правило.sel.split(',').some((часть) => /(?:product|scenario|catalog-preview)-card:hover$/.test(часть.trim())));
+  assert.ok(ховеры.length >= 2, `${где}: не найдено ни одного ховера карточки — проверка потеряла опору`);
+  for (const правило of ховеры) {
+    assert.match(правило.body, /translate\s*:/, `${где}: ${правило.sel} не едет на translate`);
+    assert.doesNotMatch(правило.body, /(^|[^-a-z])transform\s*:/, `${где}: ${правило.sel} снова на transform — показ держит свой конечный кадр`);
+  }
+}
+
+/** Окно вокруг каждой стрелки в разметке: классы, которые могут быть её родителем. */
+function окнаСтрелок(текст) {
+  const окна = [];
+  for (const m of текст.matchAll(/class(?:Name)?="([^"]*\barrow[\w-]*)"/g)) {
+    const классы = new Set([...текст.slice(Math.max(0, m.index - 400), m.index).matchAll(/class(?:Name)?="([^"]+)"/g)]
+      .flatMap((к) => к[1].split(/\s+/)));
+    m[1].split(/\s+/).forEach((к) => классы.add(к));
+    окна.push(классы);
+  }
+  return окна;
+}
+
+/**
+ * Ховер на стрелку обязан иметь к чему приложиться. Класс-стрелка может существовать в
+ * разметке (и проходить гейт мёртвых классов), но лежать под другим контейнером, чем
+ * назван в правиле, — и тогда под курсором не уезжает ничего.
+ */
+function проверитьСтрелки(текст, окна, где) {
+  const ховеры = правилаВ(текст).filter((правило) => /:hover/.test(правило.sel) && /(^|[^-a-z])translate\s*:/.test(правило.body));
+  assert.ok(ховеры.length >= 1, `${где}: нет ни одного ховера со смещением — проверка потеряла опору`);
+  const мёртвые = [];
+  for (const правило of ховеры) {
+    for (const часть of правило.sel.split(',')) {
+      const m = /^\.([\w-]+):hover\s+\.([\w-]+)$/.exec(часть.trim());
+      if (m && !окна.some((классы) => классы.has(m[1]) && классы.has(m[2]))) мёртвые.push(часть.trim());
+    }
+  }
+  assert.deepEqual(мёртвые, [], `${где}: ховер на стрелку не к чему приложить — под названным контейнером нет такой стрелки: ${мёртвые.join(', ')}`);
+}
+
+const статика = (() => {
+  const html = fs.readFileSync(path.join(root, '..', 'index.html'), 'utf8').replace(/\r\n/g, '\n');
+  const стиль = html.slice(html.indexOf('<style>') + 7, html.indexOf('</style>'));
+  return {
+    стиль,
+    разметка: html.slice(html.indexOf('</style>'), html.indexOf('<script>')),
+    скрипт: html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>')),
+    все: убратьКомментарии(стиль),
+  };
+})();
+
+/** Разметка Next: стрелки сидят в tsx-компонентах, а не в одном html, поэтому окно собирается по всем файлам. */
+const окнаNext = (() => {
+  const файлы = [];
+  for (const папка of ['app', 'components']) {
+    const обход = (каталог) => {
+      for (const имя of fs.readdirSync(каталог)) {
+        const полный = path.join(каталог, имя);
+        if (fs.statSync(полный).isDirectory()) обход(полный);
+        else if (/\.tsx$/.test(имя)) файлы.push(полный);
+      }
+    };
+    обход(path.join(root, папка));
+  }
+  const окна = файлы.flatMap((файл) => окнаСтрелок(fs.readFileSync(файл, 'utf8')));
+  assert.ok(окна.length >= 8, `разметка Next даёт всего ${окна.length} стрелок — проверка теряет опору и ничего не обещает`);
+  return окна;
+})();
+
+const движениеNext = блокДвижения(raw, css, 'globals.css', '@media (min-width: 680px)');
+const движениеStatic = блокДвижения(статика.стиль, статика.все, 'index.html', null);
+const nextКадры = кадрыВ(движениеNext);
+const staticКадры = кадрыВ(движениеStatic);
+const токеныСлоя = ['--dur-press', '--dur-control', '--dur-enter', '--dur-wipe', '--dur-ambient', '--stagger',
+  '--ease-cut', '--ease-settle', '--reveal-shift', '--reveal-bleed', '--parallax-copy', '--parallax-sign',
+  '--parallax-limit', '--grain', '--lift-shadow', '--tap-tint'];
+/** Переменные, которые пишет JavaScript: в CSS их определить негде и не нужно. */
+const программные = new Set(['--reveal-name', '--reveal-i', '--reveal-into', '--hero-shift', '--tab-w', '--tab-x', '--scroll', '--aging-count', '--needle', '--gauge-fill']);
+const nextСсылки = переменныеВ(движениеNext);
+const staticСсылки = переменныеВ(движениеStatic);
+const константыСлоя = [['край показа', /const EDGE = ([\d.]+)/, /var MOTION_EDGE = ([\d.]+)/],
+  ['предел лесенки', /const MAX_STAGGER = (\d+)/, /var MOTION_MAX_STAGGER = (\d+)/]];
+
+test('обе витрины двигает один и тот же слой', (t) => {
+  // 8.1. Шкала: одно имя токена обязано значить одно число на обеих витринах.
+  for (const имя of токеныСлоя) {
+    const next = токен(имя);
+    const staticValue = значениеВ(статика.все, имя, 'index.html');
+    assert.ok(next, `globals.css: в :root нет ${имя}`);
+    assert.ok(staticValue, `index.html: в :root нет ${имя} — ссылка молча станет начальным значением`);
+    assert.equal(staticValue, норма(next), `${имя}: витрины значат разное — ${staticValue} против ${норма(next)}`);
+  }
+
+  // 8.2. Кадры: набор nh-* и тело каждого кадра обязаны совпадать, иначе на Pages деталь
+  // едет по другой траектории или не едет вовсе.
+  assert.ok(nextКадры.size >= 8 && staticКадры.size >= 8, `кадров осталось ${nextКадры.size}/${staticКадры.size} — сверять нечего`);
+  assert.deepEqual([...staticКадры.keys()].sort(), [...nextКадры.keys()].sort(), 'набор @keyframes nh-* разошёлся между витринами');
+  for (const [имя, тело] of nextКадры) {
+    assert.equal(staticКадры.get(имя), тело, `@keyframes ${имя}: на Pages кадр отличается от globals.css`);
+  }
+
+  // 8.3. Ссылки слоя: висящая var() — это 0ms или 0px, то есть молча пропавшее движение.
+  assert.deepEqual([...staticСсылки].filter((имя) => !nextСсылки.has(имя)), [], 'слой Pages ссылается на токен, которого нет в globals.css');
+  assert.deepEqual([...nextСсылки].filter((имя) => !staticСсылки.has(имя)), [], 'globals.css ссылается на токен, которого нет на Pages');
+  for (const [где, ссылки, текст] of [['index.html', staticСсылки, статика.все], ['globals.css', nextСсылки, css]]) {
+    const висящие = [...ссылки].filter((имя) => !программные.has(имя) && !определеноВ(текст, имя));
+    assert.deepEqual(висящие, [], `${где}: var() без определения — ${висящие.join(', ')}`);
+  }
+
+  // 8.4. Варианты появления: имя из разметки превращается в nh-<имя>. Лишнее имя — узел,
+  // который навсегда останется скрытым: keyframes нет, а правило показа уже сработало.
+  const union = /function revealInto\(into: ([^)]+)\)/.exec(fs.readFileSync(path.join(root, 'lib/reveal.ts'), 'utf8'));
+  assert.ok(union, 'lib/reveal.ts: список вариантов появления больше не читается — гейт слепнет');
+  const варианты = new Set([...union[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]));
+  const staticВарианты = new Set([...статика.разметка.matchAll(/data-reveal-into="([a-z-]+)"/g)].map((m) => m[1]));
+  assert.deepEqual([...staticВарианты].sort(), [...варианты].sort(), 'разметка Pages зовёт вариант появления, которого нет в lib/reveal.ts');
+  for (const имя of staticВарианты) {
+    assert.ok(staticКадры.has(`nh-${имя}`), `index.html: data-reveal-into="${имя}" без @keyframes nh-${имя} — узел останется скрыт навсегда`);
+    assert.ok(nextКадры.has(`nh-${имя}`), `globals.css: нет @keyframes nh-${имя} для варианта из разметки Pages`);
+  }
+
+  // 8.5. Карточки, длительности и заглушка «меньше движения» — на обеих витринах.
+  проверитьКарточки(css, 'globals.css');
+  проверитьКарточки(статика.все, 'index.html');
+  проверитьСтрелки(css, окнаNext, 'globals.css');
+  проверитьСтрелки(статика.все, окнаСтрелок(статика.разметка), 'index.html');
+  assert.deepEqual(сырыеДлительности(движениеStatic), [], 'index.html: длительность слоя движения задана цифрой, а не токеном шкалы');
+  assert.deepEqual(сырыеДлительности(движениеNext), [], 'globals.css: длительность слоя движения задана цифрой, а не токеном шкалы');
+  проверитьЗаглушку(css, 'globals.css');
+  проверитьЗаглушку(статика.все, 'index.html');
+
+  // 8.6. Порог показа и предел лесенки: разные константы — разная лесенка на Pages.
+  const motion = fs.readFileSync(path.join(root, 'components/Motion.tsx'), 'utf8');
+  for (const [имя, nextRe, staticRe] of константыСлоя) {
+    const next = Number(nextRe.exec(motion)?.[1]);
+    const staticValue = Number(staticRe.exec(статика.скрипт)?.[1]);
+    assert.ok(Number.isFinite(next) && Number.isFinite(staticValue), `${имя}: константа больше не читается — гейт слепнет`);
+    assert.equal(staticValue, next, `${имя}: на Pages ${staticValue}, в Motion.tsx ${next}`);
+  }
+
+  // 8.7. Контролы, которые рисует JavaScript: без них витрина стоит на нуле или показывает
+  // значение, которого браузер не видел.
+  assert.match(статика.скрипт, /setProperty\('--tab-w'/, 'index.html: ширина черты вкладок не измеряется');
+  assert.match(статика.скрипт, /setProperty\('--tab-x'/, 'index.html: сдвиг черты вкладок не измеряется');
+  assert.match(статика.скрипт, /setAttribute\('data-tabs-ready'/, 'index.html: черта вкладок не разблокирована атрибутом готовности');
+  assert.match(статика.все, /\.site-tabs\[data-tabs-ready\] \.tab-underline \{ opacity: 1/, 'index.html: атрибут готовности есть, но черта по нему не показывается');
+  assert.match(статика.скрипт, /setProperty\('--needle'/, 'index.html: стрелка весов не поворачивается');
+  assert.match(статика.скрипт, /-60 \+ share \* 120/, 'index.html: сектор стрелки весов не тот, что в ScaleTerminal');
+  assert.match(fs.readFileSync(path.join(root, 'components/ScaleTerminal.tsx'), 'utf8'), /-60 \+ share \* 120/, 'ScaleTerminal: сектор стрелки уехал от Pages');
+  assert.match(статика.разметка, /pathLength="100"/, 'index.html: дуга весов не нормирована pathLength=100 — заливка пошла бы в пикселях');
+  assert.match(статика.скрипт, /var scale = agingScale\(catalogEntries\(\)\)/, 'index.html: линейка собрана не по всей витрине');
+
+  // 8.8. Гейт обязан быть живым: сверять витрины текстом проще, чем молчать на расхождении.
+  // Каждая проба — одна правка in-memory, ровно та, которую проверка обязана заметить.
+  const ловится = (где, проверка, проба) => {
+    let поймано = false;
+    try { проверка(проба); } catch { поймано = true; }
+    assert.ok(поймано, `проба «${где}» проходит незаметной: тот же расход гейт не поймает и в жизни`);
+  };
+  const сверитьКадры = (текст) => {
+    const m = кадрыВ(текст);
+    assert.deepEqual([...m.keys()].sort(), [...nextКадры.keys()].sort(), 'набор кадров');
+    for (const [имя, тело] of nextКадры) assert.equal(m.get(имя), тело, `тело ${имя}`);
+  };
+  const сверитьТокены = (текст) => {
+    for (const имя of токеныСлоя) assert.equal(значениеВ(текст, имя, 'проба'), норма(токен(имя)), `${имя} не совпадает`);
+  };
+  const сверитьСсылки = (текст) => {
+    const определённые = определеноВ(текст);
+    assert.deepEqual([...переменныеВ(движениеStatic)].filter((имя) => !программные.has(имя) && !определённые.has(имя)), [], 'var() без определения');
+  };
+  const сверитьКонстанты = (скрипт) => {
+    for (const [, , staticRe] of константыСлоя) {
+      const значение = Number(staticRe.exec(скрипт)?.[1]);
+      assert.ok(Number.isFinite(значение), 'константа слоя не читается');
+      assert.equal(значение, Number(staticRe.exec(статика.скрипт)[1]), 'константа слоя изменена');
+    }
+  };
+  const пробы = [
+    ['вырезан @keyframes nh-pop', сверитьКадры, движениеStatic.replace(/^@keyframes nh-pop .*$/m, '')],
+    ['кадр nh-pop поехал по другой траектории', сверитьКадры, движениеStatic.replace('scale(1.045)', 'scale(1.02)')],
+    ['кадр приехал не в свою точку', сверитьКадры, движениеStatic.replace('transform: none; }', 'transform: translateY(2px); }')],
+    ['длительность токена разъехалась', сверитьТокены, статика.все.replace('--dur-enter: .45s;', '--dur-enter: .6s;')],
+    ['токен удалён из :root', сверитьТокены, статика.все.replace(/\n[ \t]*--reveal-bleed:[^;]+;/, '')],
+    ['определение --parallax-limit удалено, ссылка осталась', сверитьСсылки, статика.все.replace('--parallax-limit: 40px;', '')],
+    ['подъём карточки вернулся на transform', проверитьКарточки, статика.все.replace('box-shadow: var(--lift-shadow); translate: 0 -2px; }', 'box-shadow: var(--lift-shadow); transform: translateY(-2px); }')],
+    ['карточка осталась без подъёма вовсе', проверитьКарточки, статика.все.replace('.product-card:hover, .catalog-preview-card:hover { background-color: var(--surface-tint); border-color: var(--cured-ruby); box-shadow: var(--lift-shadow); translate: 0 -2px; }', '.другая-карточка:hover { border-color: var(--cured-ruby); }')],
+    ['сырая длительность в слое движения', (текст) => assert.deepEqual(сырыеДлительности(текст), [], 'сырая длительность'), `${движениеStatic}\n.mutation-probe { animation-duration: .45s }`],
+    ['заглушка «меньше движения» без !important', проверитьЗаглушку, статика.все.replace('transition-duration: 0.01ms !important;', 'transition-duration: 0.01ms;')],
+    ['заглушка тяжелее миллисекунды', проверитьЗаглушку, статика.все.replace('animation-duration: 0.01ms !important;', 'animation-duration: 120ms !important;')],
+    ['заглушка не дошла до scroll-behavior', проверитьЗаглушку, статика.все.replace('scroll-behavior: auto !important;', '')],
+    ['порог показа на Pages сдвинут', сверитьКонстанты, статика.скрипт.replace('var MOTION_EDGE = 0.92', 'var MOTION_EDGE = 0.75')],
+  ];
+  for (const [где, проверка, проба] of пробы) ловится(где, проверка, проба);
+
+  const размечено = [...статика.разметка.matchAll(/data-reveal(?![\w-])/g)].length;
+  t.diagnostic(`паритность: ${токеныСлоя.length} токенов и ${nextКадры.size} кадров совпадают, ссылок слоя ${staticСсылки.size}/${nextСсылки.size}, `
+    + `вариантов появления ${staticВарианты.size}, узлов под показ на Pages ${размечено}, мутационных проб ${пробы.length}; `
+    + `вне слоя движения на Pages осталось ${сырыеДлительности(статика.все).length} правил с сырой длительностью — их меряет другой свип`);
 });
