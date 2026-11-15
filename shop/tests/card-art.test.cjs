@@ -95,6 +95,18 @@ test('бумага ярлыка темнеет к гран-резерва: тр�
   }
 });
 
+test('ярлык называет полосу той же лексикой, что и «Про выдержку»', () => {
+  const bands = [[8, 'Bodega'], [12, 'Bodega'], [14, 'Reserva'], [22, 'Reserva'], [24, 'Gran Reserva'], [28, 'Gran Reserva']];
+  for (const [months, band] of bands) {
+    const { body } = decodePlate(months);
+    assert.ok(body.includes(`>${band}</text>`), `${months}: в ярлыке нет полосы ${band}`);
+  }
+  for (const months of [8, 16, 24]) {
+    const { body } = decodePlate(months);
+    assert.match(body, /font-style="italic"/, `${months}: полоса не курсивом — редакционный голос теряется`);
+  }
+});
+
 test('в ярлыке только цвета бренда: никаких сырых оттенков мимо палитры', () => {
   for (const months of [8, 14, 20]) {
     const { body } = decodePlate(months);

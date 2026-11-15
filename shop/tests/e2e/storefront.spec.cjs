@@ -1063,7 +1063,9 @@ test('полировка обеих витрин — selection, tap, скрол�
     expect(base.tap).toBe('rgba(91, 40, 36, 0.16)');
     expect(base.gutter).toBe('stable');
     expect(base.theme).toBe('#5B2824');
-    expect(base.ogImage).toContain('shop-interior.webp');
+    // Соцпревью — горизонтальная карточка 1200×630 из макро-кадра нарезки: портрет интерьера
+    // мессенджеры резали по бокам. Файл лежит в git обоих корней (гейт ассетов держит).
+    expect(base.ogImage).toContain('og-card.jpg');
     expect(base.canonical).not.toBe('');
     const card = page.locator('.product-card').first();
     await card.scrollIntoViewIfNeeded();

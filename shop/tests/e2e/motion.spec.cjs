@@ -196,14 +196,24 @@ function проверкиОбаПрофиля() {
     // ставим в центр экрана и замеряем тем же движком, что раздаёт клики.
     // Берём первый ребёнок кадра, а не img: в демо-режиме фото прайса нет, и кадр
     // заполнен редакционной этикеткой — блик лежит над ней ровно так же.
-    const свод = await page.evaluate((снять) => {
+    const свод = await page.evaluate(async (снять) => {
       const метка = (узел) => `${узел.tagName.toLowerCase()}.${узел.className || ''}`.slice(0, 44);
       // Клик считается честным, если точка попала в сам узел или в его потомка: у контейнера
       // всегда есть дети, и возвращать родителя — не дефект. Чужой узел сверху — дефект.
       // Прокрутка обязана быть мгновенной: на html стоит scroll-behavior: smooth, и с
       // автоповедением getBoundingClientRect читается по ещё не доехавшему кадру.
-      const цель = (узел) => {
+      // Перед замером дожидаемся лесенки и шторки: pre-reveal кадр вырезан clip-path,
+      // и elementFromPoint в этот момент возвращает родителя — это гонка, а не дефект слоя.
+      const дожидаемся = async (узел) => {
+        for (let i = 0; i < 40; i += 1) {
+          const бегут = узел.getAnimations({ subtree: true }).filter((a) => a.playState === 'running');
+          if (!бегут.length) return;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      };
+      const цель = async (узел) => {
         узел.scrollIntoView({ block: 'center', behavior: 'instant' });
+        await дожидаемся(узел);
         const box = узел.getBoundingClientRect();
         if (box.width < 4 || box.height < 4) return null;
         const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
@@ -212,9 +222,11 @@ function проверкиОбаПрофиля() {
       };
       const кадры = [...document.querySelectorAll('.card-media > :first-child')].slice(0, снять);
       const ссылки = [...document.querySelectorAll('.card-title a')].slice(0, снять);
+      const под_бликом = [];
+      for (const узел of [...кадры, ...ссылки]) под_бликом.push(await цель(узел));
       return {
         кадры: кадры.length, ссылки: ссылки.length,
-        под_бликом: [...кадры, ...ссылки].map(цель).filter(Boolean),
+        под_бликом: под_бликом.filter(Boolean),
       };
     }, 5);
     expect(свод.кадры, 'на витрине нет ни одного кадра — проверке нечего замерять').toBeGreaterThanOrEqual(3);

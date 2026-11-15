@@ -412,6 +412,10 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 .hero-light { padding: 40px 0 56px; border-bottom: 1px solid var(--bone-line); background-color: var(--paper-salt); }
 @media (min-width: 900px) { .hero-light { padding: 72px 0 88px; } }
 .hero-light-grid { display: grid; grid-template-columns: 1fr; gap: 36px; align-items: center; }
+@media (max-width: 679px) {
+  /* Еда первой: на телефоне кадр идёт перед заголовком — правило «цепляет за 2 секунды». */
+  .hero-light-grid { display: flex; flex-direction: column-reverse; gap: 18px; }
+}
 @media (min-width: 680px) { .hero-light-grid { grid-template-columns: 6fr 5fr; gap: clamp(24px, 4vw, 56px); } }
 .hero-kicker { font-size: 0.75rem; letter-spacing: 0.045em; color: var(--graphite-muted); font-weight: 600; }
 .hero-big { font-family: var(--font-serif); font-weight: 800; font-size: clamp(2.6rem, 5.4vw, 4.6rem); line-height: 1.06; letter-spacing: -.035em; color: var(--cured-ruby); max-width: 16ch; }
@@ -499,7 +503,7 @@ button { background: none; border: none; cursor: pointer; touch-action: manipula
 /* Бумажная витрина: реальное макрофото нарезки и печати фактической выдержки. */
 .hero-art { margin: 0; overflow: hidden; border: 1px solid var(--bone-line); border-radius: var(--radius); background: var(--surface-tint); }
 .hero-art img { display: block; width: 100%; height: auto; }
-@media (max-width: 679px) { .hero-art { aspect-ratio: 16 / 10; } .hero-art img { height: 100%; object-fit: cover; object-position: center 30%; } }
+@media (max-width: 679px) { .hero-art { aspect-ratio: 4 / 3; } .hero-art img { height: 100%; object-fit: cover; object-position: center 30%; } }
 .hero-detail { font-size: .8125rem; color: var(--graphite-muted); }
 .hero-cta-row .btn-secondary { padding: 12px 20px; }
 .site-tabs { padding-left: max(16px, calc((100vw - 1216px) / 2)); padding-right: 16px; }
@@ -1539,11 +1543,14 @@ function productArt(product) {
 // Бумага темнеет с выдержкой — линейка читается как ряд, а не как заглушка.
 function agingPlateSrc(months) {
   var paper = months >= 20 ? '#EBDCBE' : months >= 14 ? '#F0E4CA' : '#F4EDDE';
+  // Полоса — та же лексика, что в «Про выдержку»: 8–12 Bodega, 14–22 Reserva, 24+ Gran Reserva.
+  var band = months >= 24 ? 'Gran Reserva' : months >= 14 ? 'Reserva' : 'Bodega';
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 400 400">'
     + '<rect width="400" height="400" fill="' + paper + '"/>'
     + '<g stroke="#E7DEC9" stroke-width="1.5"><line x1="58" y1="72" x2="342" y2="72"/><line x1="58" y1="328" x2="342" y2="328"/></g>'
-    + '<text x="200" y="238" text-anchor="middle" font-family="Georgia, serif" font-size="122" font-weight="700" fill="#5B2824">' + months + '</text>'
-    + '<text x="200" y="276" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#6E6155">месяцев выдержки</text>'
+    + '<text x="200" y="122" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="25" fill="#6E6155">' + band + '</text>'
+    + '<text x="200" y="242" text-anchor="middle" font-family="Georgia, serif" font-size="118" font-weight="700" fill="#5B2824">' + months + '</text>'
+    + '<text x="200" y="280" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#6E6155">месяцев выдержки</text>'
     + '</svg>';
   return 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
