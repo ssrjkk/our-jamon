@@ -40,13 +40,13 @@ export const metadata: Metadata = {
     siteName: 'Наш Хамон',
     title: 'Наш Хамон — лавка деликатесов',
     description: 'Хамон — главный герой. Вкусы собираем вокруг него: для себя, к столу и на подарок.',
-    images: [{ url: '/brand/shop-interior.webp', width: 720, height: 1280, alt: 'Интерьер лавки «Наш Хамон» на Сытном рынке' }],
+    images: [{ url: '/brand/og-card.jpg', width: 1200, height: 630, alt: 'Нож снимает ломтик с мраморного куска хамона' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Наш Хамон — лавка деликатесов',
     description: 'Хамон — главный герой. Вкусы собираем вокруг него: для себя, к столу и на подарок.',
-    images: ['/brand/shop-interior.webp'],
+    images: ['/brand/og-card.jpg'],
   },
   // Канонический адрес принадлежит каждой странице: Next сливает metadata вниз по
   // дереву, и корневая запись '/' превращала /catalog и все /product/* в дубли главной.
