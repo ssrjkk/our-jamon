@@ -64,28 +64,41 @@ const agingOf = (title) => {
   return match ? Number(match[1] ?? match[2]) : null;
 };
 
-// Типографика витрины: «ёлочки» вместо кавычек-лапок, длинное тире вместо дефиса-связки.
-const typography = (value) => value
+// Типографика витрины: «ёлочки» вместо кавычек-лапок, длинное тире вместо дефиса-связки,
+// единица, прижатая к цифре, отделена неразрывным, градус впереди числа, доля через запятую.
+// Всё это правится здесь, а не в lib/catalog.json: от прайса до витрины один конвейер
+// (build-catalog → catalog.json → sync-static → index.html), и правка результата
+// обнуляется ближайшей пересборкой.
+const typography = (value) => unbreakable(value
   .replace(/"([^"]*)"/g, '«$1»')
-  .replace(/(\s)-(\s)/g, '$1—$2');
+  .replace(/(\s)-(\s)/g, '$1—$2')
+  // Поставщик пишет градус задом наперёд («+25 С°»), а доля — через точку.
+  // Поставщик печатает бренд вплотную к русскому слову («карамельTasty Story»), и латинская
+  // заглавная внутри кириллицы — это и слипшееся слово, и омоглифа для поиска по странице.
+  .replace(/([а-яёА-ЯЁ])(?=[A-Z])/gu, '$1 ')
+  .replace(/С°/g, '°С')
+  .replace(/(белки|жиры|углеводы)[- \u00A0]+(?=\d)/giu, '$1 ')
+  .replace(/(\d)[-–](\d+\s+минут)/gu, '$1–$2')
+  .replace(/ккал\/[ \u00A0]*(\d+)\.(\d+)/gu, 'ккал/$1,$2'));
 
 /**
- * Неразрывные пробелы в авторских текстах: число не должно уезжать со своей единицей
- * на новую строку («2 000 г»), разряды тысячи — друг от друга («30 000»). Пробел
+ * Неразрывные пробелы: число не должно уезжать со своей единицей на новую строку
+ * («2 000 г», «в 100г продукта»), разряды тысячи — друг от друга («30 000»). Пробел
  * берётся тот же, что печатает Intl.NumberFormat в ценах (U+00A0), иначе витрина
  * показывает один и тот же разряд двумя способами.
  *
- * Здесь склеиваются только заметки групп. Описания наборов (1 пара) и фасовки из
- * наименований (170 вида «100 г») гейт catalog-parity сверяет побайтово со строками
- * index.html, а статическую витрину правит не эта рука: склеить их здесь — значит
- * утопить зелёный гейт. Строки прайса (title, description) не трогаем и потому, что
- * по оригиналу идут поиск и подбор снимков. На 20 живых замеров на 320/360px ни одна
- * такая строка не разъехалась — риск теоретический, закрывать его нужно вместе со
- * статикой, а не вразнобой.
+ * Склеенные единицы приходят прямо из прайса («Пищевая ценность в 100г продукта»,
+ * «выдержка 8мес.»), поэтому чинятся здесь, а не правкой строк: прайс — исходник, а
+ * его отображение нормализует этот конвейер. Идентификаторы карточек и имена снимков
+ * считаются из сырого заголовка (см. items), так что неразрывный пробел в «20 г» не
+ * меняет ни адрес карточки, ни имя файла.
  */
-const ЕДИНИЦЫ = 'г|кг|мл|л|шт|мес|сут|дн|лет|₽|руб\\.';
+const ЕДИНИЦЫ = 'кг|г|мл|л|шт|мес|сут|дн|лет|₽|руб\\.';
 const unbreakable = (value) => value
   .replace(/(\d)[ \u00A0](?=\d{3}(?!\d))/g, '$1\u00A0')
+  // Слитное написание: «2020г.» → «2020 г.». За единицей не должно стоять ни буквы, ни
+  // цифры — иначе «100гр» разъехалось бы на «100 г» + «р».
+  .replace(new RegExp(`(\\d)(${ЕДИНИЦЫ})(?![\\p{L}\\d])`, 'gu'), '$1\u00A0$2')
   .replace(new RegExp(`(\\d)[ \u00A0](?=(?:${ЕДИНИЦЫ})(?![\\p{L}]))`, 'gu'), '$1\u00A0');
 
 // =========================================================================
@@ -126,7 +139,10 @@ const items = rows.map((row) => {
   const price = row.price === null || row.price === undefined ? null : Number(row.price);
   if (price !== null && !Number.isSafeInteger(price)) throw new Error(`Нецелая цена в строке ${row.row}: ${row.price}`);
   const title = typography(row.title);
-  const id = row.code ? `nf-${row.code.replace(/^НФ-?/i, '')}` : `${category}-${agingOf(title) ?? slugify(title)}`;
+  // id — из сырого заголовка: в нём transliteration и поиск выдержки, и неразрывный пробел
+  // из типографики превратился бы в дефис slug'а, то есть в другой адрес карточки и другое
+  // имя снимка. Коды позиций на id не завязаны, но запасная ветка без кода есть.
+  const id = row.code ? `nf-${row.code.replace(/^НФ-?/i, '')}` : `${category}-${agingOf(row.title) ?? slugify(row.title)}`;
   return {
     id,
     code: row.code ?? '',
@@ -157,7 +173,7 @@ for (const item of items) {
   }
   const pack = packOf(item.title);
   products.push({ ...base, kind: 'pack', pricePerKg: pack.weightG ? Math.round(item.price * 1000 / pack.weightG) : 0,
-    pieces: [], packs: [{ label: pack.label, weightG: pack.weightG, price: item.price }], bulk: null });
+    pieces: [], packs: [{ label: unbreakable(pack.label), weightG: pack.weightG, price: item.price }], bulk: null });
 }
 
 const known = new Map([...products, ...previews].map((item) => [item.id, item]));
@@ -176,8 +192,10 @@ console.log('строк прайса:', rows.length, '| с ценой:', product
 console.log('категории:', byCategory(products), byCategory(previews));
 
 // Заметки групп — авторский текст витрины, его печатает каталог под заголовком отдела.
-const groups = CATEGORIES.map((group) => ({ ...group, note: unbreakable(group.note) }));
+const groups = CATEGORIES.map((group) => ({ ...group, note: typography(group.note) }));
+// Описания наборов тоже видит покупатель, и «по 100 г» в них склеить нужно тем же слоем.
+const kits = KITS.map((kit) => ({ ...kit, title: typography(kit.title), description: typography(kit.description) }));
 
 fs.writeFileSync(path.join(import.meta.dirname, '..', 'lib', 'catalog.json'),
-  JSON.stringify({ categories: groups, kits: KITS, products, previews }, null, 2));
+  JSON.stringify({ categories: groups, kits, products, previews }, null, 2));
 console.log('lib/catalog.json записан');

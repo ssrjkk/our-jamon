@@ -929,12 +929,17 @@ test('истории обеих витрин ведут на рабочие ра
     await expect(rings).toHaveCount(5);
     for (const ring of await rings.all()) {
       await expect.poll(() => ring.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
-      expect(await ring.evaluate((img) => img.getAttribute('src'))).toMatch(/brand\/(hero-slicing|choice-table-1|choice-self|choice-gift|shop-interior)\.webp$/);
+      // Пузырёк несёт 180-пиксельный знак, выведенный из того же собственного снимка:
+      // слот 62 CSS-пикселя, а пять полных кадров стоили ~1 МБ на каждую главную.
+      expect(await ring.evaluate((img) => img.getAttribute('src'))).toMatch(/brand\/(hero-slicing|choice-table-1|choice-self|choice-gift|shop-interior)-180\.webp$/);
     }
   }
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Открыть историю: Честный вес', exact: true }).click();
+  // Кадр открытой шторки — полный снимок, а не знак: слот 296 CSS-пикселей на мобайле,
+  // и монтируется он только при открытии (закрытая шторка под `display: none` грузится наравне).
+  await expect(page.locator('.story-visual img')).toHaveAttribute('src', /brand\/choice-self\.webp$/);
   await page.getByRole('button', { name: 'Посчитать на весах', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Как считаем вес', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.scale-readout')).toBeVisible();
@@ -1254,11 +1259,15 @@ test('фото не растягиваются выше исходного ра�
       // Крупные кадры поставщика точны и на retina: два device-пикселя на исходный.
       expect(row.rendered * 2).toBeLessThanOrEqual(row.natural + 2);
     }
-    // Первый экран обеих витрин ведёт реальное макрофото нарезки, а не вектор.
+    // Первый экран обеих витрин ведёт реальное макрофото нарезки, а не вектор. Кадр теперь
+    // приходит вариантом из srcset по измеренному слоту, поэтому сверяется не имя файла, а
+    // честность выбора: источник обязан покрывать device-пиксели слота. Заврёт `sizes` —
+    // покупатель увидит мыло, и гейт поймает это на том же замере.
     await page.goto(surface === 'next' ? '/' : `${staticURL}/`);
-    const hero = (await measure()).find((row) => row.src === 'hero-slicing.webp');
+    const dpr = await page.evaluate(() => window.devicePixelRatio);
+    const hero = (await measure()).find((row) => row.src.startsWith('hero-slicing'));
     expect(hero, `${surface} hero photo`).toBeTruthy();
-    expect(hero.natural).toBeGreaterThanOrEqual(1200);
+    expect(hero.natural, `${surface} hero: вариант тоньше слота (${hero.natural}px на ${Math.round(hero.rendered * dpr)} device-пикселей)`).toBeGreaterThanOrEqual(hero.rendered * dpr - 1);
     expect(hero.rendered).toBeLessThanOrEqual(hero.natural + 1);
   }
   await page.goto('/product/nf-00000187');

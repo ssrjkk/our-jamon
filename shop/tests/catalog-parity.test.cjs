@@ -151,10 +151,16 @@ test('группы каталога идут в одном порядке и с 
 // лавка закроется. Разойдутся — приедет к другому дому или к закрытой двери.
 const hits = (text, re, group = 0) => [...text.matchAll(re)].map((m) => m[group].replace(/\s+/g, ''));
 
+// Блок «Реквизиты продавца» печатает адрес регистрации ИП и адрес склада — это
+// юридические сведения, а не обещание самовывоза: склад стоит в другом доме (5 лит А),
+// и покупатель туда не едет. Сверяем дом самовывоза по всем покупательским упоминаниям,
+// а реквизиты из корпуса исключаем, чтобы склад не ломал сверку и не маскировал разъезд.
+const withoutLegal = (text) => text.replace(/<div class(?:Name)?="[^"]*footer-legal[^"]*">[\s\S]*?<\/div>/g, '');
+
 test('лавка ждёт по одному адресу и в одни часы на обеих витринах', () => {
   const house = (text) => hits(text, /Сытнинская[\s\S]{0,30}?(\d+\s*[А-Яа-яЁё])/g, 1);
   const hours = (text) => hits(text, /\d{1,2}:\d{2}\s*[–—-]\s*\d{1,2}:\d{2}/g);
-  const staticHouse = house(staticPages), nextHouse = house(nextCorpus);
+  const staticHouse = house(withoutLegal(staticPages)), nextHouse = house(withoutLegal(nextCorpus));
   assert.ok(staticHouse.length >= 3 && nextHouse.length >= 3,
     `упоминаний адреса стало слишком мало для сверки: статика ${staticHouse.length}, Next ${nextHouse.length}`);
   assert.deepEqual([...new Set([...staticHouse, ...nextHouse])], [staticHouse[0]],
@@ -193,6 +199,18 @@ assert.ok(artLiteral, 'в index.html больше нет объекта STORY_AR
 const staticArt = new Map(Object.entries(vm.runInNewContext(`(${artLiteral[1]})`, Object.create(null)))
   .map(([id, markup]) => [id, /src="([^"]+)"/.exec(markup)[1]]));
 
+// Пузырёк ленты несёт знак размером со слот: пять полных кадров на ленту — ~1 МБ на каждую
+// главную при 62 пикселях. Знак выводится из той же фотографии, поэтому сверяется не только
+// паритет витрин, но и имя файла, и его наличие в обоих корнях.
+const nextThumbs = new Map([...artSource.matchAll(/^ {2}(\w+): \{ src: '([^']+)', w: (\d+), h: (\d+) \}/gm)]
+  .map((m) => [m[1], { src: m[2], w: Number(m[3]), h: Number(m[4]) }]));
+// Знак ищется по тому же приёму, что и остальные объекты статики: значения — строки
+// без фигурных скобок, поэтому `\{[^}]+\}` берёт объект целиком.
+const знакLiteral = /var STORY_ART_THUMB = (\{[^}]+\})/.exec(staticHtml);
+assert.ok(знакLiteral, 'в index.html больше нет объекта STORY_ART_THUMB — гейт потерял опору');
+const staticThumbs = new Map(Object.entries(vm.runInNewContext(`(${знакLiteral[1]})`, Object.create(null)))
+  .map(([id, markup]) => [id, /src="([^"]+)"/.exec(markup)[1]]));
+
 test('лента историй показывает одни кольца и те же картинки на обеих витринах', () => {
   assert.ok(nextStoryIds.length >= 5, `колец в Next стало ${nextStoryIds.length} — сверять нечего`);
   // Массив из vm — чужая realm: deepEqual отвергает его даже при совпадении элементов,
@@ -205,4 +223,23 @@ test('лента историй показывает одни кольца и т
     'у кольца ленты нет картинка в статике');
   const picture = nextStoryIds.filter((id) => nextArt.get(id) !== `/${staticArt.get(id)}`);
   assert.deepEqual(picture, [], `кольцо «${picture.join('», «')}» рисуется разными фото на двух витринах`);
+});
+
+test('лента грузит знак со слота, а не полный кадр, и знак один на обе витрины', () => {
+  assert.ok(nextThumbs.size >= 5, `знаков пузырька в Next стало ${nextThumbs.size} — сверять нечего`);
+  const лишние = [...nextThumbs.keys()].filter((id) => !nextStoryIds.includes(id));
+  assert.deepEqual(лишние, [], `знак без кольца в Next: ${лишние.join(', ')}`);
+  assert.deepEqual(nextStoryIds.filter((id) => !nextThumbs.has(id)), [], 'есть кольцо без знака в Next — лента потянет полный кадр');
+  assert.deepEqual(nextStoryIds.filter((id) => !staticThumbs.has(id)), [], 'есть кольцо без знака в статике — витрины расходятся по весу');
+  const расходится = [];
+  const нетФайла = [];
+  for (const id of nextStoryIds) {
+    const знак = nextThumbs.get(id).src;
+    if (знак !== nextArt.get(id).replace(/\.webp$/, '-180.webp')) расходится.push(`${id}: ${знак} вместо кадра ${nextArt.get(id)}`);
+    if (`/${staticThumbs.get(id)}` !== знак) расходится.push(`${id}: витрины грузят разные знаки`);
+    if (!fs.existsSync(path.join(root, 'public', знак.replace(/^\//, '')))) нетФайла.push('public' + знак);
+    if (!fs.existsSync(path.join(root, '..', staticThumbs.get(id)))) нетФайла.push(staticThumbs.get(id));
+  }
+  assert.deepEqual(расходится, [], 'знак ленты не выведен из кадра кольца');
+  assert.deepEqual(нетФайла, [], `файла знака нет в сборке: ${нетФайла.join(', ')}`);
 });

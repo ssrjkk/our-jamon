@@ -8,7 +8,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+# Адрес витрины нужен именно на сборке: Next снимает robots и prerender-страницы сейчас,
+# и без SHOP_URL в образ ложится адрес демо — живая витрина начинает указывать каноник
+# на GitHub Pages. ENV здесь же даёт verify-build сверить собранные адреса с боевым.
+ARG SHOP_URL
+ENV SHOP_URL=$SHOP_URL
+RUN npm run build && node scripts/verify-build.mjs
 
 FROM node:24-alpine AS runner
 WORKDIR /app

@@ -176,9 +176,16 @@ export interface Catalog {
   notice: string | null;
 }
 
+let lastLoggedNotice: string | null = null;
+
 function degrade(reason: string): Catalog {
   const notice = `${reason}. Показан встроенный прайс 0711.`;
-  console.error(`[catalog] ${notice}`);
+  // Причина подмены видна в catalogHealth() — её читают /api/health и админка, а не только
+  // журнал. В журнал она пишется на смену состояния: витрина без настроенной 1С работает
+  // штатно (ONEC_API_URL необязателен), а строка ERROR на каждый просмотр выглядит как
+  // падающий магазин, и в потоке таких строк не разглядеть настоящую поломку.
+  if (notice !== lastLoggedNotice) console.error(`[catalog] ${notice}`);
+  lastLoggedNotice = notice;
   remember({ origin: 'built-in', notice });
   return { products: PRODUCTS, previews: PREVIEWS, origin: 'built-in', notice };
 }
@@ -228,6 +235,9 @@ async function fetchCatalog(): Promise<Catalog> {
     // Пустая выгрузка — это сброшенная интеграция, а не лавка без товаров.
     if (!list.length) throw new Error('Catalog service returned an empty product list');
     remember({ origin: 'onec', notice: null });
+    // Выгрузка ожила: следующая потеря должна прозвучать в журнале заново, а не молчать
+    // под предлогом «та же причина уже писали».
+    lastLoggedNotice = null;
     return { products: list, previews: [], origin: 'onec', notice: null };
   } catch (error) {
     return degrade(`Каталог 1С не принят (${error instanceof Error ? error.message : String(error)})`);

@@ -8,6 +8,10 @@ import { getProducts, CATEGORY_TITLES } from '@/lib/products';
 import { reservedPieceIds } from '@/lib/orders';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  // Заголовок и описание карточки берутся из живого каталога, а он помнит время последней
+  // выгрузки. Без connection() Next снимает метаданные в пререндер и ругается
+  // «unstable value new Date()» на каждый запрос — журнал проде завален строками ERROR.
+  await connection();
   const { id } = await params;
   const product = (await getProducts()).find((entry) => entry.id === id);
   // Карточка без товара не должна попадать в индекс как пустая страница с canonical.

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { STORY_ART } from './Art';
+import { STORY_ART, STORY_ART_THUMB } from './Art';
 import { formatRub, formatWeightLabel } from './CartContext';
 import { navigateToTab, type TabId } from './SiteTabs';
 import { useDialogFocus } from './SiteHeader';
@@ -102,19 +102,26 @@ export default function Stories({ piece, setAvailable = false, setPrice, onPiece
     setFeedback(result === true ? action === 'piece' ? 'Кусок добавлен в корзину.' : 'Весь набор добавлен в корзину.' : typeof result === 'string' ? result : 'Достигнуто максимальное количество. Проверьте корзину.');
   }
   const story = STORIES[current];
+  // Пузырёк несёт 180-пиксельный знак, а не полный кадр: пять полных снимков на ленту дают ~1 МБ
+  // на каждую главную при слоте в 62 CSS-пикселя. Полный кадр приходит в шторку по мере открытия.
+  const знак = (id: string) => STORY_ART_THUMB[id]
+    ? <img src={STORY_ART_THUMB[id].src} alt="" width={STORY_ART_THUMB[id].w} height={STORY_ART_THUMB[id].h} loading="lazy" decoding="async" />
+    : STORY_ART[id];
   const hasSet = setAvailable && typeof setPrice === 'number' && Number.isFinite(setPrice) && setPrice > 0;
 
   return <>
     <section className="container stories-section" aria-label="Истории лавки">
       <span className="stories-caption">Из жизни лавки</span>
-      <div className="stories-strip">{STORIES.map((item, index) => <button type="button" key={item.id} className="story-bubble" aria-haspopup="dialog" aria-label={`Открыть историю: ${item.label}`} onClick={() => openAt(index)}><span className={'story-ring' + (seen.has(index) ? ' is-seen' : '')}><span className="story-art" aria-hidden="true">{STORY_ART[item.id]}</span></span><span className="story-label">{item.label}</span></button>)}</div>
+      <div className="stories-strip">{STORIES.map((item, index) => <button type="button" key={item.id} className="story-bubble" aria-haspopup="dialog" aria-label={`Открыть историю: ${item.label}`} onClick={() => openAt(index)}><span className={'story-ring' + (seen.has(index) ? ' is-seen' : '')}><span className="story-art" aria-hidden="true">{знак(item.id)}</span></span><span className="story-label">{item.label}</span></button>)}</div>
     </section>
     <div className={'stories-player' + (open ? ' is-open' : '')} aria-hidden={!open} inert={!open} onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
       <div className="stories-frame" ref={dialogRef} role="dialog" aria-modal={open || undefined} aria-labelledby="story-title" tabIndex={-1}
         onPointerDown={(event) => { if (!(event.target as HTMLElement).closest('button,a,input')) setHolding(true); }}>
         <div className="story-bars" aria-hidden="true">{STORIES.map((_, index) => <span key={index}><i style={{ transform: `scaleX(${index < current ? 1 : index === current ? Math.min(1, elapsed / DURATION) : 0})` }} /></span>)}</div>
         <div className="story-head"><span className="story-position">История {current + 1} из {STORIES.length}</span><button type="button" className="story-close" onClick={close}>Закрыть</button></div>
-        <div className="story-visual" aria-hidden="true">{STORY_ART[story.id]}</div>
+        {/* Кадр mounting только открытой шторки: слой под `display: none` браузер всё равно
+            грузит, и невидимый первый кадр стоил 112 КБ на каждой главной. */}
+        <div className="story-visual" aria-hidden="true">{open ? STORY_ART[story.id] : null}</div>
         <h2 id="story-title" className="story-head-title">{story.title}</h2><p className="story-text">{story.text}</p>
         <div className="story-nav-row"><button className="story-step-btn" type="button" aria-label="Назад: предыдущая история" onClick={() => step(-1)}><span className="arrow arrow-rev" aria-hidden="true"></span>{' '}Назад</button><button className="story-step-btn" type="button" aria-pressed={paused} onClick={() => setPaused((value) => !value)}>{paused ? 'Продолжить' : 'Пауза'}</button><button className="story-step-btn" type="button" aria-label="Далее: следующая история" onClick={() => step(1)}>Далее <span className="arrow" aria-hidden="true"></span></button></div>
         {story.id === 'cut' && <><p className="story-product">{piece ? `${piece.title} · ~${formatWeightLabel(piece.weightG)}` : 'Средние куски сейчас недоступны.'}</p><button type="button" className="story-action-btn" disabled={!piece || !onPieceAdd} onClick={() => add('piece')}>{piece ? `Добавить · ≈ ${formatRub(piece.price)}` : 'Нет в наличии'}</button></>}

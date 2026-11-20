@@ -304,7 +304,11 @@ test('адрес витрины задан один раз, карта сайт�
     });
     assert.ok(routes.length >= 6, `маршрутов приложения осталось ${routes.length} — свип теряет опору`);
 
-    const disallow = robots().rules.disallow;
+    // robots обязан оставаться генерацией на запрос: снимется в пререндер — и в образ
+    // ляжет адрес демо, собранный без SHOP_URL.
+    assert.match(fs.readFileSync(path.join(root, 'app/robots.ts'), 'utf8'), /await connection\(\)/,
+      'robots больше не отдаётся по запросу: адрес карты сайтов снова начнёт запекаться на сборке');
+    const disallow = (await robots()).rules.disallow;
     const isPrivate = (route) => disallow.some((prefix) => (prefix.endsWith('/')
       ? route.startsWith(prefix)
       : route === prefix || route.startsWith(`${prefix}/`)));

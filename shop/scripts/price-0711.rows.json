@@ -427,7 +427,7 @@
   "note": null,
   "price": 1750,
   "group": "Аксессуары",
-  "media": null
+  "media": "domhamona.ru/knife"
  },
  {
   "row": 46,
@@ -1497,7 +1497,7 @@
   "note": null,
   "price": 4750,
   "group": "Хамон в кусках (весовой)",
-  "media": null
+  "media": "domhamona.ru/hamon08"
  },
  {
   "row": 153,
@@ -1507,7 +1507,7 @@
   "note": null,
   "price": 5250,
   "group": "Хамон в кусках (весовой)",
-  "media": null
+  "media": "domhamona.ru/hamon10"
  },
  {
   "row": 154,
@@ -1517,7 +1517,7 @@
   "note": null,
   "price": 5750,
   "group": "Хамон в кусках (весовой)",
-  "media": null
+  "media": "domhamona.ru/hamon12"
  },
  {
   "row": 155,
@@ -1527,7 +1527,7 @@
   "note": null,
   "price": 6250,
   "group": "Хамон в кусках (весовой)",
-  "media": null
+  "media": "domhamona.ru/hamon14"
  },
  {
   "row": 156,
@@ -1537,7 +1537,7 @@
   "note": null,
   "price": 6750,
   "group": "Хамон в кусках (весовой)",
-  "media": null
+  "media": "domhamona.ru/hamon16"
  },
  {
   "row": 157,
@@ -1547,7 +1547,7 @@
   "note": null,
   "price": 7250,
   "group": "Хамон в кусках (весовой)",
-  "media": null
+  "media": "domhamona.ru/hamon18"
  },
  {
   "row": 158,
@@ -1557,7 +1557,7 @@
   "note": null,
   "price": 7750,
   "group": "Хамон в кусках (весовой)",
-  "media": null
+  "media": "domhamona.ru/hamon20"
  },
  {
   "row": 159,
@@ -1567,7 +1567,7 @@
   "note": null,
   "price": 8250,
   "group": "Хамон в кусках (весовой)",
-  "media": null
+  "media": "domhamona.ru/hamon22"
  },
  {
   "row": 160,
@@ -1577,7 +1577,7 @@
   "note": null,
   "price": 8750,
   "group": "Хамон в кусках (весовой)",
-  "media": null
+  "media": "domhamona.ru/hamon24"
  },
  {
   "row": 161,
@@ -1587,7 +1587,7 @@
   "note": null,
   "price": 4750,
   "group": "Хамон в кусках (весовой)",
-  "media": null
+  "media": "domhamona.ru/hamon08"
  },
  {
   "row": 162,
@@ -1677,7 +1677,7 @@
   "note": null,
   "price": 950,
   "group": "Хамон нарезка",
-  "media": null
+  "media": "domhamona.ru/sliced-08"
  },
  {
   "row": 171,
@@ -1757,7 +1757,7 @@
   "note": null,
   "price": 1100,
   "group": "Хамон нарезка",
-  "media": null
+  "media": "domhamona.ru/solomka"
  },
  {
   "row": 179,
@@ -1767,7 +1767,7 @@
   "note": null,
   "price": 3500,
   "group": "Аксессуары",
-  "media": null
+  "media": "domhamona.ru/hamonera"
  },
  {
   "row": 180,
@@ -2097,6 +2097,6 @@
   "note": null,
   "price": 5000,
   "group": "Аксессуары",
-  "media": null
+  "media": "domhamona.ru/hamonera"
  }
 ]

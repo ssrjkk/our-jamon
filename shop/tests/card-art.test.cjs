@@ -157,8 +157,23 @@ test('движок не молчит по выдержке там, где ста
   }
 });
 
-test('разметка карточки: ярлык и подсказка подключены классами, а не цветом', () => {
-  assert.match(staticHtml, /product\.image \? ' has-photo' : plate \? ' has-plate' : ''/, 'card-media: класс кадра не переключается фото/ярлык');
+// Слой под `display: none` браузер грузит наравне с видимым: пока шторка закрыта, её
+// первый кадр всё равно уходил в сеть — 112 КБ на каждой главной, потраченные на картинку,
+// которую никто не открыл. Контракт держим по форме источника: движок монтирует кадр при
+// `open`, статика оставляет слот пустым и заполняет его только из навигации по шторке.
+test('кадр шторки не грузится, пока шторка закрыта', () => {
+  const stories = fs.readFileSync(path.join(root, 'components', 'Stories.tsx'), 'utf8');
+  assert.match(stories, /\{open \? STORY_ART\[story\.id\] : null\}/,
+    'движок вернул безусловный монтаж кадра — закрытая шторка снова тянет полный кадр до первого клика');
+  assert.match(staticHtml, /<div class="story-visual" id="story-visual"[^>]*><\/div>/,
+    'статика печатает кадр прямо в разметке — слот обязан стартовать пустым');
+  assert.match(staticFunction('renderStory'), /getElementById\('story-visual'\)\.innerHTML = STORY_ART/,
+    'renderStory больше не заполняет слот: кадр придётся монтировать заранее, и он снова уйдёт в сеть');
+  assert.equal([...staticHtml.matchAll(/renderStory\(\);/g)].length, 3,
+    'у renderStory появился четвёртый вызов — проверить, что он не на загрузке страницы');
+});
+
+test('разметка карточки: ярлык и подсказка подключены классами, а не цветом', () => {  assert.match(staticHtml, /product\.image \? ' has-photo' : plate \? ' has-plate' : ''/, 'card-media: класс кадра не переключается фото/ярлык');
   assert.match(staticHtml, /var plate = !product\.image && productAges\(product\)\.length === 1/, 'cardHtml: условие ярлыка потеряно');
   assert.match(staticHtml, /custom-cut-note quiet' \+ \(custom && !active\.canAdd \? ' is-error' : ''\)/, 'подсказка: тихий вариант и ошибка не переключаются');
 });

@@ -45,7 +45,10 @@ const dbPath = path.join(output, `browser-${Date.now()}.sqlite`);
 module.exports = defineConfig({
   testDir: './tests/e2e',
   testMatch: '**/*.spec.cjs',
-  timeout: 45000,
+  // 45 с на тест держал набор на грани: на этой машине полный прогон идёт параллельно с
+  // другими сессиями, и tablet-тесты движения (полные 42 с в одиночном запуске) падали по
+  // таймауту, хотя поодиночке проходили. Запас в 60 с дешевле ложного падения.
+  timeout: 60000,
   expect: { timeout: 10000 },
   fullyParallel: false,
   workers: 1,

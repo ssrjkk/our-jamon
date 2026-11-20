@@ -204,10 +204,21 @@ function проверкиОбаПрофиля() {
       // автоповедением getBoundingClientRect читается по ещё не доехавшему кадру.
       // Перед замером дожидаемся лесенки и шторки: pre-reveal кадр вырезан clip-path,
       // и elementFromPoint в этот момент возвращает родителя — это гонка, а не дефект слоя.
+      // Шторка висит не на самом узле, а на предке (`.card-media`), а `getAnimations`
+      // без subtree у предка её не отдаёт: у самого кадра анимаций нет вовсе, и ожидание
+      // по одному узлу срабатывало мгновенно ровно там, где кадр ещё закрыт.
+      const бегутПоЦепочке = (узел) => {
+        const список = [];
+        for (let к = узел; к && к !== document.documentElement; к = к.parentElement) {
+          for (const анимация of к.getAnimations(к === узел ? { subtree: true } : undefined)) {
+            if (анимация.playState === 'running') список.push(анимация);
+          }
+        }
+        return список;
+      };
       const дожидаемся = async (узел) => {
         for (let i = 0; i < 40; i += 1) {
-          const бегут = узел.getAnimations({ subtree: true }).filter((a) => a.playState === 'running');
-          if (!бегут.length) return;
+          if (!бегутПоЦепочке(узел).length) return;
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
       };

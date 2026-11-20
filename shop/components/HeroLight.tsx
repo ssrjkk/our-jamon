@@ -13,7 +13,7 @@ export default function HeroLight() {
           <p className="hero-footnote">Оливки, выдержанные сыры и всё, что хорошо рядом.</p>
         </div>
         <figure className="hero-sign">
-          <div className="hero-photo"><img src="/brand/hero-slicing.webp" alt="Нож снимает ломтик с мраморного куска хамона" width={1314} height={1230} fetchPriority="high" decoding="async" /></div>
+          <div className="hero-photo"><img src="/brand/hero-slicing.webp" srcSet="/brand/hero-slicing-700.webp 700w, /brand/hero-slicing-1000.webp 1000w, /brand/hero-slicing.webp 1314w" sizes="(max-width: 559px) 94vw, (max-width: 1279px) 41vw, 560px" alt="Нож снимает ломтик с мраморного куска хамона" width={1314} height={1230} fetchPriority="high" decoding="async" /></div>
           <figcaption className="hero-sign-foot"><span>Сытнинская, <strong>4П</strong></span><span>Вт–вс<br />10:30–20:30</span></figcaption>
         </figure>
       </div>
