@@ -1,0 +1,103 @@
+name: CI
+
+# Имена задач (gates / build / e2e / docker) — идентификаторы обязательных проверок в
+# ruleset'е `main`: они намеренно ASCII, чтобы не расходиться с тем, что GitHub печатает
+# в списке required status checks.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  gates:
+    name: gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: shop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: shop/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: shop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: shop/package-lock.json
+      - run: npm ci
+      # Адрес задаётся именно здесь: без SHOP_URL в standalone ложится каноник с GitHub
+      # Pages, и `verify-build.mjs` обязан это поймать.
+      - run: npm run build:standalone
+        env:
+          SHOP_URL: http://127.0.0.1:3000
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: shop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: shop/package-lock.json
+      - run: npm ci
+      # Конфиг требует канал chrome: системный Google Chrome стоит на образе раннера.
+      - run: npx playwright test
+
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --build-arg SHOP_URL=http://127.0.0.1:3000 -t nash-hamon ./shop
+      - name: контейнер отвечает на /api/health
+        run: |
+          docker run -d --rm -p 127.0.0.1:3000:3000 -e SHOP_MODE=demo --name nash-hamon-smoke nash-hamon
+          for attempt in $(seq 1 30); do
+            code=$(curl -s -o /tmp/health.json -w '%{http_code}' http://127.0.0.1:3000/api/health || echo 000)
+            if [ "$code" = "200" ]; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "ожидание /api/health 200, получено $code" >&2
+          docker logs nash-hamon-smoke >&2
+          exit 1
+      - run: docker rm -f nash-hamon-smoke
+        if: always()

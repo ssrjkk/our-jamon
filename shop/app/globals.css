@@ -388,7 +388,7 @@ input[type="range"] { width: 100%; min-height: 36px; accent-color: var(--cured-r
 .privacy-details summary { display: list-item; min-height: 44px; padding-block: 10px; color: var(--cured-ruby); cursor: pointer; }
 .privacy-details p + p { margin-top: 10px; }
 .demo-note { padding: 14px 16px; background: var(--surface-tint); border-left: 2px solid var(--cured-ruby); border-radius: var(--radius); color: var(--cured-ruby); font-size: .8125rem; }
-.site-demo-notice { padding-block: 12px; border-bottom: 1px solid var(--bone-line); background: var(--surface-tint); color: var(--cured-ruby); font-size: .75rem; }
+.site-demo-notice { padding-block: 12px; background: var(--cured-ruby); color: var(--fat-white); font-size: .8125rem; }
 .site-demo-notice strong { font-weight: 600; }
 .checkout-summary { display: grid; gap: 12px; padding: 20px; border: 1px solid var(--bone-line); border-radius: var(--radius); background: var(--fat-white); font-size: .875rem; }
 .checkout-summary > div, .cart-total-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }

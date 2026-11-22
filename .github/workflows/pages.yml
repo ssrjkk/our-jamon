@@ -1,0 +1,47 @@
+name: Pages (демо-витрина)
+
+# Pages собирался в режиме legacy из корня репозитория, то есть на адресе витрины
+# отдавалось всё отслеживаемое: /shop/lib/orders.ts, /shop/app/api/orders/route.ts,
+# /RELEASE.md, /brand.zip. Здесь публикация берёт артефакт, который собирает тот же
+# скрипт, что проверяет гейт `pages-surface`: список публикуемого живёт в одном месте.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  demo:
+    name: demo-artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: node shop/scripts/build-pages-artifact.mjs
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: demo-dist
+
+  deploy:
+    name: deploy
+    needs: demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

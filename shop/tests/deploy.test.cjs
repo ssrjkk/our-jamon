@@ -26,6 +26,25 @@ const filesMimoGit = (pathspecs, cwd) => {
 };
 
 /**
+ * Гейты измеряют «что лежит рядом, но не в git». На свежем клоне `data/` нет вообще:
+ * исключение проверяется вхолостую, а опора перечисления не видит обязательный каталог.
+ * Каталог создаёт сам гейт, маркером, который ничем не притворяется (не база и не
+ * legacy-выгрузка), и убирает его после прогона.
+ */
+const dataMarker = path.join(root, 'data', '.dockerignore-gate.keep');
+const provisionDataDir = () => {
+  fs.mkdirSync(path.dirname(dataMarker), { recursive: true });
+  fs.writeFileSync(dataMarker, 'служебный файл гейта .dockerignore\n');
+};
+test.after(() => {
+  fs.rmSync(dataMarker, { force: true });
+  // Каталог остаётся, если там уже лежит боевая база или её держит другая сессия.
+  try {
+    fs.rmdirSync(path.join(root, 'data'));
+  } catch { /* notEmpty или чужой процесс */ }
+});
+
+/**
  * Docker и standalone копируют рабочий каталог, а не git: всё, что лежит рядом и
  * не попало в репозиторий, уезжает в публичный артефакт молча. Единственный
  * надёжный инвариант — внутри публичного корня нечего прятать.
@@ -54,6 +73,7 @@ function dockerIgnored(file) {
 }
 
 test('.dockerignore накрывает локальные данные, секреты и отчёты проверок', () => {
+  provisionDataDir();
   for (const file of ['.env.local', 'data/orders.sqlite', 'test-results/live-check.mjs', 'public/img/domhamona-leg-08.webp']) {
     assert.equal(dockerIgnored(file), true, `${file} ушёл бы в docker-образ`);
   }
@@ -68,6 +88,7 @@ test('.dockerignore накрывает локальные данные, секр
  * .dockerignore, кроме файлов, которые Next сам генерирует при сборке.
  */
 test('весь рабочий каталог мимо git накрыт .dockerignore', () => {
+  provisionDataDir();
   const { all: stray, ignored } = filesMimoGit(['.']);
   const generatedByBuild = new Set(['next-env.d.ts']);
   const uncovered = stray.filter((file) => !generatedByBuild.has(file) && !dockerIgnored(file));

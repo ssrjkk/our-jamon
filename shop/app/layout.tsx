@@ -60,7 +60,7 @@ async function DemoNotice() {
   await connection();
   if (!isDemoMode()) return null;
   return <aside className="site-demo-notice" aria-label="Демонстрационный режим">
-    <div className="container"><strong>Демо-магазин.</strong> Заказы тестовые, оплата имитируется — деньги не списываются. Не вводите реальные персональные данные.</div>
+    <div className="container"><strong>Демо-магазин.</strong> Без реальной оплаты и отправки заказов: деньги не списываются. Не вводите реальные персональные данные.</div>
   </aside>;
 }
 

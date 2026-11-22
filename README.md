@@ -1,24 +1,66 @@
 # Наш Хамон
 
-A deli storefront for «Наш Хамон» at Saint Petersburg's Sytny Market. The repository contains an intentional static demo and the Next.js order-processing application, not two competing production stores.
+Хамонная лавка при Сытном рынке, Санкт-Петербург. Репозиторий держит две витрины с одними данными и одним дизайн-системным контрактом: статическое демо для согласования и Next.js-приложение для боевого запуска. Это не два конкурирующих магазина и не черновик под переписывание.
 
-## Run
+## What this is
 
-- Static demo: serve the repository root with `node shop/tests/static-server.cjs 8765`, then open `http://localhost:8765`. Checkout is a labelled simulation: no real order submission or payment.
-- Application: follow [shop/README.md](shop/README.md). Node.js 24.12–24.x is required; `npm run dev` in `shop/` starts the local application.
+- **`index.html` (корень)** — демо-витрина, которую отдаёт GitHub Pages. Автономна: кириллические шрифты и GSAP лежат в `brand/`, внешних запросов ноль. Оформление заказа здесь помечено как симуляция: ни письма, ни оплаты, ни удара по 1С.
+- **`shop/`** — Next.js 16: расчёт корзины на сервере, закрытые данные заказов, SQLite вместо JSON, подтверждение веса оператором, оплата через Т-Банк, выгрузка заказа в 1С:УНФ.
 
-## Storefront
+Две витрины, одна правда: каталог живёт в `shop/lib/catalog.json`, статика получает его той же выгрузкой через `npm run sync:static`, а гейт `catalog-parity` падает, если демо и движок разошлись в составе, порядке, ценах или артах.
 
-Full catalog with search and applicable country/age filters; average pieces and requested cuts; fixed-price legs; packaged goods; responsive basket and checkout. «Наша лавка», «О нас» and «Выбор покупателей» use the supplied interior photo and clearly labelled example selections, not invented customer reviews.
+## Checks
 
-Brand color: `#5B2824`. Geologica serves body text and semibold captions with Cyrillic. The actual outlined logo is retained; a licensed Pizza Hut Font Regular file is still required for web headings, which temporarily use Playfair Display. Real product/customer photos, confirmed retail prices and legal details must come from the shop.
+```
+cd shop
+npm run typecheck
+npm test                 # unit: каталог, подпись Т-Банка, SQLite, деплой-гейты, арт карточек
+npm run build            # прод-сборка движка
+npx playwright test      # e2e: обе витрины, 3 вьюпорта, доступность, путь покупателя
+
+npm run test:gate        # быстрый набор гейтов без серверов
+npm run test:deploy      # контракт Dockerfile, standalone и .dockerignore
+npm run test:slow        # то, что не в критическом пути: гео, кросс-витринные данные
+npm run test:pages       # e2e: сборка статики на Pages, её автономность и ноль запросов вовне
+
+```
+
+## Release gates in CI
+
+`ci.yml` прогоняет тот же набор на каждом пуше в `main` и в каждом PR: `gates` (typecheck + unit), `build` (standalone с `SHOP_URL` и `verify-build`), `e2e` (Playwright), `docker` (образ и опрос `/api/health`). Имена задач — ASCII и обязательны: переименовать задачу значит молча снять защиту ветки.
+
+`main` закрыта ruleset-ом: без force-push, изменения только через PR, все четыре проверки зелёные, одно одобренное ревью, ветку не удалить. В публикацию попадает только уже проверенный коммит.
+
+## What gets published to Pages
+
+`pages.yml` публикует не репозиторий, а собранный список: `node shop/scripts/build-pages-artifact.mjs` кладёт в `demo-dist/` ровно витрину — `index.html`, `404.html`, `robots.txt` и каталоги `brand/` и `img/`. Гейт `pages-surface` сверяет артефакт со скриптом: без `.ts`, `.md`, `.zip` и `.sqlite` на публичном адресе, опубликованные страницы побайтово равны файлам из git, каждый названный в разметке ассет на месте и непустой.
+
+Демо закрыто от поисковика (`noindex` плюс `Disallow: /`), пока цены не подтверждены. Открыть — значит поменять гейт в том же коммите: закрытая витрина не может открыться молча.
+
+## Repo
+
+- `shop/lib/catalog.json` — единственный источник коммерческих данных. Строится из строк прайса (`scripts/price-0711.rows.json`, выгрузка 1С:УНФ «Прайс 0711») командой `node scripts/build-catalog.mjs`; правки — в скрипте, не в JSON руками.
+- `shop/scripts/` — `build-catalog.mjs` (прайс → каталог), `sync-static.mjs` (каталог → `index.html`), `brand-variants.mjs` (варианты артов под измеренные слоты), `build-pages-artifact.mjs` (что уходит на Pages), `verify-build.mjs` (боевой адрес в собранном выводе), `pack-standalone.mjs`.
+- Токены и правила витрин живут в CSS обеих поверхностей (`:root` в `index.html` и `shop/app/globals.css`), а не в отдельном документе: их сверяет гейт `design-tokens`, и расхождение между витринами — падение, а не замечание.
+- `shop/AGENTS.md` — правила работы с движком для тех, кто его правит.
+- `RELEASE.md` — релизный статус, путь боевого запуска и список блокеров. Секреты не хранятся в репозитории и не пишутся в документацию: ключи живут в `shop/.env`, который исключён `shop/.gitignore` и `.dockerignore`.
+- Приватное (`_brand/`, брендбук, архивы сессии, фото поставщика) исключено из публикации; гейт `privacy` сверяет индекс git, а не диск.
+
+## Статус
+
+| Поверхность | Статус |
+|---|---|
+| Демо-витрина (Pages) | 🟢 работает, релиз-кандидат |
+| Движок магазина | 🟡 код готов, ждёт хостинг и боевые ключи |
+| Розничные цены | 🔴 27 позиций уточняются у лавки |
+| Оплата, 1С, реквизиты | 🟡 код и контракт есть, боевых ключей нет |
 
 ## По-русски
 
-`index.html` — демо для просмотра и согласования. Демо автономно: шрифты с кириллицей лежат в `brand/fonts/`, GSAP — в `brand/vendor/`, внешних запросов нет. `shop/` — приложение с серверным расчётом корзины, закрытыми данными заказов, SQLite и подтверждением веса. Реальный режим включается только явной настройкой; без неё оплата имитируется и в 1С ничего не отправляется.
+Итог для заказчика: демо на Pages — это согласованная витрина, готовая к показу. Магазин с оплатой и 1С готов на уровне кода и гейтов; для боевого запуска не хватает данных лавки (розничные цены, порог бесплатной доставки, фото и видео) и боевых ключей (Т-Банк, 1С, адрес и хостинг, пароль админки). Полный список и порядок действий — в `RELEASE.md`.
 
-Каталог остаётся вкладками, без длинной ленты. Целые ноги и палеты идут превью без цены: наличие и стоимость уточняет лавка. Точный вес и неподтверждённую доставку согласуют до оплаты. Истории и подборки используют данные каталога.
+Публикация проверяется кодом, а не вкусом: перед каждым релизом гоняются `npm run typecheck`, `npm test`, `npm run build` и Playwright. Гейты держат токены, паритет каталогов, арт карточек, типографику (без латинских омоглиф, неразрывные единицы, тире между словами), приватность (фото поставщика не попадают в git), подпись платежа, SQLite и деплой-контракт.
 
-Перед рабочим запуском нужны подтверждённые данные 1С, тарифы, реквизиты, настройки банка и файл шрифта с разрешением на веб-использование. Автоматическая отправка ссылок в мессенджеры и бронирование ПВЗ не подключены — ссылки передаются покупателю вручную.
+Реквизиты продавца лежат в футере обеих витрин и сверены гейтом `checkout`: ИНН и ОГРНИП обязательны, а телефон и адрес лавки — нет, потому что это данные лавки, а не ИП, и их отсутствие не повод ничего не изобретать.
 
 Контакты: Сытнинская ул., 4П, фуд-аллея рынка «Сытный»; вт–вс 10:30–20:30; +7 (906) 896-00-99; 619896@mail.ru.
