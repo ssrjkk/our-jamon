@@ -10,9 +10,13 @@ export function adminPassword(): string | undefined {
 }
 
 export function equalSecrets(left: string, right: string): boolean {
-  const a = crypto.createHash('sha256').update(left).digest();
-  const b = crypto.createHash('sha256').update(right).digest();
-  return crypto.timingSafeEqual(a, b);
+  // Хеш от секрета здесь ни при чём: сравниваем уже готовые секреты (пароль админки, токен
+  // доступа к заказу, подпись Т-Банка), а не проверяем пароль из базы. sha256 перед сравнением
+  // только выравнивал длину и поднимал CodeQL «недостаточное хеширование пароля».
+  const a = Buffer.from(left, 'utf8');
+  const b = Buffer.from(right, 'utf8');
+  // Разная длина — разные значения: выход по длине не скрывает секрет, его формат известен.
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 export function adminToken(): string {
