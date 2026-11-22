@@ -39,13 +39,22 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 const STORAGE_KEY = 'nh_cart_v2';
 
+let uidSeq = 0;
+
 /**
  * crypto.randomUUID() существует только в защищённом контексте, а магазин из README
  * стартует и на http://IP:3000: там «В корзину» падал с TypeError на каждой кнопке.
  */
 export function newLineUid(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  // В незащищённом контексте настоящего источника энтропии нет, но идентификатору строки
+  // корзины нужно только различие: счётчик даёт его внутри вкладки, getRandomValues —
+  // перемешивание между вкладками. Math.random здесь только запутывал сканер.
+  uidSeq += 1;
+  const mix = typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function'
+    ? `-${crypto.getRandomValues(new Uint32Array(1))[0].toString(36)}`
+    : '';
+  return `${Date.now().toString(16)}${mix}-${uidSeq.toString(16)}`;
 }
 
 function loadLines(): { lines: CartLine[]; notice: string } {
