@@ -37,6 +37,9 @@ jobs:
   deploy:
     name: deploy
     needs: demo
+    # Ветка protection не мешает запустить pages.yml с любого ref через
+    # workflow_dispatch и опубликовать чужой артефакт: публикация разрешена только с main.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
