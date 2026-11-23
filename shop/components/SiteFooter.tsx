@@ -9,7 +9,7 @@ export default function SiteFooter() {
           <p className="footer-intro">
             Лавка деликатесов на Сытном рынке. Хамон — главный герой, вкусы собираем вокруг него.
           </p>
-          <ul className="footer-links footer-site-links"><li><Link href="/about">О нас</Link></li><li><a href="/#shop">Наша лавка</a></li><li><a href="/#buyer-choices">Примеры выбора</a></li></ul>
+          <ul className="footer-links footer-site-links"><li><Link href="/about">О нас</Link></li><li><a href="/#shop">Наша лавка</a></li><li><a href="/#buyer-choices">Примеры выбора</a></li><li><Link href="/offer">Оферта</Link></li><li><Link href="/privacy">Политика ПДн</Link></li><li><Link href="/consent">Согласие на ПДн</Link></li></ul>
         </div>
         <div>
           <strong className="footer-heading">Контакты</strong>
@@ -26,7 +26,6 @@ export default function SiteFooter() {
             <li><a href="https://t.me/mvn_ge" target="_blank" rel="noopener">Telegram лавки</a></li>
             <li><a href="https://wa.me/79068960099" target="_blank" rel="noopener">WhatsApp</a></li>
             <li><a href="https://vk.com/nashhamon_spb" target="_blank" rel="noopener">ВКонтакте</a></li>
-            <li><a href="https://instagram.com/nashhamon.spb" target="_blank" rel="noopener">Instagram @nashhamon.spb</a></li>
             <li><a href="https://yandex.ru/maps/-/CXq~AInl" target="_blank" rel="noopener">Маршрут в Яндекс Картах</a></li>
             <li><a href="https://app.samosale.ru/Nash_khamon/nfc" target="_blank" rel="noopener">Программа лояльности Samosale</a></li>
           </ul>

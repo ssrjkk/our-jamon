@@ -498,7 +498,13 @@ test('админ подтверждает вес и согласованную �
   const guest = await requestFactory.newContext({ baseURL });
   expect((await guest.get(`/api/orders/${order.orderId}`)).status()).toBe(404);
   const privateContext = await browser.newContext({ baseURL });
-  expect((await (await privateContext.newPage()).goto(`/order/${order.orderId}`)).status()).toBe(404);
+  const privatePage = await privateContext.newPage();
+  const response = await privatePage.goto(`/order/${order.orderId}`);
+  // PPR может отдать streamed notFound со статусом 200; приватность доказывает
+  // отсутствие заказа и его ID в DOM, а не код ответа каркаса страницы.
+  expect([200, 404]).toContain(response?.status());
+  await expect(privatePage.getByRole('heading', { name: 'Страница не найдена' })).toBeVisible();
+  await expect(privatePage.locator('body')).not.toContainText(order.orderId);
   await privateContext.close();
   await guest.dispose();
 
@@ -524,6 +530,111 @@ test('админ подтверждает вес и согласованную �
   await expectAmount(page.locator('.cart-total-sum'), expectedTotal);
   await screenshot(page, info, 'admin');
   await noOverflow(page);
+});
+
+test('оплата при получении подтверждается без банковской ссылки и отмечается в лавке', async ({ page, request }, info) => {
+  test.skip(info.project.name !== 'desktop', 'банковская ссылка не создаётся в демо; API покрывает остальные профили');
+  const items = [{ productId: CUT, kind: 'custom', weightG: 300 }, { productId: PACK, kind: 'pack', qty: 1 }];
+  const order = await createOrder(request, items, 'pickup', 'pay_on_pickup');
+  expect(order.status).toBe('awaiting_confirmation');
+  expect(order.paymentMethod).toBe('pay_on_pickup');
+  expect(order.paymentUrl).toBeNull();
+
+  await loginAdmin(page);
+  const card = page.locator('.admin-order-card').filter({ hasText: order.orderId });
+  await expect(card).toBeVisible();
+  const confirmedWeight = 400;
+  await card.getByLabel(/Фактический вес:/).fill(String(confirmedWeight));
+  await card.getByRole('button', { name: 'Подтвердить все веса и доставку', exact: true }).click();
+  await expect(card).toContainText('Все веса и доставка подтверждены. Заказ готов к оплате при получении.');
+  await expect(card).toContainText('Банковская ссылка не требуется.');
+  await expect(card.getByRole('button', { name: 'Повторить создание оплаты', exact: true })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: 'Закрывающий чек ФФД 1.2', exact: true })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: 'Возврат в Т-Банке', exact: true })).toHaveCount(0);
+
+  const confirmed = await (await request.get(`/api/orders/${order.orderId}?token=${order.accessToken}`)).json();
+  expect(confirmed.status).toBe('awaiting_payment');
+  expect(confirmed.total).toBe(cutPrice(CUT, confirmedWeight) + packOf(PACK).price);
+  await page.goto(`/order/${order.orderId}?token=${order.accessToken}`);
+  await expect(page.getByText('Оплата при получении в лавке на Сытном рынке', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: /демо-оплат|Оплатить.*демо/i })).toHaveCount(0);
+
+  await page.goto('/admin');
+  const paidCard = page.locator('.admin-order-card').filter({ hasText: order.orderId });
+  await paidCard.getByRole('button', { name: 'Оплачен при получении', exact: true }).click();
+  await expect(paidCard).toContainText('Оплата при получении отмечена.');
+  await expect(paidCard).toContainText('Оплачен');
+  await expect(paidCard.getByRole('button', { name: 'Возврат в Т-Банке', exact: true })).toHaveCount(0);
+});
+
+test('админка требует ручную сверку перед повтором возврата и закрывающего чека', async ({ page, request }, info) => {
+  test.skip(info.project.name !== 'desktop', 'диалоги аварийного повтора проверяются в одном профиле');
+  const order = await createOrder(request, [{ productId: PACK, kind: 'pack', qty: 1 }]);
+  const paid = await request.post(`/api/orders/${order.orderId}`, { data: { action: 'demo-pay', token: order.accessToken } });
+  expect(paid.status()).toBe(200);
+  let reviewKind = 'refund';
+  await page.route('**/api/orders', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const response = await route.fetch();
+    if (!response.ok()) return route.fulfill({ response });
+    const data = await response.json();
+    const target = data.orders.find((entry) => entry.id === order.orderId);
+    target.demo = false;
+    target.status = 'paid';
+    target.paymentMethod = 'card';
+    target.paymentId = 'PAY-REVIEW';
+    target.paidPaymentId = 'PAY-REVIEW';
+    target.paymentIds = ['PAY-REVIEW'];
+    target.paymentUrl = 'https://payment.example.test/session';
+    target.paymentOperation = {
+      id: reviewKind === 'refund' ? '11111111-1111-4111-8111-111111111111' : '22222222-2222-4222-8222-222222222222',
+      kind: reviewKind, state: 'needs_attention', startedAt: new Date(Date.now() - 180000).toISOString(),
+      finishedAt: new Date().toISOString(), attempt: 1, error: 'test_connection_lost',
+    };
+    await route.fulfill({ response, json: data });
+  });
+  const patches = [];
+  await page.route('**/api/orders/*', async (route) => {
+    if (route.request().method() !== 'PATCH') return route.continue();
+    patches.push(route.request().postDataJSON());
+    await route.fulfill({ status: 409, json: { error: 'Результат предыдущего возврата не подтверждён.' } });
+  });
+  await loginAdmin(page);
+  const card = page.locator('.admin-order-card').filter({ hasText: order.orderId });
+  const retryRefund = card.getByRole('button', { name: 'Проверить и повторить возврат', exact: true });
+  await expect(card).toContainText('Результат возврата не подтверждён. Проверьте кабинет Т-Банка');
+  await expect(retryRefund).toBeVisible();
+
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('Повторить только если деньги не возвращены?');
+    await dialog.dismiss();
+  });
+  await retryRefund.click();
+  expect(patches).toEqual([]);
+
+  page.once('dialog', async (dialog) => dialog.accept());
+  await retryRefund.click();
+  await expect.poll(() => patches.length).toBe(1);
+  expect(patches[0]).toEqual({ action: 'refund-payment', retryConfirmed: true });
+
+  reviewKind = 'closing_receipt';
+  await page.getByRole('button', { name: 'Обновить заказы', exact: true }).click();
+  const retryReceipt = card.getByRole('button', { name: 'Проверить и повторить чек', exact: true });
+  await expect(card).toContainText('Результат отправки закрывающего чека не подтверждён.');
+  await expect(retryReceipt).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Проверить и повторить возврат', exact: true })).toHaveCount(0);
+
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('Повторить только если чека там нет?');
+    await dialog.dismiss();
+  });
+  await retryReceipt.click();
+  expect(patches).toHaveLength(1);
+
+  page.once('dialog', async (dialog) => dialog.accept());
+  await retryReceipt.click();
+  await expect.poll(() => patches.length).toBe(2);
+  expect(patches[1]).toEqual({ action: 'closing-receipt', retryConfirmed: true });
 });
 
 test('ошибка входа в админку возвращает фокус в поле пароля', async ({ page }) => {
@@ -1410,7 +1521,12 @@ test('в CSS обеих витрин нет мёртвых классов и я�
   };
   const html = fs.readFileSync(path.resolve(root, '../index.html'), 'utf8');
   const htmlCss = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
-  const htmlMarkup = html.replace(/<style[^>]*>[\s\S]*?<\/style>/g, '');
+  const styleStart = html.indexOf('<style>');
+  const styleEnd = html.indexOf('</style>', styleStart);
+  expect(styleStart).toBeGreaterThanOrEqual(0);
+  expect(styleEnd).toBeGreaterThan(styleStart);
+  const htmlMarkup = html.slice(0, styleStart) + html.slice(styleEnd + '</style>'.length);
+  expect(htmlMarkup).not.toMatch(/<style\b/i);
   const nextCss = fs.readFileSync(path.resolve(root, 'app/globals.css'), 'utf8');
   const nextMarkup = ['app', 'components'].flatMap((dir) => fs.readdirSync(path.resolve(root, dir), { recursive: true })
     .filter((f) => /\.(tsx|ts)$/.test(String(f)))

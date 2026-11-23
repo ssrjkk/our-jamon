@@ -674,3 +674,6 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 99; pointer-event
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
   .flying-token { display: none; }
 }
+
+.order-sbp-qr { display: inline-flex; padding: 12px; background: var(--fat-white); border: 1px solid var(--bone-line); border-radius: var(--radius); }
+.admin-audit { margin-top: 28px; display: grid; gap: 12px; }

@@ -75,6 +75,7 @@ jobs:
           cache: npm
           cache-dependency-path: shop/package-lock.json
       - run: npm ci
+      # E2E сам собирает standalone с тем же SHOP_URL, который проверяет canonical.
       # Конфиг требует канал chrome: системный Google Chrome стоит на образе раннера.
       - run: npx playwright test
 

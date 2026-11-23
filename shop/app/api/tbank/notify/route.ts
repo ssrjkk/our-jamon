@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     // заказ остаётся в своём статусе, а второй платёж встаёт в очередь на возврат через банк.
     if (success && body.Status === 'CONFIRMED') {
       const accounted = current.paidPaymentId ?? (current.status === 'paid' ? current.paymentId : undefined);
-      if (accounted !== paymentId && !current.refundPaymentIds?.includes(paymentId)) {
+      if (accounted !== paymentId && !current.refundPaymentIds?.includes(paymentId) && !current.refundedPaymentIds?.includes(paymentId)) {
         current.refundPaymentIds = [...(current.refundPaymentIds ?? []), paymentId];
       }
     }

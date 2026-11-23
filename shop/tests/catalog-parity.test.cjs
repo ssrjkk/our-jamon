@@ -106,12 +106,14 @@ test('одна служба доставки называется одинако
 const CONTACT_RE = /tel:\+\d+|https:\/\/t\.me\/[\w+]+|https:\/\/wa\.me\/\d+|mailto:[\w.@-]+/g;
 const nextContacts = new Set();
 let nextCorpus = '';
+let nextPickupCorpus = '';
 for (const dir of ['app', 'components', 'lib']) {
   for (const entry of fs.readdirSync(path.join(root, dir), { recursive: true })) {
     const file = path.join(root, dir, String(entry));
     if (!/\.(?:tsx?|json)$/.test(file) || !fs.statSync(file).isFile()) continue;
     const source = fs.readFileSync(file, 'utf8');
     nextCorpus += source;
+    if (path.relative(root, file).replace(/\\/g, '/') !== 'app/offer/page.tsx') nextPickupCorpus += source;
     for (const hit of source.matchAll(CONTACT_RE)) nextContacts.add(hit[0]);
   }
 }
@@ -151,16 +153,16 @@ test('группы каталога идут в одном порядке и с 
 // лавка закроется. Разойдутся — приедет к другому дому или к закрытой двери.
 const hits = (text, re, group = 0) => [...text.matchAll(re)].map((m) => m[group].replace(/\s+/g, ''));
 
-// Блок «Реквизиты продавца» печатает адрес регистрации ИП и адрес склада — это
-// юридические сведения, а не обещание самовывоза: склад стоит в другом доме (5 лит А),
-// и покупатель туда не едет. Сверяем дом самовывоза по всем покупательским упоминаниям,
-// а реквизиты из корпуса исключаем, чтобы склад не ломал сверку и не маскировал разъезд.
+// Блок «Реквизиты продавца» и страница оферты печатают юридические адреса, а не
+// обещание самовывоза: регистрация и склад могут стоять в других домах, и покупатель
+// туда не едет. Сверяем дом самовывоза по всем покупательским страницам, исключая
+// только реквизиты и оферту, чтобы юридический адрес не маскировал реальный разъезд.
 const withoutLegal = (text) => text.replace(/<div class(?:Name)?="[^"]*footer-legal[^"]*">[\s\S]*?<\/div>/g, '');
 
 test('лавка ждёт по одному адресу и в одни часы на обеих витринах', () => {
   const house = (text) => hits(text, /Сытнинская[\s\S]{0,30}?(\d+\s*[А-Яа-яЁё])/g, 1);
   const hours = (text) => hits(text, /\d{1,2}:\d{2}\s*[–—-]\s*\d{1,2}:\d{2}/g);
-  const staticHouse = house(withoutLegal(staticPages)), nextHouse = house(withoutLegal(nextCorpus));
+  const staticHouse = house(withoutLegal(staticPages)), nextHouse = house(withoutLegal(nextPickupCorpus));
   assert.ok(staticHouse.length >= 3 && nextHouse.length >= 3,
     `упоминаний адреса стало слишком мало для сверки: статика ${staticHouse.length}, Next ${nextHouse.length}`);
   assert.deepEqual([...new Set([...staticHouse, ...nextHouse])], [staticHouse[0]],

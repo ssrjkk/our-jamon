@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import { connection } from 'next/server';
 import MockPayButton from '@/components/MockPayButton';
 import { isDemoMode } from '@/lib/config';
+import { clientAddress } from '@/lib/rate-limit';
 import { getAuthorizedOrder } from '@/lib/order-access';
 import { orderStatusRu } from '@/lib/orders';
 
@@ -28,7 +30,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const { id } = await params;
   const query = await searchParams;
   const token = typeof query.token === 'string' ? query.token : undefined;
-  const order = await getAuthorizedOrder(id, token);
+  const order = await getAuthorizedOrder(id, token, clientAddress(await headers()));
   if (!order) notFound();
 
   const paid = order.status === 'paid';
@@ -39,7 +41,8 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const estimated = confirming || !weightsConfirmed;
   const activeDemo = isDemoMode();
   const modeMatches = order.demo === activeDemo;
-  const paymentReady = order.status === 'awaiting_payment' && weightsConfirmed && order.total !== null && order.delivery.cost !== null;
+  const payOnPickup = order.paymentMethod === 'pay_on_pickup';
+  const paymentReady = !payOnPickup && order.status === 'awaiting_payment' && weightsConfirmed && order.total !== null && order.delivery.cost !== null;
   const demoPayment = paymentReady && order.demo && activeDemo && Boolean(order.paymentId?.startsWith('DEMO-')) && !order.paymentError;
   const realPayment = paymentReady && !order.demo && modeMatches && !order.paymentError && Boolean(order.paymentUrl?.startsWith('https://'));
   // The payment API rejects concurrent initializations for one minute.
@@ -99,7 +102,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
           <h2 id="order-delivery-title" className="checkout-title">Получение</h2>
           <p><strong>{order.delivery.name}</strong>{order.delivery.address ? ` · ${order.delivery.address}` : ''}</p>
           {order.delivery.id === 'pickup' && <p className="checkout-hint">Сытнинская ул., 4П · вт–вс 10:30–20:30. Готовность заказа уточните в лавке.</p>}
-          <p className="checkout-hint">Предпочтительный способ связи: {order.messenger}. Ссылка на оплату доступна на этой странице после согласования.</p>
+          <p className="checkout-hint">Способ оплаты: {order.paymentMethod === 'sbp' ? 'СБП (QR-код)' : order.paymentMethod === 'pay_on_pickup' ? 'При получении в лавке' : 'Банковская карта / T-Pay'}. Предпочтительный способ связи: {order.messenger}.</p>
           {order.delivery.freeFrom !== null && <p className="checkout-hint">Порог бесплатной доставки для этого заказа: {rub(order.delivery.freeFrom)} по подтверждённой сумме товаров.{order.delivery.baseCost !== null ? ` Стоимость до применения порога: ${rub(order.delivery.baseCost)}.` : ''}</p>}
         </section>
         <section className="checkout-summary" aria-label="Стоимость заказа">
@@ -110,10 +113,14 @@ export default async function OrderPage({ params, searchParams }: Props) {
           {estimated && order.total !== null && <p className="checkout-hint">Это расчёт до окончательного подтверждения. Оплата сейчас не требуется.</p>}
         </section>
         {!cancelled && !paid && !modeMatches && <p className="form-status-box" role="status">Заказ создан в другом режиме магазина. Оплата здесь недоступна; свяжитесь с лавкой.</p>}
+        {payOnPickup && !cancelled && !paid && !confirming && <p className="form-status-box" role="status">Оплата при получении в лавке на Сытном рынке (Сытнинская ул., 4П).</p>}
         {realPayment && <a className="btn-primary" href={order.paymentUrl} rel="noreferrer" referrerPolicy="no-referrer">Оплатить в Т-Банке · {rub(order.total!)}</a>}
+        {realPayment && order.sbpPayloadUrl && <a className="btn-secondary" href={order.sbpPayloadUrl} rel="noreferrer" referrerPolicy="no-referrer">Оплатить через СБП</a>}
+        {realPayment && !order.sbpQrSvg && <MockPayButton orderId={order.id} token={order.accessToken} action="sbp-qr" />}
+        {paymentReady && order.sbpQrSvg && <div className="order-sbp-qr"><img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(order.sbpQrSvg)}`} alt="QR-код СБП" width={200} height={200} /></div>}
         {demoPayment && <MockPayButton orderId={order.id} token={order.accessToken} action="demo-pay" />}
         {retryPayment && <div className="order-payment-retry"><p className="form-status-box error" role="alert">Ссылка на оплату недоступна. Заказ сохранён; оформлять его заново не нужно.</p><MockPayButton orderId={order.id} token={order.accessToken} action="retry-payment" /></div>}
-        {!cancelled && !paid && !confirming && !paymentReady && <p className="form-status-box">Оплата ещё недоступна: нужно подтвердить вес и стоимость доставки. Свяжитесь с лавкой.</p>}
+        {!cancelled && !paid && !confirming && !paymentReady && !payOnPickup && <p className="form-status-box">Оплата ещё недоступна: нужно подтвердить вес и стоимость доставки. Свяжитесь с лавкой.</p>}
         <div className="checkout-actions">
           <a href={`/order/${encodeURIComponent(order.id)}?token=${encodeURIComponent(order.accessToken)}`} className="btn-secondary" referrerPolicy="no-referrer">Обновить статус</a>
           <Link href="/catalog" className="btn-secondary">В каталог</Link>

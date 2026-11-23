@@ -118,7 +118,7 @@ for (const имя of файлыPages) {
     // только ветка jsx=true, а сюда мы приходим с jsx=false.
     корпус.push({ метка: `Pages/${имя}:${строкаИсходника(видимый, позиция)}`, кусок: кНормальномуВиду(текст.replace(/&nbsp;/gi, NBSP), false), jsx: false });
   }
-  for (const блок of источник.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) {
+  for (const блок of источник.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)) {
     const тело = блок[1];
     const смещение = блок.index + блок[0].indexOf(тело);
     for (const { текст, позиция, jsx } of кускиТекста(тело)) {

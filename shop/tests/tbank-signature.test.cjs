@@ -45,8 +45,7 @@ test('значение токена = конкатенация строк по �
     String(NOTIFY_EXTRA.Success), NOTIFY_EXTRA.TerminalKey,
   ].join('');
   assert.equal(joined, '90000abcxNH-GOLDEN-1test-only-bank-passphrase123456r1CONFIRMEDtruetest-terminal');
-  const crypto = await import('node:crypto');
-  assert.equal(crypto.createHash('sha256').update(joined).digest('hex'), tbankToken(NOTIFY_EXTRA, PASSWORD));
+  assert.equal(tbankToken(NOTIFY_EXTRA, PASSWORD), GOLDEN.notifyExtra);
 }));
 
 test('токен по неполному набору полей банк не примет', () => withSystem(async s => {

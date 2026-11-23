@@ -76,8 +76,19 @@ test('бренд-гарнитуры идут раньше fallback-семейс�
 });
 
 test('стрелки больше не символы текста: в размеченных поверхностях их нет', () => {
+  const html = read('index.html');
+  const styleStart = html.indexOf('<style>');
+  const styleEnd = html.indexOf('</style>', styleStart);
+  assert.ok(styleStart >= 0 && styleEnd > styleStart, 'в index.html потерян блок стилей — гейт потерял опору');
+  const markupHtml = html.slice(0, styleStart) + html.slice(styleEnd + '</style>'.length);
+  assert.doesNotMatch(markupHtml, /<style\b/i, 'в index.html появился второй блок стилей вне вырезанного');
+  const withoutComments = markupHtml.split('<!--').map((part, index) => {
+    if (index === 0) return part;
+    const end = part.indexOf('-->');
+    return end < 0 ? '' : part.slice(end + 3);
+  }).join('');
   const markup = [
-    ['index.html', read('index.html').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<!--[\s\S]*?-->/g, '')],
+    ['index.html', withoutComments],
     ['shop/app/page.tsx', read('shop/app/page.tsx')],
     ['shop/app/about/page.tsx', read('shop/app/about/page.tsx')],
     ['shop/app/product/[id]/page.tsx', read('shop/app/product/[id]/page.tsx')],

@@ -46,7 +46,7 @@ for (const file of candidates) {
   проверено += 1;
   const where = relative(root, file).replace(/\\/g, '/');
   if (text.includes(pagesHost)) {
-    const строк = (text.match(new RegExp(`[^"'<> ]{0,80}${pagesHost.replace(/\./g, '\\.')}[^"'<>]{0,60}`, 'g')) || []).slice(0, 2);
+    const строк = (text.match(new RegExp(`[^"'<> ]{0,80}${pagesHost.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^"'<>]{0,60}`, 'g')) || []).slice(0, 2);
     problems.push(`${where}: в собранном выводе адрес демо ${pagesHost} — ${строк.join(' § ').slice(0, 160)}`);
     continue;
   }
