@@ -440,6 +440,27 @@ test('CANCELED старого платежа не отменяет заказ с
   assert.equal(saved.paidPaymentId, 'PAY-NEW');
 }, { env: LIVE_ENV }));
 
+test('завершённая ссылка не считается действующей и получает новую выдачу', () => withSystem(async (s) => {
+  process.env.SHOP_MODE = 'live';
+  const orders = s.load('lib/orders.ts');
+  const order = orderFields({
+    status: 'awaiting_payment',
+    paidPaymentId: undefined,
+    paymentId: 'PAY-A',
+    paymentIds: ['PAY-A'],
+    paymentStates: { 'PAY-A': 'cancelled' },
+    paymentUrl: 'https://payment.example.test/A',
+  });
+  await orders.saveOrder(order);
+  const tbank = s.load('lib/tbank.ts');
+  tbank.createTbankPayment = async () => ({ ok: true, paymentId: 'PAY-B', paymentUrl: 'https://payment.example.test/B' });
+  const updated = await s.load('lib/checkout.ts').initializeOrderPayment(order.id, process.env.SHOP_URL);
+  assert.deepEqual(updated.paymentIds, ['PAY-A', 'PAY-B']);
+  assert.equal(updated.paymentId, 'PAY-B');
+  assert.equal(updated.paymentUrl, 'https://payment.example.test/B');
+  assert.equal(updated.paymentError, false);
+}));
+
 test('завершённый платёж освобождает локальную отмену, но остаётся в реестре', () => withSystem(async (s) => {
   const orders = s.load('lib/orders.ts');
   await login(s);

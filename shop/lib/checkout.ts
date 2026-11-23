@@ -38,7 +38,7 @@ export async function initializeOrderPayment(id: string, baseUrl: string): Promi
     if (order.paymentMethod === 'pay_on_pickup') return;
     if (order.status !== 'awaiting_payment' || order.total === null || order.delivery.cost === null
       || order.items.some((item) => item.requiresWeightCheck && !item.weightConfirmed)) throw new OrderConflict('Сначала нужно согласовать вес и доставку.');
-    if (order.paymentUrl && !order.paymentError) return;
+    if (order.paymentUrl && !order.paymentError && !(order.paymentId && paymentStateIsTerminal(order.paymentStates?.[order.paymentId]))) return;
     if (order.paymentInitAt && Date.now() - Date.parse(order.paymentInitAt) < 60000) throw new OrderConflict('Ссылка на оплату уже формируется. Повторите чуть позже.');
     order.paymentInitAt = attempt;
     start = true;
