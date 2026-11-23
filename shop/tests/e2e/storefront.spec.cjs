@@ -1849,7 +1849,7 @@ test('скруглены состояния контролов вне основ
     await expect(toggle, `${label}: бургер меню не виден`).toBeVisible();
     await toggle.hover();
     expect(await toggle.evaluate((el) => getComputedStyle(el).borderTopWidth), `${label}: у бургера нет обводки при наведении`).not.toBe('0px');
-    expect(await toggle.evaluate((el) => getComputedStyle(el).borderTopColor), `${label}: обводка бургера при наведении прозрачна`).not.toBe('rgba(0, 0, 0, 0)');
+    await expect(toggle, `${label}: обводка бургера при наведении прозрачна`).toHaveCSS('border-top-color', /^(?!rgba\(0, 0, 0, 0\)$)rgba?\(/);
     expect(await toggle.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius)), `${label}: угол обводки бургера острый`).toBeGreaterThan(0.5);
   }
 });
