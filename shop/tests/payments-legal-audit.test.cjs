@@ -62,6 +62,13 @@ function patch(s, id, body) {
   return s.load('app/api/orders/[id]/route.ts').PATCH(s.request(body, `${process.env.SHOP_URL}/api/orders/${id}`), s.context(id));
 }
 
+function notify(s, order, status, paymentId, success = true) {
+  const tbank = s.load('lib/tbank.ts');
+  const body = { TerminalKey: 'test-terminal', OrderId: order.id, PaymentId: paymentId, Amount: order.total * 100, Success: success, Status: status };
+  body.Token = tbank.tbankToken(body, BANK_PASSWORD);
+  return s.load('app/api/tbank/notify/route.ts').POST(s.request(body));
+}
+
 function receiptItem(uid, productId, title, price, qty = 1) {
   return { uid, productId, title, label: `${qty} шт.`, price, weightG: 100, pricePerKg: null, requiresWeightCheck: false, weightConfirmed: true, pieceId1c: null, qty };
 }
@@ -262,6 +269,200 @@ test('Т-Банк: закрывающий чек идёт без /v2 и сохр
   assert.ok(marked.every((item) => item.PaymentObject === 'goods_with_marking_code' && item.Quantity === 1 && item.Tax === 'vat22'));
   assert.equal(receipt.Items.find((item) => item.Name === 'Доставка').Tax, 'vat22');
   assert.equal(receipt.Items.reduce((sum, item) => sum + item.Amount, 0), 150000);
+}, { env: LIVE_ENV }));
+
+test('завершение возврата не скрывает новый платёж, появившийся перед записью', () => withSystem(async (s) => {
+  const order = await paidOrder(s);
+  await login(s);
+  const operations = s.load('lib/payment-operations.ts');
+  const orders = s.load('lib/orders.ts');
+  const complete = operations.completePaymentRefund;
+  operations.completePaymentRefund = async (id, operationId) => {
+    await orders.mutateOrder(id, (current) => { current.refundPaymentIds = ['PAY-LATE']; });
+    return complete(id, operationId);
+  };
+  global.fetch = async () => ({ ok: true, json: async () => ({ Success: true, Status: 'REFUNDED' }) });
+  const response = await patch(s, order.id, { action: 'refund-payment' });
+  assert.equal(response.status, 409);
+  const saved = await orders.getOrder(order.id);
+  assert.equal(saved.status, 'paid');
+  assert.deepEqual(saved.refundedPaymentIds, ['PAY-1']);
+  assert.deepEqual(saved.refundPaymentIds, ['PAY-LATE']);
+  assert.equal(saved.paymentOperation.state, 'needs_attention');
+}, { env: LIVE_ENV }));
+
+test('завершение чека не скрывает потерю актуального статуса заказа', () => withSystem(async (s) => {
+  const order = await paidOrder(s);
+  await login(s);
+  const operations = s.load('lib/payment-operations.ts');
+  const orders = s.load('lib/orders.ts');
+  const complete = operations.completeClosingReceipt;
+  operations.completeClosingReceipt = async (id, operationId) => {
+    await orders.mutateOrder(id, (current) => { current.status = 'cancelled'; });
+    return complete(id, operationId);
+  };
+  global.fetch = async () => ({ ok: true, json: async () => ({ Success: true }) });
+  const response = await patch(s, order.id, { action: 'closing-receipt' });
+  assert.equal(response.status, 409);
+  const saved = await orders.getOrder(order.id);
+  assert.equal(saved.status, 'cancelled');
+  assert.equal(saved.closingReceiptSentAt, undefined);
+  assert.equal(saved.paymentOperation.state, 'needs_attention');
+}, { env: LIVE_ENV }));
+
+test('поздний ответ Init не воскрешает ссылку завершённого платежа', () => withSystem(async (s) => {
+  process.env.SHOP_MODE = 'live';
+  const orders = s.load('lib/orders.ts');
+  const order = orderFields({
+    status: 'awaiting_payment',
+    paidPaymentId: undefined,
+    paymentId: undefined,
+    paymentIds: undefined,
+    paymentUrl: undefined,
+  });
+  await orders.saveOrder(order);
+  const tbank = s.load('lib/tbank.ts');
+  tbank.createTbankPayment = async () => {
+    await orders.mutateOrder(order.id, (current) => { current.paymentStates = { 'PAY-LATE': 'cancelled' }; });
+    return { ok: true, paymentId: 'PAY-LATE', paymentUrl: 'https://payment.example.test/late' };
+  };
+  const updated = await s.load('lib/checkout.ts').initializeOrderPayment(order.id, process.env.SHOP_URL);
+  assert.deepEqual(updated.paymentIds, ['PAY-LATE']);
+  assert.equal(updated.paymentStates['PAY-LATE'], 'cancelled');
+  assert.equal(updated.paymentId, undefined);
+  assert.equal(updated.paymentUrl, undefined);
+  assert.equal(updated.paymentError, true);
+}));
+
+test('поздний GetQr не подменяет QR нового платежа', () => withSystem(async (s) => {
+  const orders = s.load('lib/orders.ts');
+  const order = orderFields({
+    status: 'awaiting_payment',
+    paidPaymentId: undefined,
+    paymentMethod: 'sbp',
+    paymentId: 'PAY-A',
+    paymentIds: ['PAY-A'],
+    paymentStates: { 'PAY-A': 'pending' },
+    sbpPayloadUrl: undefined,
+    sbpQrSvg: undefined,
+  });
+  await orders.saveOrder(order);
+  const tbank = s.load('lib/tbank.ts');
+  tbank.fetchTbankSbpQr = async (paymentId) => {
+    assert.equal(paymentId, 'PAY-A');
+    await orders.mutateOrder(order.id, (current) => {
+      current.paymentId = 'PAY-B';
+      current.paymentIds = ['PAY-A', 'PAY-B'];
+      current.paymentStates = { 'PAY-A': 'cancelled', 'PAY-B': 'pending' };
+      current.sbpPayloadUrl = 'https://qr.example.test/B';
+      current.sbpQrSvg = '<svg>B</svg>';
+    });
+    return { ok: true, sbpPayloadUrl: 'https://qr.example.test/A', sbpQrSvg: '<svg>A</svg>' };
+  };
+  const updated = await s.load('lib/checkout.ts').ensureOrderSbpQr(order.id, process.env.SHOP_URL);
+  assert.equal(updated.paymentId, 'PAY-B');
+  assert.equal(updated.sbpPayloadUrl, 'https://qr.example.test/B');
+  assert.equal(updated.sbpQrSvg, '<svg>B</svg>');
+}));
+
+test('GetQr не записывает QR платежа, ставшего терминальным во время запроса', () => withSystem(async (s) => {
+  const orders = s.load('lib/orders.ts');
+  const order = orderFields({
+    status: 'awaiting_payment',
+    paidPaymentId: undefined,
+    paymentMethod: 'sbp',
+    paymentId: 'PAY-A',
+    paymentIds: ['PAY-A'],
+    paymentStates: { 'PAY-A': 'pending' },
+    sbpPayloadUrl: undefined,
+    sbpQrSvg: undefined,
+  });
+  await orders.saveOrder(order);
+  const tbank = s.load('lib/tbank.ts');
+  tbank.fetchTbankSbpQr = async () => {
+    await orders.mutateOrder(order.id, (current) => { current.paymentStates['PAY-A'] = 'cancelled'; });
+    return { ok: true, sbpPayloadUrl: 'https://qr.example.test/A', sbpQrSvg: '<svg>A</svg>' };
+  };
+  const updated = await s.load('lib/checkout.ts').ensureOrderSbpQr(order.id, process.env.SHOP_URL);
+  assert.equal(updated.sbpPayloadUrl, undefined);
+  assert.equal(updated.sbpQrSvg, undefined);
+}));
+
+test('неуспешный GetQr возвращает актуальный заказ, а не старый снимок', () => withSystem(async (s) => {
+  const orders = s.load('lib/orders.ts');
+  const order = orderFields({
+    status: 'awaiting_payment',
+    paidPaymentId: undefined,
+    paymentMethod: 'sbp',
+    paymentId: 'PAY-A',
+    paymentIds: ['PAY-A'],
+    paymentStates: { 'PAY-A': 'pending' },
+    sbpPayloadUrl: 'https://qr.example.test/A',
+    sbpQrSvg: undefined,
+  });
+  await orders.saveOrder(order);
+  const tbank = s.load('lib/tbank.ts');
+  tbank.fetchTbankSbpQr = async () => {
+    await orders.mutateOrder(order.id, (current) => {
+      current.paymentId = 'PAY-B';
+      current.paymentStates['PAY-A'] = 'cancelled';
+      current.paymentStates['PAY-B'] = 'pending';
+      current.sbpPayloadUrl = undefined;
+    });
+    return { ok: false, error: 'qr_unavailable' };
+  };
+  const updated = await s.load('lib/checkout.ts').ensureOrderSbpQr(order.id, process.env.SHOP_URL);
+  assert.equal(updated.paymentId, 'PAY-B');
+  assert.equal(updated.sbpPayloadUrl, undefined);
+  assert.equal(updated.sbpQrSvg, undefined);
+}));
+
+test('CANCELED старого платежа не отменяет заказ с другой активной ссылкой', () => withSystem(async (s) => {
+  const order = orderFields({
+    status: 'awaiting_payment',
+    paidPaymentId: undefined,
+    paymentId: 'PAY-NEW',
+    paymentIds: ['PAY-OLD', 'PAY-NEW'],
+    paymentStates: { 'PAY-OLD': 'pending', 'PAY-NEW': 'pending' },
+    paymentUrl: 'https://payment.example.test/new',
+  });
+  await s.load('lib/orders.ts').saveOrder(order);
+  assert.equal((await notify(s, order, 'CANCELED', 'PAY-OLD')).status, 200);
+  let saved = await s.load('lib/orders.ts').getOrder(order.id);
+  assert.equal(saved.status, 'awaiting_payment');
+  assert.equal(saved.paymentId, 'PAY-NEW');
+  assert.equal(saved.paymentUrl, order.paymentUrl);
+  assert.equal(saved.paymentStates['PAY-OLD'], 'cancelled');
+  assert.equal(saved.paymentStates['PAY-NEW'], 'pending');
+  assert.equal((await notify(s, order, 'CONFIRMED', 'PAY-NEW')).status, 200);
+  saved = await s.load('lib/orders.ts').getOrder(order.id);
+  assert.equal(saved.status, 'paid');
+  assert.equal(saved.paidPaymentId, 'PAY-NEW');
+}, { env: LIVE_ENV }));
+
+test('завершённый платёж освобождает локальную отмену, но остаётся в реестре', () => withSystem(async (s) => {
+  const orders = s.load('lib/orders.ts');
+  await login(s);
+  for (const [index, status] of ['CANCELED', 'REJECTED', 'DEADLINE_EXPIRED'].entries()) {
+    const paymentId = `PAY-TERMINAL-${index + 1}`;
+    const order = orderFields({
+      id: `NH-TERMINAL-${index + 1}`,
+      status: 'awaiting_payment',
+      paidPaymentId: undefined,
+      paymentId,
+      paymentIds: [paymentId],
+      paymentStates: { [paymentId]: 'pending' },
+    });
+    await orders.saveOrder(order);
+    assert.equal((await notify(s, order, status, paymentId, status !== 'REJECTED')).status, 200);
+    const saved = await orders.getOrder(order.id);
+    assert.equal(saved.status, 'awaiting_payment', `${status} отменил весь заказ`);
+    assert.equal(saved.paymentId, undefined);
+    assert.equal(saved.paymentUrl, undefined);
+    assert.deepEqual(saved.paymentIds, [paymentId]);
+    assert.equal(s.load('lib/payment-registry.ts').activePaymentIdsOf(saved).length, 0);
+    assert.equal((await patch(s, order.id, { action: 'cancel' })).status, 200);
+  }
 }, { env: LIVE_ENV }));
 
 test('возврат обрабатывает все не возвращённые платежи и идемпотентен', () => withSystem(async (s) => {

@@ -90,6 +90,7 @@ export async function markPaymentRefunded(id: string, operationId: string, payme
   await mutateOrder(id, (order) => {
     if (order.paymentOperation?.id !== operationId || order.paymentOperation.state !== 'running') return;
     order.refundedPaymentIds = [...new Set([...(order.refundedPaymentIds ?? []), paymentId])];
+    order.paymentStates = { ...order.paymentStates, [paymentId]: 'refunded' };
   });
 }
 
@@ -103,21 +104,27 @@ export async function failPaymentOperation(id: string, operationId: string, erro
 }
 
 export async function completePaymentRefund(id: string, operationId: string): Promise<Order | undefined> {
-  return mutateOrder(id, (order) => {
-    if (order.paymentOperation?.id !== operationId || order.paymentOperation.state !== 'running' || refundTargetsOf(order).length > 0) return undefined;
-    order.status = 'cancelled';
-    order.paymentOperation.state = 'succeeded';
-    order.paymentOperation.finishedAt = new Date().toISOString();
-    order.paymentOperation.error = undefined;
+  let completed = false;
+  const order = await mutateOrder(id, (current) => {
+    if (current.paymentOperation?.id !== operationId || current.paymentOperation.state !== 'running' || refundTargetsOf(current).length > 0) return;
+    current.status = 'cancelled';
+    current.paymentOperation.state = 'succeeded';
+    current.paymentOperation.finishedAt = new Date().toISOString();
+    current.paymentOperation.error = undefined;
+    completed = true;
   });
+  return completed ? order : undefined;
 }
 
 export async function completeClosingReceipt(id: string, operationId: string): Promise<Order | undefined> {
-  return mutateOrder(id, (order) => {
-    if (order.paymentOperation?.id !== operationId || order.paymentOperation.state !== 'running' || order.status !== 'paid') return undefined;
-    order.closingReceiptSentAt = new Date().toISOString();
-    order.paymentOperation.state = 'succeeded';
-    order.paymentOperation.finishedAt = new Date().toISOString();
-    order.paymentOperation.error = undefined;
+  let completed = false;
+  const order = await mutateOrder(id, (current) => {
+    if (current.paymentOperation?.id !== operationId || current.paymentOperation.state !== 'running' || current.status !== 'paid') return;
+    current.closingReceiptSentAt = new Date().toISOString();
+    current.paymentOperation.state = 'succeeded';
+    current.paymentOperation.finishedAt = new Date().toISOString();
+    current.paymentOperation.error = undefined;
+    completed = true;
   });
+  return completed ? order : undefined;
 }

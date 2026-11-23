@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import type { AdminAuditEntry, Order } from '@/lib/types';
-import { paymentIdsOf } from '@/lib/payment-registry';
+import { activePaymentIdsOf } from '@/lib/payment-registry';
 import { formatRub, formatWeightLabel } from './CartContext';
 
 type Feedback = { kind: 'error' | 'success'; text: string };
@@ -312,7 +312,7 @@ export default function AdminClient() {
           const status = statuses[order.status];
           const confirming = order.status === 'awaiting_confirmation';
           const closed = order.status === 'paid' || order.status === 'cancelled';
-          const canCancel = !closed && (order.demo || paymentIdsOf(order).length === 0);
+          const canCancel = !closed && (order.demo || activePaymentIdsOf(order).length === 0);
           const refundIds = order.refundPaymentIds ?? [];
           const outstandingRefundIds = refundIds.filter((id) => !order.refundedPaymentIds?.includes(id));
           const paymentOperation = order.paymentOperation;

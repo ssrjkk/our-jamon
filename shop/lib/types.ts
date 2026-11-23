@@ -65,6 +65,7 @@ export interface CartItemResolved {
 export type OrderStatus = 'awaiting_confirmation' | 'awaiting_payment' | 'paid' | 'cancelled';
 export type Messenger = 'Telegram' | 'WhatsApp' | 'SMS';
 export type PaymentMethod = 'card' | 'sbp' | 'pay_on_pickup';
+export type PaymentState = 'pending' | 'confirmed' | 'cancelled' | 'rejected' | 'expired' | 'refunded';
 
 export interface OrderDelivery {
   id: string;
@@ -107,6 +108,7 @@ export interface Order {
   paymentOperation?: PaymentOperation;
   paymentId?: string;
   paymentIds?: string[];
+  paymentStates?: Record<string, PaymentState>;
   paidPaymentId?: string;
   refundPaymentIds?: string[];
   refundedPaymentIds?: string[];

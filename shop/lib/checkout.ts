@@ -2,7 +2,7 @@ import { isDemoMode } from './config';
 import { resolveDelivery } from './delivery';
 import { getProducts } from './products';
 import { getOrder, mutateOrder, OrderConflict, reservedPieceIds, resolveCart } from './orders';
-import { paymentIdsOf } from './payment-registry';
+import { paymentIdsOf, paymentStateIsTerminal } from './payment-registry';
 import { createTbankPayment, fetchTbankSbpQr } from './tbank';
 import { CartQuote, Order } from './types';
 
@@ -56,17 +56,24 @@ export async function initializeOrderPayment(id: string, baseUrl: string): Promi
   });
   await mutateOrder(id, (order) => {
     if (order.status !== 'awaiting_payment') return;
-    if (payment.paymentId && !paymentIdsOf(order).includes(payment.paymentId)) {
-      order.paymentIds = [...(order.paymentIds ?? []), payment.paymentId];
+    if (payment.paymentId) {
+      if (!paymentIdsOf(order).includes(payment.paymentId)) order.paymentIds = [...(order.paymentIds ?? []), payment.paymentId];
+      if (!order.paymentStates?.[payment.paymentId]) order.paymentStates = { ...order.paymentStates, [payment.paymentId]: 'pending' };
     }
     if (order.paymentInitAt !== attempt) return;
     order.paymentInitAt = undefined;
-    order.paymentError = !payment.ok;
-    if (payment.ok) {
+    const terminal = payment.paymentId ? paymentStateIsTerminal(order.paymentStates?.[payment.paymentId]) : false;
+    order.paymentError = !payment.ok || terminal;
+    if (payment.ok && payment.paymentId && !terminal) {
       order.paymentId = payment.paymentId;
       order.paymentUrl = payment.paymentUrl;
       if (payment.sbpPayloadUrl) order.sbpPayloadUrl = payment.sbpPayloadUrl;
       if (payment.sbpQrSvg) order.sbpQrSvg = payment.sbpQrSvg;
+    } else if (payment.paymentId && terminal) {
+      order.paymentId = undefined;
+      order.paymentUrl = undefined;
+      order.sbpPayloadUrl = undefined;
+      order.sbpQrSvg = undefined;
     }
   });
   return getOrder(id);
@@ -83,10 +90,11 @@ export async function ensureOrderSbpQr(id: string, baseUrl: string): Promise<Ord
     if (!order?.paymentId) return order;
     if (order.sbpQrSvg && order.sbpPayloadUrl) return order;
   }
-  const qr = await fetchTbankSbpQr(order.paymentId);
-  if (!qr.ok) return order;
+  const paymentId = order.paymentId;
+  const qr = await fetchTbankSbpQr(paymentId);
+  if (!qr.ok) return getOrder(id);
   return mutateOrder(id, (current) => {
-    if (current.status !== 'awaiting_payment') return;
+    if (current.status !== 'awaiting_payment' || current.paymentId !== paymentId || paymentStateIsTerminal(current.paymentStates?.[paymentId])) return;
     if (qr.sbpPayloadUrl) current.sbpPayloadUrl = qr.sbpPayloadUrl;
     if (qr.sbpQrSvg) current.sbpQrSvg = qr.sbpQrSvg;
   });
