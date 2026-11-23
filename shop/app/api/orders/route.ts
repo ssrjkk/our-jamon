@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Order } from '@/lib/types';
-import { saveOrder, readOrders, generateOrderId, newAccessToken, OrderConflict } from '@/lib/orders';
+import { Order, PaymentMethod } from '@/lib/types';
+import {
+  saveOrder,
+  readOrders,
+  readAdminAudit,
+  recordOrderConsent,
+  generateOrderId,
+  newAccessToken,
+  OrderConflict,
+} from '@/lib/orders';
 import { CheckoutError, initializeOrderPayment, quoteCart } from '@/lib/checkout';
 import { orderCookieName } from '@/lib/order-access';
 import { catalogHealth } from '@/lib/products';
 import { syncOrderToOneC } from '@/lib/onec';
-import { isAdmin } from '@/lib/admin';
+import { adminIpAllowed, isAdmin } from '@/lib/admin';
 import { requestOriginAllowed } from '@/lib/config';
-import { guardAttempts } from '@/lib/rate-limit';
+import { clientAddress, guardAttempts } from '@/lib/rate-limit';
 import { logServerError } from '@/lib/server-log';
 
 export async function POST(req: NextRequest) {
@@ -29,6 +37,11 @@ export async function POST(req: NextRequest) {
   if (body.deliveryId !== 'pickup' && !address.trim()) return NextResponse.json({ error: 'Укажите адрес доставки или пункта выдачи.' }, { status: 400 });
   const messenger = 'messenger' in body ? body.messenger : 'SMS';
   if (messenger !== 'Telegram' && messenger !== 'WhatsApp' && messenger !== 'SMS') return NextResponse.json({ error: 'Выберите способ связи.' }, { status: 400 });
+  const rawPaymentMethod = 'paymentMethod' in body ? body.paymentMethod : 'card';
+  if (rawPaymentMethod !== 'card' && rawPaymentMethod !== 'sbp' && rawPaymentMethod !== 'pay_on_pickup') {
+    return NextResponse.json({ error: 'Выберите доступный способ оплаты.' }, { status: 400 });
+  }
+  const paymentMethod: PaymentMethod = rawPaymentMethod === 'pay_on_pickup' && body.deliveryId !== 'pickup' ? 'card' : rawPaymentMethod;
   try {
     const quote = await quoteCart(body.items, body.deliveryId, address.trim());
     if (!('expectedItemsSum' in body) || body.expectedItemsSum !== quote.itemsSum || !('expectedDeliveryCost' in body) || body.expectedDeliveryCost !== quote.delivery.cost) {
@@ -38,13 +51,17 @@ export async function POST(req: NextRequest) {
     const order: Order = {
       id: generateOrderId(), accessToken: newAccessToken(), createdAt: now, consentedAt: now, demo: quote.demo,
       customer: { name: customer.name.trim(), phone: '+' + digits }, delivery: quote.delivery, messenger,
+      paymentMethod,
       items: quote.items, itemsSum: quote.itemsSum, total: quote.total,
       status: quote.needsConfirmation ? 'awaiting_confirmation' : 'awaiting_payment',
     };
     let saved = await saveOrder(order);
-    if (saved.status === 'awaiting_payment') saved = await initializeOrderPayment(saved.id, process.env.SHOP_URL || req.nextUrl.origin) || saved;
+    recordOrderConsent(saved.id, clientAddress(req.headers));
+    if (saved.status === 'awaiting_payment' && saved.paymentMethod !== 'pay_on_pickup') {
+      saved = await initializeOrderPayment(saved.id, process.env.SHOP_URL || req.nextUrl.origin) || saved;
+    }
     await syncOrderToOneC(saved);
-    const response = NextResponse.json({ orderId: saved.id, accessToken: saved.accessToken, status: saved.status, paymentUrl: saved.paymentUrl || null, paymentError: Boolean(saved.paymentError), total: saved.total, demo: saved.demo }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
+    const response = NextResponse.json({ orderId: saved.id, accessToken: saved.accessToken, status: saved.status, paymentMethod: saved.paymentMethod ?? 'card', paymentUrl: saved.paymentUrl || null, sbpPayloadUrl: saved.sbpPayloadUrl || null, paymentError: Boolean(saved.paymentError), total: saved.total, demo: saved.demo }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
     response.cookies.set(orderCookieName(saved.id), saved.accessToken, { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', maxAge: 30 * 24 * 60 * 60, path: '/' });
     return response;
   } catch (error) {
@@ -53,18 +70,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     if (error instanceof OrderConflict) return NextResponse.json({ error: error.message }, { status: 409 });
-    // Сюда доходят отказы, которые покупатель уже считает принятым заказом: в журнале
-    // обязана остаться исходная причина, а не только вежливый текст на витрине.
     logServerError('order-create', error);
     return NextResponse.json({ error: 'Не удалось сохранить заказ. Попробуйте позже или свяжитесь с лавкой.' }, { status: 503 });
   }
 }
 
-// GET /api/orders — список заказов (только админ)
-export async function GET() {
+export async function GET(req?: NextRequest) {
+  if (req && !adminIpAllowed(clientAddress(req.headers))) {
+    return NextResponse.json({ error: 'Доступ с этого адреса запрещён' }, { status: 403 });
+  }
   if (!(await isAdmin())) {
     return NextResponse.json({ error: 'Требуется авторизация администратора' }, { status: 401 });
   }
   const orders = await readOrders();
-  return NextResponse.json({ orders, catalog: catalogHealth() });
+  const audit = readAdminAudit(30);
+  return NextResponse.json({ orders, catalog: catalogHealth(), audit });
 }

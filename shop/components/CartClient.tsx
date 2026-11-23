@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import type { CartItemInput, CartQuote, DeliveryOption, Messenger } from '@/lib/types';
+import type { CartItemInput, CartQuote, DeliveryOption, Messenger, PaymentMethod } from '@/lib/types';
 import { MAX_QTY_PER_LINE, MIN_QTY_PER_LINE, QTY_LIMIT_NOTE } from '@/lib/cart';
 import { useCart, formatRub, formatUnitSummary } from './CartContext';
 
@@ -33,6 +33,7 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
   const [deliveryId, setDeliveryId] = useState('pickup');
   const [address, setAddress] = useState('');
   const [messenger, setMessenger] = useState<Messenger>('SMS');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [consent, setConsent] = useState(false);
@@ -148,7 +149,7 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer: { name: name.trim(), phone }, consent: true, deliveryId,
-          deliveryAddress: deliveryId === 'pickup' ? '' : address.trim(), messenger, items,
+          deliveryAddress: deliveryId === 'pickup' ? '' : address.trim(), messenger, paymentMethod, items,
           expectedItemsSum: quote.itemsSum, expectedDeliveryCost: quote.delivery.cost,
         }),
       });
@@ -262,7 +263,7 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
             <div className="delivery-radio-grid">
               {deliveryOptions.map((option) => (
                 <label key={option.id} className={'delivery-option-btn' + (deliveryId === option.id ? ' is-selected' : '')}>
-                  <input type="radio" name="delivery" value={option.id} checked={deliveryId === option.id} onChange={() => { setDeliveryId(option.id); clearError('address'); }} />
+                  <input type="radio" name="delivery" value={option.id} checked={deliveryId === option.id} onChange={() => { setDeliveryId(option.id); if (option.id !== 'pickup' && paymentMethod === 'pay_on_pickup') setPaymentMethod('card'); clearError('address'); }} />
                   <strong>{option.name}</strong>
                   <span className="deliv-cost tabular">{quote?.delivery.id === option.id
                     ? quote.delivery.cost === null ? 'Согласуем до оплаты' : formatRub(quote.delivery.cost)
@@ -302,6 +303,15 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
               {errors.phone && <p id="checkout-phone-error" className="field-error" role="alert">{errors.phone}</p>}
             </div>
             <div className="form-field">
+              <label htmlFor="checkout-payment">Способ оплаты</label>
+              <select id="checkout-payment" className="form-input" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}>
+                <option value="card">Банковская карта / T-Pay (Т-Банк)</option>
+                <option value="sbp">СБП (QR-код)</option>
+                {deliveryId === 'pickup' && <option value="pay_on_pickup">При получении в лавке</option>}
+              </select>
+              <p className="checkout-hint">{paymentMethod === 'pay_on_pickup' ? 'Оплата картой или наличными на Сытном рынке при выдаче.' : 'Для весовых товаров оплата открывается после подтверждения фактического веса.'}</p>
+            </div>
+            <div className="form-field">
               <label htmlFor="checkout-messenger">Предпочтительный способ связи</label>
               <select id="checkout-messenger" className="form-input" value={messenger} onChange={(event) => setMessenger(event.target.value as Messenger)}>
                 {(['Telegram', 'WhatsApp', 'SMS'] as const).map((option) => <option key={option}>{option}</option>)}
@@ -321,7 +331,7 @@ export default function CartClient({ deliveryOptions, freeFrom, demo }: Props) {
           {calculationError && <div className="form-status-box error" role="alert"><p>{calculationError}</p><button type="button" className="btn-secondary" disabled={busy} onClick={() => setRetry((value) => value + 1)}>Повторить расчёт</button></div>}
           <label className="consent-label" htmlFor="checkout-consent">
             <input id="checkout-consent" type="checkbox" checked={consent} disabled={busy} required onChange={(event) => { setConsent(event.target.checked); clearError('consent'); }} aria-invalid={Boolean(errors.consent)} aria-describedby={errors.consent ? 'checkout-consent-error checkout-privacy' : 'checkout-privacy'} />
-            <span>Согласен на обработку указанных данных для оформления и выполнения этого заказа.</span>
+            <span>Даю <Link href="/consent" target="_blank">согласие на обработку персональных данных</Link> по <Link href="/privacy" target="_blank">Политике ПДн</Link> и принимаю <Link href="/offer" target="_blank">публичную оферту</Link>.</span>
           </label>
           <details className="privacy-details" id="checkout-privacy"><summary>Какие данные используем и зачем</summary><p>Имя и телефон нужны для связи по заказу, адрес — для доставки. Сведения о заказе передаются в систему учёта, а данные для оплаты — платёжному сервису. В демо реальной передачи в банк и 1С нет. Ссылка на заказ открывает его детали: не публикуйте её.</p></details>
           {errors.consent && <p id="checkout-consent-error" className="field-error" role="alert">{errors.consent}</p>}

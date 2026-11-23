@@ -3,11 +3,11 @@ const { expect } = require('@playwright/test');
 // Пароль совпадает с ADMIN_PASSWORD в playwright.config.cjs: тесты всегда пишут его одним местом.
 const ADMIN_PASSWORD = 'test-only-admin-passphrase';
 
-async function createOrder(api, items, deliveryId = 'pickup') {
+async function createOrder(api, items, deliveryId = 'pickup', paymentMethod = 'card') {
   const quoted = await api.post('/api/cart', { data: { items, deliveryId } });
   expect(quoted.status()).toBe(200);
   const { quote } = await quoted.json();
-  const created = await api.post('/api/orders', { data: { items, customer: { name: 'Локальный тест', phone: '+79991234567' }, consent: true, messenger: 'SMS', deliveryId, deliveryAddress: deliveryId === 'pickup' ? '' : 'Тестовый адрес', expectedItemsSum: quote.itemsSum, expectedDeliveryCost: quote.delivery.cost } });
+  const created = await api.post('/api/orders', { data: { items, customer: { name: 'Локальный тест', phone: '+79991234567' }, consent: true, messenger: 'SMS', deliveryId, deliveryAddress: deliveryId === 'pickup' ? '' : 'Тестовый адрес', paymentMethod, expectedItemsSum: quote.itemsSum, expectedDeliveryCost: quote.delivery.cost } });
   expect(created.status()).toBe(201);
   return { ...await created.json(), quote };
 }

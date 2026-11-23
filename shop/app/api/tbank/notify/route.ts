@@ -40,30 +40,37 @@ export async function POST(req: NextRequest) {
   let changed = false;
   const updated = await mutateOrder(order.id, (current) => {
     if (current.total !== order.total) return;
-    // Каждое сообщение банка становится записью заказа: по реестру различаются первая и
-    // повторная оплаты одного заказа, и по нему же блокируется локальная отмена.
     if (!paymentIdsOf(current).includes(paymentId)) current.paymentIds = [...(current.paymentIds ?? []), paymentId];
-    if (current.status === 'awaiting_payment') {
-      if (success && body.Status === 'CONFIRMED') {
+    const previousState = current.paymentStates?.[paymentId];
+    if (success && body.Status === 'CONFIRMED') {
+      if (previousState === 'refunded') return;
+      current.paymentStates = { ...current.paymentStates, [paymentId]: 'confirmed' };
+      if (current.status === 'awaiting_payment') {
         current.status = 'paid';
         current.paymentError = false;
         current.paidPaymentId = paymentId;
         changed = true;
-      } else if (success && body.Status === 'CANCELED') {
-        current.status = 'cancelled';
-        changed = true;
-      } else if (body.Status === 'REJECTED' || body.Status === 'DEADLINE_EXPIRED') {
-        current.paymentError = true;
+      } else {
+        const accounted = current.paidPaymentId ?? (current.status === 'paid' ? current.paymentId : undefined);
+        if (accounted !== paymentId && !current.refundPaymentIds?.includes(paymentId) && !current.refundedPaymentIds?.includes(paymentId)) {
+          current.refundPaymentIds = [...(current.refundPaymentIds ?? []), paymentId];
+        }
       }
       return;
     }
-    // Оплата по ссылке, которую магазин уже сменил или по которой заказ отменён: деньги на счёте,
-    // заказ остаётся в своём статусе, а второй платёж встаёт в очередь на возврат через банк.
-    if (success && body.Status === 'CONFIRMED') {
-      const accounted = current.paidPaymentId ?? (current.status === 'paid' ? current.paymentId : undefined);
-      if (accounted !== paymentId && !current.refundPaymentIds?.includes(paymentId)) {
-        current.refundPaymentIds = [...(current.refundPaymentIds ?? []), paymentId];
-      }
+    if (previousState === 'confirmed' || previousState === 'refunded' || (previousState && previousState !== 'pending')) return;
+    const terminalState = success && body.Status === 'CANCELED' ? 'cancelled'
+      : body.Status === 'REJECTED' ? 'rejected'
+      : body.Status === 'DEADLINE_EXPIRED' ? 'expired'
+      : undefined;
+    if (!terminalState) return;
+    current.paymentStates = { ...current.paymentStates, [paymentId]: terminalState };
+    if (current.status === 'awaiting_payment' && current.paymentId === paymentId) {
+      current.paymentId = undefined;
+      current.paymentUrl = undefined;
+      current.sbpPayloadUrl = undefined;
+      current.sbpQrSvg = undefined;
+      current.paymentError = terminalState !== 'cancelled';
     }
   });
   if (changed && updated) await syncOrderToOneC(updated);

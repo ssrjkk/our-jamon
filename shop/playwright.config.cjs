@@ -72,12 +72,16 @@ module.exports = defineConfig({
   ],
   webServer: [
     {
-      command: `node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port ${appPort}`,
+      // Проверяем релизный артефакт: next dev повторно компилирует страницы и на Windows
+      // упирается в лимит виртуальной памяти ещё до первого браузерного теста.
+      // Сборка получает тот же SHOP_URL, поэтому canonical проверяется на честном origin.
+      command: 'npm run build:standalone && node .next/standalone/server.js',
       url: baseURL,
       reuseExistingServer: false,
-      timeout: 120000,
+      timeout: 180000,
       env: {
         ...process.env,
+        PORT: String(appPort), HOSTNAME: '127.0.0.1',
         SHOP_MODE: 'demo', SHOP_URL: baseURL,
         ADMIN_PASSWORD,
         ORDERS_DB_PATH: dbPath, ORDERS_LEGACY_PATH: path.join(output, 'no-legacy-orders.json'),

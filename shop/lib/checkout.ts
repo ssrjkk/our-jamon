@@ -2,8 +2,8 @@ import { isDemoMode } from './config';
 import { resolveDelivery } from './delivery';
 import { getProducts } from './products';
 import { getOrder, mutateOrder, OrderConflict, reservedPieceIds, resolveCart } from './orders';
-import { paymentIdsOf } from './payment-registry';
-import { createTbankPayment } from './tbank';
+import { paymentIdsOf, paymentStateIsTerminal } from './payment-registry';
+import { createTbankPayment, fetchTbankSbpQr } from './tbank';
 import { CartQuote, Order } from './types';
 
 export class CheckoutError extends Error {
@@ -35,30 +35,67 @@ export async function initializeOrderPayment(id: string, baseUrl: string): Promi
   const attempt = new Date().toISOString();
   const pending = await mutateOrder(id, (order) => {
     if (order.demo !== isDemoMode()) throw new OrderConflict('Этот заказ создан в другом режиме магазина. Свяжитесь с лавкой.');
+    if (order.paymentMethod === 'pay_on_pickup') return;
     if (order.status !== 'awaiting_payment' || order.total === null || order.delivery.cost === null
       || order.items.some((item) => item.requiresWeightCheck && !item.weightConfirmed)) throw new OrderConflict('Сначала нужно согласовать вес и доставку.');
-    if (order.paymentUrl && !order.paymentError) return;
+    if (order.paymentUrl && !order.paymentError && !(order.paymentId && paymentStateIsTerminal(order.paymentStates?.[order.paymentId]))) return;
     if (order.paymentInitAt && Date.now() - Date.parse(order.paymentInitAt) < 60000) throw new OrderConflict('Ссылка на оплату уже формируется. Повторите чуть позже.');
     order.paymentInitAt = attempt;
     start = true;
   });
   if (!pending || !start) return pending;
-  const payment = await createTbankPayment({ orderId: pending.id, accessToken: pending.accessToken, amountRub: pending.total!, items: pending.items, description: `Заказ ${pending.id} · Наш Хамон`, customerPhone: pending.customer.phone, baseUrl });
+  const payment = await createTbankPayment({
+    orderId: pending.id,
+    accessToken: pending.accessToken,
+    amountRub: pending.total!,
+    items: pending.items,
+    description: `Заказ ${pending.id} · Наш Хамон`,
+    customerPhone: pending.customer.phone,
+    baseUrl,
+    paymentMethod: pending.paymentMethod ?? 'card',
+  });
   await mutateOrder(id, (order) => {
     if (order.status !== 'awaiting_payment') return;
-    // id попадает в реестр до того, как мы решим, удалась ли выдача и не устарела ли попытка:
-    // платёж, о котором банк сообщил даже в ошибочном или запоздалом ответе, позже обязан
-    // быть принят уведомлением. Ведущей ссылкой остаётся только ответ той же попытки.
-    if (payment.paymentId && !paymentIdsOf(order).includes(payment.paymentId)) {
-      order.paymentIds = [...(order.paymentIds ?? []), payment.paymentId];
+    if (payment.paymentId) {
+      if (!paymentIdsOf(order).includes(payment.paymentId)) order.paymentIds = [...(order.paymentIds ?? []), payment.paymentId];
+      if (!order.paymentStates?.[payment.paymentId]) order.paymentStates = { ...order.paymentStates, [payment.paymentId]: 'pending' };
     }
     if (order.paymentInitAt !== attempt) return;
     order.paymentInitAt = undefined;
-    order.paymentError = !payment.ok;
-    if (payment.ok) {
+    const terminal = payment.paymentId ? paymentStateIsTerminal(order.paymentStates?.[payment.paymentId]) : false;
+    order.paymentError = !payment.ok || terminal;
+    if (payment.ok && payment.paymentId && !terminal) {
       order.paymentId = payment.paymentId;
       order.paymentUrl = payment.paymentUrl;
+      if (payment.sbpPayloadUrl) order.sbpPayloadUrl = payment.sbpPayloadUrl;
+      if (payment.sbpQrSvg) order.sbpQrSvg = payment.sbpQrSvg;
+    } else if (payment.paymentId && terminal) {
+      order.paymentId = undefined;
+      order.paymentUrl = undefined;
+      order.sbpPayloadUrl = undefined;
+      order.sbpQrSvg = undefined;
     }
   });
   return getOrder(id);
+}
+
+export async function ensureOrderSbpQr(id: string, baseUrl: string): Promise<Order | undefined> {
+  let order = await getOrder(id);
+  if (!order) return undefined;
+  if (order.paymentMethod === 'pay_on_pickup') throw new OrderConflict('Для заказа с оплатой при получении QR СБП не требуется.');
+  if (order.status !== 'awaiting_payment') throw new OrderConflict('Заказ ещё не готов к оплате или уже закрыт.');
+  if (order.sbpQrSvg && order.sbpPayloadUrl) return order;
+  if (!order.paymentId) {
+    order = await initializeOrderPayment(id, baseUrl);
+    if (!order?.paymentId) return order;
+    if (order.sbpQrSvg && order.sbpPayloadUrl) return order;
+  }
+  const paymentId = order.paymentId;
+  const qr = await fetchTbankSbpQr(paymentId);
+  if (!qr.ok) return getOrder(id);
+  return mutateOrder(id, (current) => {
+    if (current.status !== 'awaiting_payment' || current.paymentId !== paymentId || paymentStateIsTerminal(current.paymentStates?.[paymentId])) return;
+    if (qr.sbpPayloadUrl) current.sbpPayloadUrl = qr.sbpPayloadUrl;
+    if (qr.sbpQrSvg) current.sbpQrSvg = qr.sbpQrSvg;
+  });
 }

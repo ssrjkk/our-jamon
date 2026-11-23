@@ -1,13 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import type { Order } from '@/lib/types';
-import { paymentIdsOf } from '@/lib/payment-registry';
+import type { AdminAuditEntry, Order } from '@/lib/types';
+import { activePaymentIdsOf } from '@/lib/payment-registry';
 import { formatRub, formatWeightLabel } from './CartContext';
 
 type Feedback = { kind: 'error' | 'success'; text: string };
 type OrderFields = Record<string, Record<string, string>>;
 type ActionResponse = { order?: Order; ok?: boolean; error?: string };
+const PAYMENT_OPERATION_LEASE_MS = 2 * 60 * 1000;
 const statuses: Record<Order['status'], { className: string; label: string }> = {
   awaiting_confirmation: { className: 'aw', label: 'На согласовании' },
   awaiting_payment: { className: 'ap', label: 'Ожидает оплаты' },
@@ -20,6 +21,9 @@ const weightId = (orderId: string, uid: string) => `admin-weight-${orderId}-${ui
 export default function AdminClient() {
   const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState('');
+  const [totp, setTotp] = useState('');
+  const [totpNeeded, setTotpNeeded] = useState(false);
+  const [audit, setAudit] = useState<AdminAuditEntry[]>([]);
   const [error, setError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -48,6 +52,8 @@ export default function AdminClient() {
     setFeedback({});
     setCatalogWarning('');
     setPassword('');
+    setTotp('');
+    setAudit([]);
   }, []);
 
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -58,11 +64,12 @@ export default function AdminClient() {
       const response = await fetch('/api/orders', { cache: 'no-store', signal });
       if (signal?.aborted || request !== requestId.current) return;
       if (response.status === 401) { forgetSession(); return; }
-      const data: { orders?: Order[]; catalog?: { notice?: string | null } | null; error?: string } = await response.json();
+      const data: { orders?: Order[]; catalog?: { notice?: string | null } | null; audit?: AdminAuditEntry[]; error?: string } = await response.json();
       if (signal?.aborted || request !== requestId.current) return;
       if (!response.ok || !Array.isArray(data.orders)) throw new Error(data.error || 'Не удалось загрузить заказы. Повторите попытку.');
       setOrders(data.orders);
       setCatalogWarning(data.catalog?.notice ?? '');
+      setAudit(Array.isArray(data.audit) ? data.audit : []);
       setAuthed(true);
     } catch {
       if (signal?.aborted || request !== requestId.current) return;
@@ -119,11 +126,12 @@ export default function AdminClient() {
     setSessionBusy(true);
     try {
       const response = await fetch('/api/admin/login', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password, ...(totp.trim() ? { totp: totp.trim() } : {}) }),
       });
-      const data: { error?: string } = await response.json();
+      const data: { error?: string; totpRequired?: boolean } = await response.json();
       if (!response.ok) {
         if (response.status === 401) {
+          if (data.totpRequired) setTotpNeeded(true);
           setPasswordError(data.error || 'Неверный пароль.');
           wantPasswordFocus.current = true;
         } else {
@@ -190,6 +198,14 @@ export default function AdminClient() {
         throw new Error('Ответ о результате не получен. Обновите список перед повторным действием.');
       } else if (body.action === 'cancel') {
         message = { kind: 'success', text: 'Заказ отменён.' };
+      } else if (body.action === 'mark-pickup-paid') {
+        message = { kind: 'success', text: 'Оплата при получении отмечена.' };
+      } else if ((body.action === 'confirm-order' || body.action === 'retry-payment') && data.order.paymentMethod === 'pay_on_pickup') {
+        message = { kind: 'success', text: body.action === 'confirm-order' ? 'Все веса и доставка подтверждены. Заказ готов к оплате при получении.' : 'Заказ уже оформлен с оплатой при получении.' };
+      } else if (body.action === 'refund-payment') {
+        message = { kind: 'success', text: 'Возврат в Т-Банке выполнен, заказ отменён.' };
+      } else if (body.action === 'closing-receipt') {
+        message = { kind: 'success', text: 'Закрывающий чек ФФД 1.2 отправлен.' };
       } else if (data.order.paymentError || !data.order.paymentUrl) {
         message = { kind: 'error', text: body.action === 'confirm-order' ? 'Вес и доставка подтверждены, но ссылка на оплату не создана. Повторите создание ссылки.' : 'Ссылка на оплату не создана. Повторите попытку или проверьте настройку платежей.' };
       } else {
@@ -263,6 +279,12 @@ export default function AdminClient() {
                 <input ref={passwordRef} id="admin-pass" type="password" className="form-input" value={password} disabled={sessionBusy} onChange={(event) => { setPassword(event.target.value); setPasswordError(''); setError(''); }} autoComplete="current-password" maxLength={512} required aria-invalid={Boolean(passwordError)} aria-describedby={passwordError ? 'admin-password-error' : undefined} />
                 {passwordError && <p id="admin-password-error" className="field-error" role="alert">{passwordError}</p>}
               </div>
+              {totpNeeded && (
+                <div className="form-field">
+                  <label htmlFor="admin-totp">Код 2FA (6 цифр)</label>
+                  <input id="admin-totp" type="text" inputMode="numeric" className="form-input tabular" value={totp} disabled={sessionBusy} onChange={(event) => setTotp(event.target.value)} maxLength={6} autoComplete="one-time-code" />
+                </div>
+              )}
               <button type="submit" className="btn-primary" disabled={sessionBusy}>{sessionBusy ? 'Входим…' : 'Войти'}</button>
             </form>
           )}
@@ -290,8 +312,12 @@ export default function AdminClient() {
           const status = statuses[order.status];
           const confirming = order.status === 'awaiting_confirmation';
           const closed = order.status === 'paid' || order.status === 'cancelled';
-          const canCancel = !closed && (order.demo || paymentIdsOf(order).length === 0);
+          const canCancel = !closed && (order.demo || activePaymentIdsOf(order).length === 0);
           const refundIds = order.refundPaymentIds ?? [];
+          const outstandingRefundIds = refundIds.filter((id) => !order.refundedPaymentIds?.includes(id));
+          const paymentOperation = order.paymentOperation;
+          const operationRunning = paymentOperation?.state === 'running' && Date.now() - Date.parse(paymentOperation.startedAt) < PAYMENT_OPERATION_LEASE_MS;
+          const operationNeedsReview = paymentOperation?.state === 'needs_attention' || (paymentOperation?.state === 'running' && !operationRunning);
           const pendingWeights = order.items.some((item) => item.requiresWeightCheck && !item.weightConfirmed);
           const message = feedback[order.id];
           const errors = fieldErrors[order.id] ?? {};
@@ -307,7 +333,7 @@ export default function AdminClient() {
               <div className="admin-customer">
                 <p><strong>{order.customer.name}</strong> · <a className="tabular" href={`tel:${order.customer.phone}`}>{order.customer.phone}</a></p>
                 <p>{order.delivery.name}{order.delivery.address ? ` · ${order.delivery.address}` : ''}</p>
-                <p className="checkout-hint">Связь: {order.messenger}. Отправка ссылки вручную, без автоматической рассылки.</p>
+                <p className="checkout-hint">Оплата: {order.paymentMethod === 'sbp' ? 'СБП' : order.paymentMethod === 'pay_on_pickup' ? 'При получении' : 'Карта / T-Pay'}. Связь: {order.messenger}.</p>
                 <p className="checkout-hint">{order.consentedAt ? `Согласие на обработку данных: ${dateTime(order.consentedAt)}.` : 'Отметка о согласии отсутствует.'}</p>
               </div>
               <form className="checkout-form" onSubmit={(event) => confirm(event, order)} noValidate>
@@ -348,16 +374,30 @@ export default function AdminClient() {
                 <div><span>Доставка</span><strong className="tabular">{order.delivery.cost === null ? 'Не согласована' : formatRub(order.delivery.cost)}</strong></div>
                 <div className="cart-total-line"><span>{confirming ? 'Предварительный итог' : 'Итого'}</span><strong className="cart-total-sum tabular">{order.total === null ? 'После согласования' : formatRub(order.total)}</strong></div>
               </section>
-              {order.status === 'awaiting_payment' && <p className={'form-status-box' + (order.paymentError ? ' error' : '')}>{order.paymentError ? 'Ошибка создания оплаты. Заказ сохранён; создание ссылки можно повторить.' : order.paymentInitAt ? 'Создание платёжной ссылки выполняется. Обновите заказ; если попытка зависла, повторите её позже.' : order.paymentUrl ? 'Ссылка на оплату готова. Передайте покупателю страницу заказа вручную.' : 'Платёжная ссылка пока не создана.'}</p>}
+              {order.status === 'awaiting_payment' && (order.paymentMethod === 'pay_on_pickup'
+                ? <p className="form-status-box">Заказ готов к оплате при получении. Банковская ссылка не требуется.</p>
+                : <p className={'form-status-box' + (order.paymentError ? ' error' : '')}>{order.paymentError ? 'Ошибка создания оплаты. Заказ сохранён; создание ссылки можно повторить.' : order.paymentInitAt ? 'Создание платёжной ссылки выполняется. Обновите заказ; если попытка зависла, повторите её позже.' : order.paymentUrl ? 'Ссылка на оплату готова. Передайте покупателю страницу заказа вручную.' : 'Платёжная ссылка пока не создана.'}</p>)}
               {!order.demo && <div className="admin-sync-status"><p className="checkout-hint">{order.onecSyncError ? `Не удалось синхронизировать с 1С (${order.onecSyncError}). Можно повторить вручную.` : order.onecSyncedAt ? `Синхронизировано с 1С: ${dateTime(order.onecSyncedAt)}.` : 'Синхронизация с 1С ожидает подтверждения.'}</p></div>}
-              {order.status === 'paid' && <p className="checkout-hint">{order.demo ? 'Демо-оплата подтверждена; реальной отправки нет.' : 'Банк подтвердил оплату. Отправка ещё не подтверждена. Отмена и возврат выполняются через банк, не в этой панели.'}</p>}
-              {refundIds.length > 0 && <p className="form-status-box error" role="alert">Банк подтвердил оплату по ссылке {refundIds.join(', ')}, а заказ этой оплаты уже не ждёт. Деньги возвращает банк через кабинет: заказ остаётся в текущем статусе, повторной оплаты от покупателя не требуется.</p>}
+              {order.status === 'paid' && <p className="checkout-hint">{order.demo ? 'Демо-оплата подтверждена; реальной отправки нет.' : order.paymentMethod === 'pay_on_pickup' ? 'Оплата при получении отмечена. Отправка ещё не подтверждена.' : 'Банк подтвердил оплату. Отправка ещё не подтверждена; возврат выполняется через Т-Банк.'}</p>}
+              {operationRunning && <p className="form-status-box" role="status">{paymentOperation?.kind === 'refund' ? 'Выполняется возврат в Т-Банке. Не повторяйте операцию.' : 'Отправляется закрывающий чек. Не повторяйте операцию.'}</p>}
+              {operationNeedsReview && <p className="form-status-box error" role="alert">{paymentOperation?.kind === 'refund' ? 'Результат возврата не подтверждён. Проверьте кабинет Т-Банка; заказ отменён только после возврата всех платежей.' : 'Результат отправки закрывающего чека не подтверждён. Проверьте кабинет Т-Банка перед повтором.'}</p>}
+              {outstandingRefundIds.length > 0 && <p className="form-status-box error" role="alert">Банк подтвердил дополнительную оплату по ссылке {outstandingRefundIds.join(', ')}. Эти деньги нужно вернуть; заказ остаётся в текущем статусе до завершения возврата.</p>}
               {!closed && !canCancel && <p className="checkout-hint">У заказа есть банковский платёж. Сначала отмените его в кабинете банка и дождитесь подтверждения: локальная отмена и снятие резерва здесь недоступны.</p>}
               <div className="checkout-actions">
                 <a className="btn-secondary" href={pageUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Страница заказа</a>
                 <button type="button" className="btn-secondary" disabled={disabled} onClick={() => { void copyOrder(order); }}>Скопировать ссылку на заказ</button>
-                {order.status === 'awaiting_payment' && (order.paymentError || !order.paymentUrl) && <button type="button" className="btn-secondary" disabled={disabled} onClick={() => { void act(order.id, { action: 'retry-payment' }); }}>Повторить создание оплаты</button>}
+                {order.status === 'awaiting_payment' && order.paymentMethod !== 'pay_on_pickup' && (order.paymentError || !order.paymentUrl) && <button type="button" className="btn-secondary" disabled={disabled || operationRunning} onClick={() => { void act(order.id, { action: 'retry-payment' }); }}>Повторить создание оплаты</button>}
                 {!order.demo && (order.onecSyncError || !order.onecSyncedAt) && <button type="button" className="btn-secondary" disabled={disabled} onClick={() => { void act(order.id, { action: 'sync-onec' }); }}>Синхронизировать с 1С</button>}
+                {order.status === 'awaiting_payment' && order.paymentMethod === 'pay_on_pickup' && <button type="button" className="btn-primary" disabled={disabled} onClick={() => { void act(order.id, { action: 'mark-pickup-paid' }); }}>Оплачен при получении</button>}
+                {order.status === 'paid' && !order.closingReceiptSentAt && order.paymentMethod !== 'pay_on_pickup' && <button type="button" className="btn-secondary" disabled={disabled || operationRunning || (operationNeedsReview && paymentOperation?.kind !== 'closing_receipt')} onClick={() => {
+                  const review = operationNeedsReview && paymentOperation?.kind === 'closing_receipt';
+                  if (review && !window.confirm(`Результат отправки чека по заказу № ${order.id} не подтверждён. Сначала проверьте кабинет Т-Банка. Повторить только если чека там нет?`)) return;
+                  void act(order.id, { action: 'closing-receipt', ...(review ? { retryConfirmed: true } : {}) });
+                }}>{operationNeedsReview && paymentOperation?.kind === 'closing_receipt' ? 'Проверить и повторить чек' : 'Закрывающий чек ФФД 1.2'}</button>}
+                {((order.status === 'paid' && order.paymentMethod !== 'pay_on_pickup') || outstandingRefundIds.length > 0) && <button type="button" className="btn-secondary" disabled={disabled || operationRunning || (operationNeedsReview && paymentOperation?.kind !== 'refund')} onClick={() => {
+                  const review = operationNeedsReview && paymentOperation?.kind === 'refund';
+                  if (window.confirm(review ? `Результат возврата по заказу № ${order.id} не подтверждён. Сначала проверьте кабинет Т-Банка. Повторить только если деньги не возвращены?` : `Выполнить возврат всех платежей по заказу № ${order.id} через Т-Банк?`)) void act(order.id, { action: 'refund-payment', ...(review ? { retryConfirmed: true } : {}) });
+                }}>{operationNeedsReview && paymentOperation?.kind === 'refund' ? 'Проверить и повторить возврат' : 'Возврат в Т-Банке'}</button>}
                 {canCancel && <button type="button" className="btn-secondary" disabled={disabled} onClick={() => { if (window.confirm(`Отменить заказ № ${order.id}?`)) void act(order.id, { action: 'cancel' }); }}>Отменить заказ</button>}
               </div>
               {busyId === order.id && <p className="checkout-hint" role="status">Выполняем действие…</p>}
@@ -366,6 +406,18 @@ export default function AdminClient() {
           );
         })}
       </div>
+      {audit.length > 0 && (
+        <section className="bento-card admin-audit" aria-labelledby="admin-audit-title">
+          <h2 id="admin-audit-title" className="checkout-title">Журнал действий</h2>
+          <ul className="footer-links">
+            {audit.slice(0, 15).map((entry) => (
+              <li key={entry.id} className="checkout-hint tabular">
+                {dateTime(entry.ts)} · {entry.action}{entry.orderId ? ` · ${entry.orderId}` : ''}{entry.detail ? ` (${entry.detail})` : ''} · {entry.ip}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   );
 }

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
-import { CartItemInput, CartItemResolved, Order, OrderStatus, Product } from './types';
+import { AdminAuditEntry, CartItemInput, CartItemResolved, Order, OrderStatus, Product } from './types';
 import { PRODUCTS, averageWeightOf, piecePriceOf } from './products';
 import { MAX_CART_LINES, MAX_QTY_PER_LINE, MIN_QTY_PER_LINE } from './cart';
 import { logServerError } from './server-log';
@@ -16,6 +16,8 @@ export class OrderConflict extends Error {}
 // его резерв снимает только отмена. Просрочку выпускает не крон, а любое обращение к
 // базе, потому что отдельного процесса в контейнере нет.
 const RESERVATION_TTL_DEFAULT_HOURS = 24;
+const ADMIN_AUDIT_RETENTION_MS = 180 * 24 * 60 * 60 * 1000;
+const ADMIN_AUDIT_MAX_ROWS = 10000;
 
 function reservationTtlMs(): number {
   const raw = process.env.RESERVATION_TTL_HOURS?.trim();
@@ -108,7 +110,7 @@ function getDatabase(): DatabaseSync {
   const db = new DatabaseSync(filename);
   try {
     db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
-    db.exec('CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, payload TEXT NOT NULL CHECK(json_valid(payload))); CREATE TABLE IF NOT EXISTS reservations (piece_id TEXT PRIMARY KEY, order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE, reserved_at TEXT NOT NULL DEFAULT \'\'); CREATE INDEX IF NOT EXISTS orders_created_at ON orders(created_at DESC);');
+    db.exec('CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, payload TEXT NOT NULL CHECK(json_valid(payload))); CREATE TABLE IF NOT EXISTS reservations (piece_id TEXT PRIMARY KEY, order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE, reserved_at TEXT NOT NULL DEFAULT \'\'); CREATE INDEX IF NOT EXISTS orders_created_at ON orders(created_at DESC); CREATE TABLE IF NOT EXISTS admin_audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, action TEXT NOT NULL, order_id TEXT, detail TEXT, ip TEXT NOT NULL); CREATE INDEX IF NOT EXISTS admin_audit_ts ON admin_audit_log(id DESC); CREATE TABLE IF NOT EXISTS consent_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, order_id TEXT NOT NULL, consent_version TEXT NOT NULL, ip TEXT NOT NULL); CREATE TABLE IF NOT EXISTS admin_totp_state (id INTEGER PRIMARY KEY CHECK (id = 1), last_used_step INTEGER NOT NULL DEFAULT 0); INSERT OR IGNORE INTO admin_totp_state (id, last_used_step) VALUES (1, 0);');
     // База, поднятая до срока резерва, колонки не имеет: без штампа просрочку считать
     // нечем, поэтому старые строки получают время появления заказа и доживают свой срок.
     const columns = db.prepare('PRAGMA table_info(reservations)').all().map((row) => String(row.name));
@@ -290,4 +292,48 @@ export function formatWeight(weightG: number): string {
 
 export function orderStatusRu(status: OrderStatus): string {
   return { awaiting_confirmation: 'Согласуем заказ', awaiting_payment: 'Ожидает оплаты', paid: 'Оплачен', cancelled: 'Отменён' }[status];
+}
+
+export function recordAdminAudit(action: string, ip: string | null, orderId: string | null = null, detail: string | null = null): void {
+  try {
+    const db = getDatabase();
+    db.prepare('INSERT INTO admin_audit_log (ts, action, order_id, detail, ip) VALUES (?, ?, ?, ?, ?)')
+      .run(new Date().toISOString(), action, orderId, detail ? detail.slice(0, 500) : null, ip || 'unknown');
+    db.prepare('DELETE FROM admin_audit_log WHERE ts < ?').run(new Date(Date.now() - ADMIN_AUDIT_RETENTION_MS).toISOString());
+    db.prepare('DELETE FROM admin_audit_log WHERE id NOT IN (SELECT id FROM admin_audit_log ORDER BY id DESC LIMIT ?)').run(ADMIN_AUDIT_MAX_ROWS);
+  } catch (error) {
+    logServerError('admin-audit', error);
+  }
+}
+
+export function readAdminAudit(limit = 40): AdminAuditEntry[] {
+  const safeLimit = Math.max(1, Math.min(200, Math.round(limit)));
+  return getDatabase()
+    .prepare('SELECT id, ts, action, order_id, detail, ip FROM admin_audit_log ORDER BY id DESC LIMIT ?')
+    .all(safeLimit)
+    .map((row) => ({
+      id: Number(row.id),
+      ts: String(row.ts),
+      action: String(row.action),
+      orderId: row.order_id === null ? null : String(row.order_id),
+      detail: row.detail === null ? null : String(row.detail),
+      ip: String(row.ip),
+    }));
+}
+
+export function recordOrderConsent(orderId: string, ip: string | null, consentVersion = '2026-11-v1'): void {
+  try {
+    getDatabase()
+      .prepare('INSERT INTO consent_log (ts, order_id, consent_version, ip) VALUES (?, ?, ?, ?)')
+      .run(new Date().toISOString(), orderId, consentVersion, ip || 'unknown');
+  } catch (error) {
+    logServerError('consent-log', error);
+  }
+}
+
+export function claimAdminTotpStep(step: number): boolean {
+  const res = getDatabase()
+    .prepare('UPDATE admin_totp_state SET last_used_step = ? WHERE id = 1 AND last_used_step < ?')
+    .run(step, step);
+  return Number(res.changes) === 1;
 }

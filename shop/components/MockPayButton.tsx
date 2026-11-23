@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-type Props = { orderId: string; token: string; action: 'demo-pay' | 'retry-payment' };
+type Props = { orderId: string; token: string; action: 'demo-pay' | 'retry-payment' | 'sbp-qr' };
 
 export default function MockPayButton({ orderId, token, action }: Props) {
   const router = useRouter();
@@ -12,6 +12,7 @@ export default function MockPayButton({ orderId, token, action }: Props) {
   const [error, setError] = useState('');
   const pending = useRef(false);
   const isDemoPay = action === 'demo-pay';
+  const isSbpQr = action === 'sbp-qr';
 
   async function perform() {
     if (pending.current || completed) return;
@@ -26,7 +27,7 @@ export default function MockPayButton({ orderId, token, action }: Props) {
       });
       const data: { ok?: boolean; error?: string } = await response.json();
       if (!response.ok || data.ok !== true) {
-        throw new Error(data.error || (isDemoPay ? 'Демо-оплата не подтверждена. Повторите попытку.' : 'Ссылку на оплату пока не удалось создать. Повторите попытку или свяжитесь с лавкой.'));
+        throw new Error(data.error || (isDemoPay ? 'Демо-оплата не подтверждена. Повторите попытку.' : isSbpQr ? 'Не удалось получить QR-код СБП. Повторите попытку.' : 'Ссылку на оплату пока не удалось создать. Повторите попытку или свяжитесь с лавкой.'));
       }
       setCompleted(true);
       router.refresh();
@@ -40,12 +41,12 @@ export default function MockPayButton({ orderId, token, action }: Props) {
 
   return (
     <div className="order-payment-action" aria-busy={busy}>
-      <button type="button" className="btn-primary" onClick={perform} disabled={busy || completed}>
-        {completed ? 'Обновляем статус…' : busy ? isDemoPay ? 'Проверяем демо-оплату…' : 'Создаём ссылку…' : isDemoPay ? 'Подтвердить демо-оплату' : 'Повторить создание ссылки на оплату'}
+      <button type="button" className={isSbpQr ? 'btn-secondary' : 'btn-primary'} onClick={perform} disabled={busy || completed}>
+        {completed ? 'Обновляем статус…' : busy ? isDemoPay ? 'Проверяем демо-оплату…' : isSbpQr ? 'Запрашиваем QR СБП…' : 'Создаём ссылку…' : isDemoPay ? 'Подтвердить демо-оплату' : isSbpQr ? 'Показать QR-код СБП' : 'Повторить создание ссылки на оплату'}
       </button>
       {isDemoPay && <p className="checkout-hint">Тестовое действие: деньги не списываются, обращения в реальный банк нет.</p>}
       {error && <p className="form-status-box error" role="alert">{error}</p>}
-      {completed && <p className="form-status-box success" role="status">{isDemoPay ? 'Сервер подтвердил демо-оплату. Обновляем заказ.' : 'Ссылка создана. Обновляем заказ.'}</p>}
+      {completed && <p className="form-status-box success" role="status">{isDemoPay ? 'Сервер подтвердил демо-оплату. Обновляем заказ.' : isSbpQr ? 'QR-код СБП получен. Обновляем заказ.' : 'Ссылка создана. Обновляем заказ.'}</p>}
     </div>
   );
 }

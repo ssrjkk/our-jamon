@@ -107,6 +107,41 @@ function кускиProzy(видимый) {
   return найденные;
 }
 
+function scriptBlocks(источник) {
+  const lower = источник.toLowerCase();
+  const blocks = [];
+  let cursor = 0;
+  const граница = (символ) => символ === '>' || (символ !== undefined && символ.trim() === '');
+  while (cursor < источник.length) {
+    const start = lower.indexOf('<script', cursor);
+    if (start < 0) break;
+    const nameEnd = start + '<script'.length;
+    if (!граница(источник[nameEnd])) {
+      cursor = nameEnd;
+      continue;
+    }
+    const openEnd = источник.indexOf('>', nameEnd);
+    if (openEnd < 0) break;
+    const closeStart = lower.indexOf('</script', openEnd + 1);
+    if (closeStart < 0) break;
+    const closeNameEnd = closeStart + '</script'.length;
+    if (!граница(источник[closeNameEnd])) {
+      cursor = closeNameEnd;
+      continue;
+    }
+    const closeEnd = источник.indexOf('>', closeNameEnd);
+    if (closeEnd < 0) break;
+    blocks.push({ тело: источник.slice(openEnd + 1, closeStart), индекс: openEnd + 1 });
+    cursor = closeEnd + 1;
+  }
+  return blocks;
+}
+
+test('scriptBlocks разбирает закрывающий тег с пробелами и разным регистром', () => {
+  const источник = '<ScRiPt>const x = 1;</sCrIpT \n>';
+  assert.deepEqual(scriptBlocks(источник), [{ тело: 'const x = 1;', индекс: 8 }]);
+});
+
 const страницы = new Map();
 for (const имя of файлыPages) {
   const источник = fs.readFileSync(path.join(кореньPages, имя), 'utf8');
@@ -118,9 +153,8 @@ for (const имя of файлыPages) {
     // только ветка jsx=true, а сюда мы приходим с jsx=false.
     корпус.push({ метка: `Pages/${имя}:${строкаИсходника(видимый, позиция)}`, кусок: кНормальномуВиду(текст.replace(/&nbsp;/gi, NBSP), false), jsx: false });
   }
-  for (const блок of источник.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) {
-    const тело = блок[1];
-    const смещение = блок.index + блок[0].indexOf(тело);
+  for (const { тело, индекс } of scriptBlocks(источник)) {
+    const смещение = индекс;
     for (const { текст, позиция, jsx } of кускиТекста(тело)) {
       // Ветку JSX в скрипте включать нельзя: шаблон `'<div class="cut">' + текст + '</div>'`
       // тот же самый текст отдаёт и как литерал, и как «текст за тегом», и нарушение

@@ -64,6 +64,8 @@ export interface CartItemResolved {
 
 export type OrderStatus = 'awaiting_confirmation' | 'awaiting_payment' | 'paid' | 'cancelled';
 export type Messenger = 'Telegram' | 'WhatsApp' | 'SMS';
+export type PaymentMethod = 'card' | 'sbp' | 'pay_on_pickup';
+export type PaymentState = 'pending' | 'confirmed' | 'cancelled' | 'rejected' | 'expired' | 'refunded';
 
 export interface OrderDelivery {
   id: string;
@@ -72,6 +74,17 @@ export interface OrderDelivery {
   baseCost: number | null;
   freeFrom: number | null;
   address?: string;
+}
+
+export interface PaymentOperation {
+  id: string;
+  kind: 'refund' | 'closing_receipt';
+  state: 'running' | 'needs_attention' | 'succeeded';
+  startedAt: string;
+  finishedAt?: string;
+  attempt: number;
+  error?: string;
+  markCodes?: Record<string, string[]>;
 }
 
 export interface Order {
@@ -87,11 +100,18 @@ export interface Order {
   itemsSum: number;
   total: number | null;
   status: OrderStatus;
+  paymentMethod?: PaymentMethod;
   paymentUrl?: string;
+  sbpPayloadUrl?: string;
+  sbpQrSvg?: string;
+  closingReceiptSentAt?: string;
+  paymentOperation?: PaymentOperation;
   paymentId?: string;
   paymentIds?: string[];
+  paymentStates?: Record<string, PaymentState>;
   paidPaymentId?: string;
   refundPaymentIds?: string[];
+  refundedPaymentIds?: string[];
   paymentError?: boolean;
   paymentInitAt?: string;
   onecSyncedAt?: string;
@@ -113,4 +133,13 @@ export interface CartQuote {
   total: number | null;
   needsConfirmation: boolean;
   demo: boolean;
+}
+
+export interface AdminAuditEntry {
+  id: number;
+  ts: string;
+  action: string;
+  orderId: string | null;
+  detail: string | null;
+  ip: string;
 }

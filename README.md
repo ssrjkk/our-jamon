@@ -27,21 +27,15 @@
 cd shop
 npm run typecheck
 npm test                 # unit: каталог, подпись Т-Банка, SQLite, деплой-гейты, арт карточек
-npm run build            # прод-сборка движка
-npx playwright test      # e2e: обе витрины, 3 вьюпорта, доступность, путь покупателя
-
-npm run test:gate        # быстрый набор гейтов без серверов
-npm run test:deploy      # контракт Dockerfile, standalone и .dockerignore
-npm run test:slow        # то, что не в критическом пути: гео, кросс-витринные данные
-npm run test:pages       # e2e: сборка статики на Pages, её автономность и ноль запросов вовне
-
+SHOP_URL=http://127.0.0.1:3000 npm run build:standalone
+npx playwright test      # e2e: обе витрины, 3 вьюпорта, доступность, путь покупателя; сам пересобирает standalone
 ```
 
 ## Release gates in CI
 
 `ci.yml` прогоняет тот же набор на каждом пуше в `main` и в каждом PR: `gates` (typecheck + unit), `build` (standalone с `SHOP_URL` и `verify-build`), `e2e` (Playwright), `docker` (образ и опрос `/api/health`). Имена задач — ASCII и обязательны: переименовать задачу значит молча снять защиту ветки.
 
-`main` закрыта ruleset-ом: без force-push, изменения только через PR, все четыре проверки зелёные, одно одобренное ревью, ветку не удалить. В публикацию попадает только уже проверенный коммит.
+`main` закрыта ruleset-ом: без force-push, изменения только через PR, все четыре проверки зелёные, ветку не удалить. Обязательного одобрения ревью нет: проект ведёт один мейнтейнер. В публикацию попадает только уже проверенный коммит.
 
 ## What gets published to Pages
 
