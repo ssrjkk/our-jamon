@@ -6,7 +6,12 @@ Two storefront surfaces for Nash Hamon with one catalog and one design contract:
 a static demo for review and a Next.js application for a live store. The full
 Russian documentation is in [README.ru.md](README.ru.md).
 
-**Site:** https://ssrjkk.github.io/our-jamon/
+**Site:** https://ssrjkk.github.io/our-jamon/  
+**Source:** https://github.com/ssrjkk/our-jamon
+
+## Screenshot
+
+![Our Jamon](docs/screenshots/home.jpg)
 
 The published site is a demo. Ordering is simulated; email, payment and 1C are not
 connected to live credentials.
