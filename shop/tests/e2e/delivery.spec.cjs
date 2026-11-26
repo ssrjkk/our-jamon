@@ -118,7 +118,7 @@ test('доставка: имя с кнопки доходит до заказа 
   await card.locator('.add-btn').click();
   await открытьСтатичнуюКорзину(page);
   const staticDrivee = page.locator('.delivery-option-btn[data-deliv-id="drivee"]');
-  expect((await staticDrivee.locator('strong').innerText()).trim()).toBe(driveeName);
+  await expect(staticDrivee.locator('strong')).toHaveText(driveeName);
   await staticDrivee.click();
   await page.locator('#courier-address-input').fill('Санкт-Петербург, тестовый адрес');
   await fillStaticCheckout(page);
