@@ -1,77 +1,70 @@
-# Наш Хамон
+# Our Jamon
 
-Хамонная лавка при Сытном рынке, Санкт-Петербург. Репозиторий держит две витрины с одними данными и одним дизайн-системным контрактом: статическое демо для согласования и Next.js-приложение для боевого запуска. Это не два конкурирующих магазина и не черновик под переписывание.
+> **Languages:** [English](README.md) · [Русский](README.ru.md)
 
-**Сайт:** https://ssrjkk.github.io/our-jamon/
+Two storefront surfaces for Nash Hamon with one catalog and one design contract:
+a static demo for review and a Next.js application for a live store. The full
+Russian documentation is in [README.ru.md](README.ru.md).
 
-## Скриншоты
+**Site:** https://ssrjkk.github.io/our-jamon/  
+**Source:** https://github.com/ssrjkk/our-jamon
 
-Сняты с опубликованного сайта в настоящем браузере (Chrome, 1440×900 и 390×844).
+## Screenshot
 
-| Главная | Разделы |
-| --- | --- |
-| <img src="docs/screenshots/home.jpg" width="420" alt="Наш Хамон — главная страница"> | <img src="docs/screenshots/content.jpg" width="420" alt="Наш Хамон — разделы сайта"> |
+![Our Jamon](docs/screenshots/home.jpg)
 
-<p align="center"><img src="docs/screenshots/mobile.jpg" width="320" alt="Наш Хамон — мобильная версия"></p>
+The published site is a demo. Ordering is simulated; email, payment and 1C are not
+connected to live credentials.
 
-## What this is
+## Surfaces
 
-- **`index.html` (корень)** — демо-витрина, которую отдаёт GitHub Pages. Автономна: кириллические шрифты и GSAP лежат в `brand/`, внешних запросов ноль. Оформление заказа здесь помечено как симуляция: ни письма, ни оплаты, ни удара по 1С.
-- **`shop/`** — Next.js 16: расчёт корзины на сервере, закрытые данные заказов, SQLite вместо JSON, подтверждение веса оператором, оплата через Т-Банк, выгрузка заказа в 1С:УНФ.
+- Root `index.html` — autonomous GitHub Pages demo with local fonts and GSAP.
+- `shop/` — Next.js 16 storefront with server-side cart calculations, SQLite orders,
+  operator-confirmed weight, T-Bank payment contract and 1C export code.
 
-Две витрины, одна правда: каталог живёт в `shop/lib/catalog.json`, статика получает его той же выгрузкой через `npm run sync:static`, а гейт `catalog-parity` падает, если демо и движок разошлись в составе, порядке, ценах или артах.
+`shop/lib/catalog.json` is the commercial source of truth. `npm run sync:static`
+updates the demo, and the `catalog-parity` gate fails if composition, order, prices
+or artwork diverge.
 
 ## Checks
 
-```
+```bash
 cd shop
 npm run typecheck
-npm test                 # unit: каталог, подпись Т-Банка, SQLite, деплой-гейты, арт карточек
+npm test
 SHOP_URL=http://127.0.0.1:3000 npm run build:standalone
-npx playwright test      # e2e: обе витрины, 3 вьюпорта, доступность, путь покупателя; сам пересобирает standalone
+npx playwright test
 ```
 
-## Release gates in CI
+CI runs gates, standalone build, Playwright and Docker health checks. The `main`
+branch is protected by a ruleset and requires all four checks.
 
-`ci.yml` прогоняет тот же набор на каждом пуше в `main` и в каждом PR: `gates` (typecheck + unit), `build` (standalone с `SHOP_URL` и `verify-build`), `e2e` (Playwright), `docker` (образ и опрос `/api/health`). Имена задач — ASCII и обязательны: переименовать задачу значит молча снять защиту ветки.
+## Published Pages artifact
 
-`main` закрыта ruleset-ом: без force-push, изменения только через PR, все четыре проверки зелёные, ветку не удалить. Обязательного одобрения ревью нет: проект ведёт один мейнтейнер. В публикацию попадает только уже проверенный коммит.
+`pages.yml` publishes only the storefront files produced by
+`build-pages-artifact.mjs`. The `pages-surface` gate rejects source files, archives
+and SQLite databases on the public address and verifies that every referenced asset
+exists.
 
-## What gets published to Pages
+The demo remains `noindex` until prices are confirmed. Opening it to search engines
+requires an explicit gate change in the same commit.
 
-`pages.yml` публикует не репозиторий, а собранный список: `node shop/scripts/build-pages-artifact.mjs` кладёт в `demo-dist/` ровно витрину — `index.html`, `404.html`, `robots.txt` и каталоги `brand/` и `img/`. Гейт `pages-surface` сверяет артефакт со скриптом: без `.ts`, `.md`, `.zip` и `.sqlite` на публичном адресе, опубликованные страницы побайтово равны файлам из git, каждый названный в разметке ассет на месте и непустой.
+## Live-launch status
 
-Демо закрыто от поисковика (`noindex` плюс `Disallow: /`), пока цены не подтверждены. Открыть — значит поменять гейт в том же коммите: закрытая витрина не может открыться молча.
+- Demo storefront: working release candidate.
+- Store engine: code and gates are ready; hosting and live keys are missing.
+- Retail prices, payment credentials, 1C credentials and admin hosting are still
+  owner-supplied inputs.
 
-## Repo
+See [RELEASE.md](RELEASE.md) for the exact blockers and launch order.
 
-- `shop/lib/catalog.json` — единственный источник коммерческих данных. Строится из строк прайса (`scripts/price-0711.rows.json`, выгрузка 1С:УНФ «Прайс 0711») командой `node scripts/build-catalog.mjs`; правки — в скрипте, не в JSON руками.
-- `shop/scripts/` — `build-catalog.mjs` (прайс → каталог), `sync-static.mjs` (каталог → `index.html`), `brand-variants.mjs` (варианты артов под измеренные слоты), `build-pages-artifact.mjs` (что уходит на Pages), `verify-build.mjs` (боевой адрес в собранном выводе), `pack-standalone.mjs`.
-- Токены и правила витрин живут в CSS обеих поверхностей (`:root` в `index.html` и `shop/app/globals.css`), а не в отдельном документе: их сверяет гейт `design-tokens`, и расхождение между витринами — падение, а не замечание.
-- `shop/AGENTS.md` — правила работы с движком для тех, кто его правит.
-- `RELEASE.md` — релизный статус, путь боевого запуска и список блокеров. Секреты не хранятся в репозитории и не пишутся в документацию: ключи живут в `shop/.env`, который исключён `shop/.gitignore` и `.dockerignore`.
-- Приватное (`_brand/`, брендбук, архивы сессии, фото поставщика) исключено из публикации; гейт `privacy` сверяет индекс git, а не диск.
+## Documentation
 
-## Статус
-
-| Поверхность | Статус |
-|---|---|
-| Демо-витрина (Pages) |  работает, релиз-кандидат |
-| Движок магазина |  код готов, ждёт хостинг и боевые ключи |
-| Розничные цены |  27 позиций уточняются у лавки |
-| Оплата, 1С, реквизиты |  код и контракт есть, боевых ключей нет |
-
-## По-русски
-
-Итог для заказчика: демо на Pages — это согласованная витрина, готовая к показу. Магазин с оплатой и 1С готов на уровне кода и гейтов; для боевого запуска не хватает данных лавки (розничные цены, порог бесплатной доставки, фото и видео) и боевых ключей (Т-Банк, 1С, адрес и хостинг, пароль админки). Полный список и порядок действий — в `RELEASE.md`.
-
-Публикация проверяется кодом, а не вкусом: перед каждым релизом гоняются `npm run typecheck`, `npm test`, `npm run build` и Playwright. Гейты держат токены, паритет каталогов, арт карточек, типографику (без латинских омоглиф, неразрывные единицы, тире между словами), приватность (фото поставщика не попадают в git), подпись платежа, SQLite и деплой-контракт.
-
-Реквизиты продавца лежат в футере обеих витрин и сверены гейтом `checkout`: ИНН и ОГРНИП обязательны, а телефон и адрес лавки — нет, потому что это данные лавки, а не ИП, и их отсутствие не повод ничего не изобретать.
-
-Контакты: Сытнинская ул., 4П, фуд-аллея рынка «Сытный»; вт–вс 10:30–20:30; +7 (906) 896-00-99; 619896@mail.ru.
-
-## Документация
-
-- [Releases](RELEASE.md)
+- [Russian README](README.ru.md)
+- [Release status](RELEASE.md)
 - [Shop guide](shop/README.md)
+- [Security policy](SECURITY.md)
+
+## License
+
+The repository license is not declared.
